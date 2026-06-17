@@ -1,0 +1,310 @@
+import type { Prisma, User, UserRole } from "@prisma/client";
+import { mainNav, hrNav, settingsNav, type NavItem } from "@/lib/navigation";
+import { adminHasUnitWorkspace, getAdminMainNav } from "@/lib/admin-unit";
+import type { OrgUnit } from "@/lib/org-units";
+import { DATA_UNIT_ID } from "@/lib/org-units";
+import { employeeDashboardPathForUser, kpiWhereForPlantScope, type PlantDataScope } from "@/lib/unit-workspace";
+import { Users, BarChart3 } from "lucide-react";
+import { kpiWhereForManager } from "@/lib/team-scope";
+
+export const ROLE_COOKIE = "nova_user_role";
+
+/** KPI dashboard with uploaded data (Bony 37P) */
+export const KPI_DASHBOARD_PATH = `/dashboard/units/${DATA_UNIT_ID}`;
+
+/** Admin-only unit tile picker */
+export const UNIT_PICKER_PATH = "/dashboard";
+
+/** Dashboard paths employees may open */
+const EMPLOYEE_ALLOWED = [
+  KPI_DASHBOARD_PATH,
+  "/dashboard/kpis",
+  "/dashboard/track",
+  "/dashboard/reviews",
+] as const;
+
+/** Managers use Team Reports — not org-wide employee report or department master */
+const MANAGER_BLOCKED_PREFIXES = [
+  "/dashboard/masters/departments",
+  "/dashboard/reports/employee",
+] as const;
+
+/** Blocked for employees (checked before allow-list) */
+const EMPLOYEE_BLOCKED_PREFIXES = [
+  "/dashboard/masters",
+  "/dashboard/kra",
+  "/dashboard/reports",
+  "/dashboard/ai",
+  "/dashboard/feedback",
+  "/dashboard/goals",
+  "/dashboard/surveys",
+  "/dashboard/analytics",
+  "/dashboard/calibration",
+  "/dashboard/compensation",
+  "/dashboard/settings",
+  "/dashboard/kpis/create",
+  "/dashboard/reviews/new",
+];
+
+export function isEmployeeRole(role: UserRole): boolean {
+  return role === "EMPLOYEE";
+}
+
+export function isAdminRole(role: UserRole): boolean {
+  return role === "ADMIN";
+}
+
+export function canAccessUnitPicker(role: UserRole): boolean {
+  return role === "ADMIN";
+}
+
+/** Default landing page after login, by role */
+export function roleHomeRedirect(role: UserRole): string {
+  if (role === "ADMIN") return UNIT_PICKER_PATH;
+  if (role === "MANAGER") return "/dashboard/team/reports";
+  return KPI_DASHBOARD_PATH;
+}
+
+export function canAccessDashboardPath(role: UserRole, pathname: string): boolean {
+  if (pathname === UNIT_PICKER_PATH && !canAccessUnitPicker(role)) {
+    return false;
+  }
+
+  if (role === "MANAGER") {
+    for (const blocked of MANAGER_BLOCKED_PREFIXES) {
+      if (pathname === blocked || pathname.startsWith(`${blocked}/`)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  if (role !== "EMPLOYEE") return true;
+
+  if (pathname.startsWith("/dashboard/units/")) return true;
+
+  for (const blocked of EMPLOYEE_BLOCKED_PREFIXES) {
+    if (pathname === blocked || pathname.startsWith(`${blocked}/`)) {
+      return false;
+    }
+  }
+
+  if (pathname === UNIT_PICKER_PATH) return false;
+
+  for (const allowed of EMPLOYEE_ALLOWED) {
+    if (pathname === allowed || pathname.startsWith(`${allowed}/`)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+export function employeeDashboardRedirect(userId?: string): string {
+  if (userId) return employeeDashboardPathForUser(userId);
+  return KPI_DASHBOARD_PATH;
+}
+
+export function managerDashboardRedirect(pathname: string): string {
+  if (pathname.startsWith("/dashboard/reports/employee")) {
+    return "/dashboard/team/reports";
+  }
+  if (pathname === UNIT_PICKER_PATH) {
+    return "/dashboard/team/reports";
+  }
+  return roleHomeRedirect("MANAGER");
+}
+
+export function kpiWhereForUser(user: User): Prisma.KpiWhereInput {
+  const base: Prisma.KpiWhereInput = {
+    organizationId: user.organizationId,
+    isActive: true,
+  };
+
+  if (user.role === "MANAGER") return kpiWhereForManager(user);
+
+  if (user.role !== "EMPLOYEE") return base;
+
+  const or: Prisma.KpiWhereInput[] = [{ ownerId: user.id }];
+  const name = user.name?.trim();
+  if (name) or.push({ ownerName: name });
+
+  return { ...base, OR: or };
+}
+
+export function mergeKpiWhere(
+  user: User,
+  extra?: Prisma.KpiWhereInput
+): Prisma.KpiWhereInput {
+  const scoped = kpiWhereForUser(user);
+  if (!extra || Object.keys(extra).length === 0) return scoped;
+  return { AND: [scoped, extra] };
+}
+
+/** Scope KPI queries to a plant / unit workspace */
+export function mergeKpiWhereForUnit(
+  user: User,
+  scope: PlantDataScope | string,
+  extra?: Prisma.KpiWhereInput
+): Prisma.KpiWhereInput {
+  const plantFilter =
+    typeof scope === "string"
+      ? { plantUnit: scope }
+      : kpiWhereForPlantScope(scope);
+  return mergeKpiWhere(user, { ...plantFilter, ...extra });
+}
+
+export function mergeKpiWhereForWorkspace(
+  user: User,
+  dataScope: PlantDataScope | null | undefined,
+  extra?: Prisma.KpiWhereInput
+): Prisma.KpiWhereInput {
+  if (dataScope) {
+    return mergeKpiWhereForUnit(user, dataScope, extra);
+  }
+  return mergeKpiWhere(user, extra);
+}
+
+export function reviewAssignmentWhereForUser(
+  user: User
+): Prisma.ReviewAssignmentWhereInput {
+  const base: Prisma.ReviewAssignmentWhereInput = {
+    cycle: { organizationId: user.organizationId },
+  };
+
+  if (user.role === "ADMIN") return base;
+
+  return {
+    ...base,
+    OR: [{ reviewerId: user.id }, { revieweeId: user.id }],
+  };
+}
+
+export function canAccessReviewAssignment(
+  user: User,
+  assignment: { reviewerId: string; revieweeId: string }
+): boolean {
+  if (user.role === "ADMIN") return true;
+  return (
+    assignment.reviewerId === user.id || assignment.revieweeId === user.id
+  );
+}
+
+export async function employeeMasterWhereForUserAsync(
+  user: User
+): Promise<Prisma.EmployeeMasterWhereInput> {
+  const base = { organizationId: user.organizationId };
+  if (user.role === "ADMIN") return base;
+  if (user.role === "MANAGER" && user.department) {
+    return { ...base, department: user.department, isActive: true };
+  }
+  if (user.role === "EMPLOYEE" && user.name?.trim()) {
+    return { ...base, name: user.name.trim() };
+  }
+  if (user.role === "EMPLOYEE") return { ...base, id: "__none__" };
+  return base;
+}
+
+export function employeeMasterWhereForUser(
+  user: User
+): Prisma.EmployeeMasterWhereInput {
+  const base = { organizationId: user.organizationId };
+  if (user.role !== "EMPLOYEE") {
+    if (user.role === "MANAGER" && user.department) {
+      return { ...base, department: user.department, isActive: true };
+    }
+    return base;
+  }
+
+  if (user.name?.trim()) {
+    return { ...base, name: user.name.trim() };
+  }
+
+  return { ...base, id: "__none__" };
+}
+
+export function getMainNavForRole(role: UserRole): NavItem[] {
+  if (role === "EMPLOYEE") {
+    return mainNav
+      .filter((item) =>
+        [KPI_DASHBOARD_PATH, "/dashboard/kpis", "/dashboard/track"].includes(item.href)
+      )
+      .map((item) =>
+        item.href === KPI_DASHBOARD_PATH
+          ? { ...item, label: "My Dashboard" }
+          : item.href === "/dashboard/kpis"
+            ? { ...item, label: "My KPIs" }
+            : item
+      );
+  }
+
+  if (role === "MANAGER") {
+    const teamKraNav: NavItem = {
+      href: "/dashboard/team",
+      label: "My Team KRA",
+      icon: Users,
+      keywords: ["team", "it", "kra", "edit"],
+    };
+    const teamReportsNav: NavItem = {
+      href: "/dashboard/team/reports",
+      label: "Team Reports",
+      icon: BarChart3,
+      keywords: ["team", "reports", "performance"],
+    };
+    const managerMain = mainNav.filter(
+      (item) =>
+        item.href !== UNIT_PICKER_PATH &&
+        item.href !== "/dashboard/masters/departments" &&
+        item.href !== "/dashboard/reports/employee"
+    );
+    const idx = managerMain.findIndex((i) => i.href === "/dashboard/kra");
+    const nav = [...managerMain];
+    nav.splice(idx >= 0 ? idx + 1 : 2, 0, teamKraNav, teamReportsNav);
+    return nav;
+  }
+
+  return mainNav;
+}
+
+export function getHrNavForRole(role: UserRole): NavItem[] {
+  if (role !== "EMPLOYEE") return hrNav;
+  return hrNav
+    .filter((item) => item.href === "/dashboard/reviews")
+    .map((item) => ({ ...item, label: "My Reviews" }));
+}
+
+export function getSettingsNavForRole(role: UserRole): NavItem | null {
+  if (role === "EMPLOYEE") return null;
+  return settingsNav;
+}
+
+export function getCommandPaletteItemsForRole(
+  role: UserRole,
+  adminUnitId?: string | null,
+  catalog: OrgUnit[] = []
+) {
+  const main =
+    role === "ADMIN"
+      ? getAdminMainNav(adminUnitId, catalog)
+      : getMainNavForRole(role);
+
+  const hr =
+    role === "ADMIN" && !adminHasUnitWorkspace(adminUnitId, catalog)
+      ? []
+      : getHrNavForRole(role);
+
+  const items = [
+    ...main,
+    ...hr,
+    ...(getSettingsNavForRole(role) ? [getSettingsNavForRole(role)!] : []),
+  ];
+
+  return items.map((item) => ({
+    ...item,
+    group: main.some((m) => m.href === item.href)
+      ? "KPI tracking"
+      : item.href === settingsNav.href
+        ? "System"
+        : "People & HR",
+  }));
+}

@@ -1,0 +1,550 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  MANAGER
+  EMPLOYEE
+}
+
+enum CycleType {
+  ANNUAL
+  QUARTERLY
+  MONTHLY
+  AD_HOC
+}
+
+enum CycleStatus {
+  DRAFT
+  ACTIVE
+  CLOSED
+}
+
+enum ReviewType {
+  SELF
+  MANAGER
+  PEER
+}
+
+enum AssignmentStatus {
+  PENDING
+  IN_PROGRESS
+  SUBMITTED
+  OVERDUE
+}
+
+enum GoalLevel {
+  COMPANY
+  TEAM
+  INDIVIDUAL
+}
+
+enum GoalStatus {
+  ON_TRACK
+  AT_RISK
+  BEHIND
+  COMPLETED
+}
+
+enum IntegrationProvider {
+  TEAMS
+  WORKDAY
+  BAMBOOHR
+  RIPPLING
+  ADP
+  CUSTOM
+  JIRA
+  ASANA
+}
+
+enum SyncDirection {
+  INBOUND
+  OUTBOUND
+  BIDIRECTIONAL
+}
+
+enum SyncStatus {
+  PENDING
+  RUNNING
+  SUCCESS
+  FAILED
+}
+
+enum KpiDirection {
+  HIGHER_IS_BETTER
+  LOWER_IS_BETTER
+}
+
+enum KpiFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users              User[]
+  reviewCycles       ReviewCycle[]
+  reviewTemplates    ReviewTemplate[]
+  feedbackCampaigns  Feedback360Campaign[]
+  goals              Goal[]
+  surveys            Survey[]
+  calibrationSessions CalibrationSession[]
+  hrisConnections    HrisConnection[]
+  competencyFrameworks CompetencyFramework[]
+  integrations       IntegrationConnection[]
+  kpis               Kpi[]
+  departments        DepartmentMaster[]
+  employees          EmployeeMaster[]
+  orgGroups          OrgGroupMaster[]
+  orgUnits           OrgUnitMaster[]
+}
+
+model User {
+  id              String   @id @default(cuid())
+  organizationId  String
+  email           String
+  name            String
+  role            UserRole @default(EMPLOYEE)
+  title           String?
+  department      String?
+  managerId       String?
+  teamsUserId     String?
+  hrisExternalId  String?
+  avatarUrl       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  manager      User?        @relation("ManagerReports", fields: [managerId], references: [id])
+  reports      User[]       @relation("ManagerReports")
+
+  reviewAssignments     ReviewAssignment[]
+  feedbackGiven         Feedback360Response[] @relation("FeedbackGiver")
+  feedbackReceived      Feedback360Response[] @relation("FeedbackReceiver")
+  goals                 Goal[]
+  compensationRecs      CompensationRecommendation[] @relation("CompEmployee")
+  compensationAsManager CompensationRecommendation[] @relation("CompManager")
+  surveyResponses       SurveyResponse[]
+  nineBoxPlacements     NineBoxPlacement[]
+  syncLogs              HrisSyncLog[]
+  ownedKpis             Kpi[]
+  kpiEntries            KpiEntry[]
+
+  @@unique([organizationId, email])
+  @@index([organizationId])
+  @@index([teamsUserId])
+  @@index([hrisExternalId])
+}
+
+model ReviewTemplate {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  description    String?
+  /// JSON: { sections: [{ id, title, questions: [{ id, type, label, required, options? }] }] }
+  formSchema     String
+  /// JSON: { type: "numeric"|"text"|"likert", min?, max?, labels?: string[] }
+  ratingScale    String
+  isDefault      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  reviewCycles ReviewCycle[]
+}
+
+model ReviewCycle {
+  id             String      @id @default(cuid())
+  organizationId String
+  templateId     String
+  name           String
+  description    String?
+  cycleType      CycleType
+  status         CycleStatus @default(DRAFT)
+  /// JSON: { self: boolean, manager: boolean, peer: boolean, peerCount?: number }
+  workflow       String
+  startDate      DateTime
+  endDate        DateTime
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  template     ReviewTemplate   @relation(fields: [templateId], references: [id])
+  assignments  ReviewAssignment[]
+}
+
+model ReviewAssignment {
+  id           String           @id @default(cuid())
+  cycleId      String
+  revieweeId   String
+  reviewerId   String
+  reviewType   ReviewType
+  status       AssignmentStatus @default(PENDING)
+  dueDate      DateTime?
+  /// JSON responses keyed by question id
+  responses    String?
+  overallRating Float?
+  submittedAt  DateTime?
+  teamsActivityId String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  cycle    ReviewCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  reviewee User        @relation(fields: [revieweeId], references: [id], onDelete: Cascade)
+
+  @@index([cycleId])
+  @@index([reviewerId])
+  @@index([status])
+}
+
+model Feedback360Campaign {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  subjectUserId  String
+  /// JSON array of question strings or structured questions
+  questions      String
+  status         CycleStatus @default(ACTIVE)
+  allowExternal  Boolean  @default(false)
+  aiSummary      String?
+  dueDate        DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  responses    Feedback360Response[]
+}
+
+model Feedback360Response {
+  id         String   @id @default(cuid())
+  campaignId String
+  giverId    String?
+  receiverId String
+  giverEmail String?
+  giverName  String?
+  isExternal Boolean  @default(false)
+  /// JSON answers
+  responses  String
+  createdAt  DateTime @default(now())
+
+  campaign Feedback360Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  giver    User?               @relation("FeedbackGiver", fields: [giverId], references: [id])
+  receiver User                @relation("FeedbackReceiver", fields: [receiverId], references: [id])
+}
+
+model Kpi {
+  id             String       @id @default(cuid())
+  organizationId String
+  name           String
+  description    String?
+  category       String
+  unit           String
+  targetValue    Float
+  direction      KpiDirection @default(HIGHER_IS_BETTER)
+  frequency      KpiFrequency @default(MONTHLY)
+  ownerId        String?
+  department     String?
+  /// Finance | Quality | Process — matches employee KRA sheets
+  perspective    String?
+  /// Primary KRA title from plant Excel
+  kraName        String?
+  /// Weightage 0–1 (e.g. 0.2 = 20%)
+  weightage      Float?
+  fiscalYear     String?
+  plantUnit      String?      @default("Bony Polymers")
+  /// PLANT | DEPARTMENT | INDIVIDUAL
+  kpiLevel       String?
+  ownerName      String?
+  /// JSON: { q1: { target, achieved }, q2, q3, q4 }
+  quarterTargets String?
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  owner        User?        @relation(fields: [ownerId], references: [id])
+  entries      KpiEntry[]
+
+  @@index([organizationId])
+  @@index([category])
+  @@index([plantUnit, fiscalYear])
+}
+
+model KpiEntry {
+  id          String   @id @default(cuid())
+  kpiId       String
+  value       Float
+  recordedAt  DateTime
+  note        String?
+  enteredById String?
+  createdAt   DateTime @default(now())
+
+  kpi       Kpi   @relation(fields: [kpiId], references: [id], onDelete: Cascade)
+  enteredBy User? @relation(fields: [enteredById], references: [id])
+
+  @@index([kpiId, recordedAt])
+}
+
+model Goal {
+  id             String     @id @default(cuid())
+  organizationId String
+  ownerId        String
+  parentId       String?
+  level          GoalLevel
+  title          String
+  description    String?
+  targetValue    Float?
+  currentValue   Float      @default(0)
+  unit           String?
+  status         GoalStatus @default(ON_TRACK)
+  quarter        String?
+  jiraIssueKey   String?
+  asanaTaskGid   String?
+  dueDate        DateTime?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  owner        User         @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  parent       Goal?        @relation("GoalHierarchy", fields: [parentId], references: [id])
+  children     Goal[]       @relation("GoalHierarchy")
+}
+
+model CompensationRecommendation {
+  id              String   @id @default(cuid())
+  cycleId         String?
+  employeeId      String
+  managerId       String
+  performanceRating Float?
+  suggestedMeritPct Float?
+  suggestedBonusPct Float?
+  managerRecommendation String?
+  status          String   @default("draft")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  employee User @relation("CompEmployee", fields: [employeeId], references: [id], onDelete: Cascade)
+  manager  User @relation("CompManager", fields: [managerId], references: [id], onDelete: Cascade)
+}
+
+model Survey {
+  id             String   @id @default(cuid())
+  organizationId String
+  title          String
+  description    String?
+  /// JSON questions
+  questions      String
+  cadence        String?
+  isPulse        Boolean  @default(true)
+  status         CycleStatus @default(ACTIVE)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  responses    SurveyResponse[]
+}
+
+model SurveyResponse {
+  id        String   @id @default(cuid())
+  surveyId  String
+  userId    String
+  /// JSON answers + dimension scores for heatmap
+  answers   String
+  createdAt DateTime @default(now())
+
+  survey Survey @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model CalibrationSession {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  cycleId        String?
+  /// JSON quota rules e.g. { topRight: 0.15, ... }
+  quotaRules     String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  placements   NineBoxPlacement[]
+}
+
+model NineBoxPlacement {
+  id           String @id @default(cuid())
+  sessionId    String
+  userId       String
+  performance  Int
+  potential    Int
+  notes        String?
+
+  session CalibrationSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user    User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, userId])
+}
+
+model CompetencyFramework {
+  id             String @id @default(cuid())
+  organizationId String
+  name           String
+  /// JSON: { competencies: [{ id, name, levels: [{ level, description }] }] }
+  schema         String
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+model HrisConnection {
+  id             String              @id @default(cuid())
+  organizationId String
+  provider       IntegrationProvider
+  apiKeyEncrypted String?
+  webhookSecret  String?
+  baseUrl        String?
+  syncDirection  SyncDirection       @default(BIDIRECTIONAL)
+  fieldMapping   String?
+  lastSyncAt     DateTime?
+  isActive       Boolean             @default(true)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  syncLogs     HrisSyncLog[]
+}
+
+model HrisSyncLog {
+  id           String     @id @default(cuid())
+  connectionId String
+  direction    SyncDirection
+  status       SyncStatus
+  recordsProcessed Int    @default(0)
+  errorMessage String?
+  payload      String?
+  userId       String?
+  createdAt    DateTime   @default(now())
+
+  connection HrisConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  user       User?          @relation(fields: [userId], references: [id])
+}
+
+model IntegrationConnection {
+  id             String              @id @default(cuid())
+  organizationId String
+  provider       IntegrationProvider
+  accessToken    String?
+  refreshToken   String?
+  teamId         String?
+  workspaceName  String?
+  metadata       String?
+  isActive       Boolean             @default(true)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, provider])
+}
+
+model DepartmentMaster {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  headName       String?
+  location       String?  @default("Bony Polymers")
+  kraSheetId     String?
+  sortOrder      Int      @default(0)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  employees    EmployeeMaster[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+}
+
+model EmployeeMaster {
+  id             String   @id @default(cuid())
+  organizationId String
+  departmentId   String?
+  name           String
+  designation    String?
+  department     String?
+  location       String?  @default("Bony Polymers")
+  doj            String?
+  ecn            String?
+  managerName    String?
+  sortOrder      Int      @default(0)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  dept         DepartmentMaster? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([departmentId])
+}
+
+model OrgGroupMaster {
+  id             String   @id @default(cuid())
+  organizationId String
+  slug           String
+  name           String
+  subtitle       String?
+  gradientCss    String
+  accent         String   @default("text-emerald-600")
+  emoji          String   @default("🏭")
+  sortOrder      Int      @default(0)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  units        OrgUnitMaster[]
+
+  @@unique([organizationId, slug])
+  @@index([organizationId])
+}
+
+model OrgUnitMaster {
+  id             String   @id @default(cuid())
+  organizationId String
+  groupId        String?
+  slug           String
+  name           String
+  subtitle       String?
+  plantUnitKey   String
+  /** JSON string[] — employee/department master location values for this unit */
+  locationAliases String  @default("[]")
+  /** JSON string[] — Kpi.plantUnit values for this unit */
+  kpiPlantAliases String  @default("[]")
+  gradientCss    String
+  accent         String   @default("text-emerald-600")
+  emoji          String   @default("🏭")
+  sortOrder      Int      @default(0)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  group        OrgGroupMaster?  @relation(fields: [groupId], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, slug])
+  @@unique([organizationId, plantUnitKey])
+  @@index([organizationId])
+  @@index([groupId])
+}

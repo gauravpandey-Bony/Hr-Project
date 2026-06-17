@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Bony KPI Project Guide</title>
+  <style>
+    html {
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      background-color: #1a1a1a;
+      border: none;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+    /* CSS for syntax highlighting */
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">Bony KPI Project Guide</h1>
+</header>
+<h1 id="bony-kpi-nova-complete-project-guide">Bony KPI (Nova) — Complete
+Project Guide</h1>
+<p><strong>Organization:</strong> Bony Polymers Pvt Ltd<br />
+<strong>Product:</strong> Bony KPI<br />
+<strong>AI Assistant:</strong> Maya<br />
+<strong>Version:</strong> 2026</p>
+<hr />
+<h2 id="table-of-contents">Table of Contents</h2>
+<ol type="1">
+<li><a href="#1-project-overview">Project Overview</a></li>
+<li><a href="#2-who-uses-the-system">Who Uses the System</a></li>
+<li><a href="#3-how-data-flows-admin--employee">How Data Flows (Admin →
+Employee)</a></li>
+<li><a href="#4-what-each-role-can-do">What Each Role Can Do</a></li>
+<li><a href="#5-daily-workflows">Daily Workflows</a></li>
+<li><a href="#6-maya-ai-assistant">Maya AI Assistant</a></li>
+<li><a href="#7-hr-processes">HR Processes</a></li>
+<li><a href="#8-dashboard-pages">Dashboard Pages</a></li>
+<li><a href="#9-kpi-system-explained">KPI System Explained</a></li>
+<li><a href="#10-multi-plant-structure">Multi-Plant Structure</a></li>
+<li><a href="#11-technical-overview">Technical Overview</a></li>
+<li><a href="#12-setup--environment">Setup &amp; Environment</a></li>
+<li><a href="#13-project-status">Project Status</a></li>
+</ol>
+<hr />
+<h2 id="project-overview">1. Project Overview</h2>
+<p><strong>Bony KPI</strong> is a KPI tracking and HR performance
+platform built for <strong>Bony Polymers Pvt Ltd</strong>. It replaces
+spreadsheet-based KRA/KPI tracking with a modern web dashboard.</p>
+<h3 id="what-the-system-does">What the system does</h3>
+<ul>
+<li>Track KPIs across plants, departments, and individuals</li>
+<li>Import employee and department data from Excel/CSV</li>
+<li>Display dashboards with green/red performance status</li>
+<li>Provide <strong>Maya AI</strong> — a voice-enabled assistant for
+reports and queries</li>
+<li>Support HR modules: reviews, 360° feedback, goals, surveys,
+calibration, compensation</li>
+</ul>
+<h3 id="technology-brief">Technology (brief)</h3>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Technology</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Framework</td>
+<td>Next.js 14</td>
+</tr>
+<tr>
+<td>UI</td>
+<td>React, Tailwind CSS</td>
+</tr>
+<tr>
+<td>Database</td>
+<td>SQLite + Prisma</td>
+</tr>
+<tr>
+<td>AI</td>
+<td>OpenAI (GPT, Whisper, TTS)</td>
+</tr>
+<tr>
+<td>Voice</td>
+<td>Browser Speech API</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="who-uses-the-system">2. Who Uses the System</h2>
+<table>
+<colgroup>
+<col style="width: 20%" />
+<col style="width: 48%" />
+<col style="width: 31%" />
+</colgroup>
+<thead>
+<tr>
+<th>Role</th>
+<th>Who they are</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Admin (HR / System)</strong></td>
+<td>Full company access</td>
+<td>HR Administrator</td>
+</tr>
+<tr>
+<td><strong>Manager</strong></td>
+<td>Head of a team or department</td>
+<td>Bhupesh Sharma (IT), Praveen Kumar (Store)</td>
+</tr>
+<tr>
+<td><strong>Employee</strong></td>
+<td>Individual staff member</td>
+<td>Mahima, Sudha Jetli</td>
+</tr>
+</tbody>
+</table>
+<h3 id="where-each-person-lands-after-login">Where each person lands
+after login</h3>
+<table>
+<thead>
+<tr>
+<th>Role</th>
+<th>Home page after login</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Admin</strong></td>
+<td>Unit picker — choose which plant to view</td>
+</tr>
+<tr>
+<td><strong>Manager</strong></td>
+<td>Team Reports</td>
+</tr>
+<tr>
+<td><strong>Employee</strong></td>
+<td>My Dashboard (own KPIs only)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="how-data-flows-admin-employee">3. How Data Flows (Admin →
+Employee)</h2>
+<pre><code>ADMIN enters:
+  • Who works here (employees)
+  • Which department they belong to
+  • KPI targets (e.g. Production target = 95%)
+         ↓
+MANAGER monitors:
+  • Team performance
+  • Who is behind target
+  • Can edit team KRAs
+         ↓
+EMPLOYEE updates:
+  • Actual numbers (e.g. production achieved = 88%)
+  • Completes assigned reviews
+         ↓
+SYSTEM calculates:
+  • Target vs Actual comparison
+  • Green = on track (progress ≥ 20%)
+  • Red = below target
+         ↓
+EVERYONE sees results (at their level):
+  • Admin → entire company
+  • Manager → their team only
+  • Employee → themselves only</code></pre>
+<h3 id="data-setup-flow">Data setup flow</h3>
+<ol type="1">
+<li><strong>Admin</strong> loads company data — departments, employees,
+KPI targets</li>
+<li><strong>Managers</strong> monitor their teams using that data</li>
+<li><strong>Employees</strong> enter their actual KPI values</li>
+<li>Everyone sees results on the <strong>dashboard</strong></li>
+</ol>
+<hr />
+<h2 id="what-each-role-can-do">4. What Each Role Can Do</h2>
+<h3 id="admin-full-company-access">ADMIN — Full company access</h3>
+<table>
+<thead>
+<tr>
+<th>Task</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Select Unit</td>
+<td>Pick any plant (37P, 77, 24…) and view its dashboard</td>
+</tr>
+<tr>
+<td>Department Master</td>
+<td>Add/edit departments</td>
+</tr>
+<tr>
+<td>Employee Master</td>
+<td>Full employee list management</td>
+</tr>
+<tr>
+<td>KRA / KPI Sheet</td>
+<td>Set company-wide targets and goals</td>
+</tr>
+<tr>
+<td>KPI Library</td>
+<td>View all KPIs, create new ones</td>
+</tr>
+<tr>
+<td>Update Data</td>
+<td>Enter or change any KPI value</td>
+</tr>
+<tr>
+<td>Reports</td>
+<td>Company-wide rankings and league tables</td>
+</tr>
+<tr>
+<td>Employee Report</td>
+<td>Full report for any employee by name</td>
+</tr>
+<tr>
+<td>Maya AI</td>
+<td>Ask anything across the whole organization</td>
+</tr>
+<tr>
+<td>Reviews, 360°, Goals, Surveys</td>
+<td>Start and manage HR processes</td>
+</tr>
+<tr>
+<td>Settings</td>
+<td>HRIS, Teams, integrations</td>
+</tr>
+<tr>
+<td>Excel/CSV upload</td>
+<td>Bulk import employees, departments, KPIs</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Cannot be restricted</strong> — Admin has access to
+everything.</p>
+<hr />
+<h3 id="manager-team-department-only">MANAGER — Team / department
+only</h3>
+<table>
+<thead>
+<tr>
+<th>✅ Can do</th>
+<th>❌ Cannot do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>View their team’s KPIs</td>
+<td>Edit Department Master</td>
+</tr>
+<tr>
+<td>Team Reports</td>
+<td>Org-wide employee reports</td>
+</tr>
+<tr>
+<td>Edit team KRAs</td>
+<td>Access full Settings</td>
+</tr>
+<tr>
+<td>Update KPI data (own + team)</td>
+<td>Choose any plant (unit picker)</td>
+</tr>
+<tr>
+<td>KPI Dashboard, Library, KRA sheet</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Maya AI (for their unit)</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Reviews (own + team)</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Goals, 360°, Surveys, Analytics</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Team matching:</strong> System finds employees in the same
+department whose manager name matches.</p>
+<hr />
+<h3 id="employee-own-data-only">EMPLOYEE — Own data only</h3>
+<table>
+<thead>
+<tr>
+<th>✅ Can do</th>
+<th>❌ Cannot do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>My Dashboard — KPI overview</td>
+<td>Maya AI</td>
+</tr>
+<tr>
+<td>My KPIs — personal list</td>
+<td>Reports, Analytics</td>
+</tr>
+<tr>
+<td>Update Data — enter own KPI values</td>
+<td>Employee / Department Master</td>
+</tr>
+<tr>
+<td>My Reviews — complete performance review</td>
+<td>Goals, 360°, Surveys</td>
+</tr>
+<tr>
+<td>View their unit dashboard</td>
+<td>KRA Master Sheet, Settings</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="quick-comparison-table">Quick comparison table</h3>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Admin</th>
+<th>Manager</th>
+<th>Employee</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>All plants / units</td>
+<td>✅</td>
+<td>❌</td>
+<td>❌</td>
+</tr>
+<tr>
+<td>Department Master</td>
+<td>✅</td>
+<td>❌</td>
+<td>❌</td>
+</tr>
+<tr>
+<td>Employee Master</td>
+<td>✅</td>
+<td>❌</td>
+<td>❌</td>
+</tr>
+<tr>
+<td>KRA Master Sheet</td>
+<td>✅</td>
+<td>✅</td>
+<td>❌</td>
+</tr>
+<tr>
+<td>KPI Dashboard</td>
+<td>✅</td>
+<td>✅</td>
+<td>✅ (own only)</td>
+</tr>
+<tr>
+<td>Update Data</td>
+<td>✅ (all)</td>
+<td>✅ (team)</td>
+<td>✅ (own)</td>
+</tr>
+<tr>
+<td>Reports (org-wide)</td>
+<td>✅</td>
+<td>❌</td>
+<td>❌</td>
+</tr>
+<tr>
+<td>Team Reports</td>
+<td>✅</td>
+<td>✅</td>
+<td>❌</td>
+</tr>
+<tr>
+<td>Maya AI</td>
+<td>✅</td>
+<td>✅</td>
+<td>❌</td>
+</tr>
+<tr>
+<td>Reviews</td>
+<td>✅ (all)</td>
+<td>✅ (team)</td>
+<td>✅ (own)</td>
+</tr>
+<tr>
+<td>Goals / 360° / Surveys</td>
+<td>✅</td>
+<td>✅</td>
+<td>❌</td>
+</tr>
+<tr>
+<td>Settings</td>
+<td>✅</td>
+<td>✅</td>
+<td>❌</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="daily-workflows">5. Daily Workflows</h2>
+<h3 id="admin-typical-day">Admin — typical day</h3>
+<pre><code>1. Log in
+2. Choose a plant (e.g. Bony 37P)
+3. Check / update employee list
+4. Import or edit KRA sheet
+5. View dashboard — identify weak departments
+6. Ask Maya: &quot;production department report&quot;
+7. Launch review cycle (yearly)</code></pre>
+<h3 id="manager-typical-day">Manager — typical day</h3>
+<pre><code>1. Log in
+2. Open Team Reports
+3. See who is on track vs off target
+4. Edit team KRA if targets changed
+5. Enter team KPI values in Update Data
+6. Ask Maya: &quot;Maya, Mahima employee report&quot;
+7. Complete team reviews</code></pre>
+<h3 id="employee-typical-day">Employee — typical day</h3>
+<pre><code>1. Log in
+2. Open My Dashboard
+3. Check if KPIs are green or red
+4. Go to Update Data → enter monthly/daily values
+5. Complete review if assigned</code></pre>
+<h3 id="full-process-sequence">Full process sequence</h3>
+<pre><code>STEP 1 — Setup (Admin, once/monthly)
+  → Upload departments + employees
+  → Set KPI targets / KRA sheet
+  → Configure plants (37P, 77...)
+
+STEP 2 — Daily work (Manager + Employee)
+  → Employee updates own KPI values
+  → Manager checks + updates team KPIs
+  → System shows team report + personal dashboard
+
+STEP 3 — Reports (Admin + Manager)
+  → Ask Maya for employee or department reports
+  → View league tables and analytics
+
+STEP 4 — HR (Admin, yearly/quarterly)
+  → Start review cycle
+  → Managers + employees complete reviews
+  → Calibration + compensation</code></pre>
+<hr />
+<h2 id="maya-ai-assistant">6. Maya AI Assistant</h2>
+<p><strong>Maya</strong> is the built-in AI assistant for KPI and HR
+queries.</p>
+<h3 id="who-can-use-maya">Who can use Maya?</h3>
+<table>
+<thead>
+<tr>
+<th>Who</th>
+<th>Access</th>
+<th>What they can ask</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Admin</strong></td>
+<td>✅ Yes</td>
+<td>Any employee, department, or plant</td>
+</tr>
+<tr>
+<td><strong>Manager</strong></td>
+<td>✅ Yes</td>
+<td>Their unit / team only</td>
+</tr>
+<tr>
+<td><strong>Employee</strong></td>
+<td>❌ No</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<h3 id="how-to-use-maya-voice">How to use Maya (voice)</h3>
+<ol type="1">
+<li>Tap <strong>Hey Maya</strong> or the mic button (one time — grants
+mic permission)</li>
+<li>Say <strong>“Hey Maya”</strong> → chime plays, system becomes
+active</li>
+<li>Say your command: <strong>“Maya, Bhupesh Sharma report”</strong> or
+<strong>“Maya, show all KPIs”</strong></li>
+<li>Maya displays the answer — text, tables, or dashboard cards</li>
+<li>Mic automatically resumes for the next command</li>
+</ol>
+<h3 id="how-to-use-maya-text">How to use Maya (text)</h3>
+<p>Type in the chat box: - <code>Maya, Bhupesh Sharma report</code> -
+<code>Maya, production department report</code> -
+<code>Maya, show all KPIs</code></p>
+<h3 id="what-maya-can-answer">What Maya can answer</h3>
+<ul>
+<li>Individual employee KPI reports (by name or ECN)</li>
+<li>Department performance reports</li>
+<li>KPI lookups and summaries</li>
+<li>General questions about org data (when OpenAI is configured)</li>
+<li>KPI suggestions for admins</li>
+</ul>
+<h3 id="voice-flow-simplified">Voice flow (simplified)</h3>
+<pre><code>User says &quot;Hey Maya&quot;
+  → System activates (chime)
+User says command
+  → Speech converted to text
+  → System finds the right report
+  → Data fetched from database
+  → Report shown in chat
+  → Mic resumes for next command</code></pre>
+<hr />
+<h2 id="hr-processes">7. HR Processes</h2>
+<h3 id="performance-review-cycle">Performance review cycle</h3>
+<pre><code>Admin starts review cycle
+    ↓
+Each employee gets a review assignment
+    ↓
+Employee completes self-review
+Manager writes team reviews
+    ↓
+Admin reviews all submissions
+    ↓
+Calibration meeting (Nine-box talent grid)
+    ↓
+Compensation recommendations (bonus / increment)</code></pre>
+<h3 id="other-hr-modules">Other HR modules</h3>
+<table>
+<thead>
+<tr>
+<th>Module</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Reviews</strong></td>
+<td>Formal performance review cycles</td>
+</tr>
+<tr>
+<td><strong>360° Feedback</strong></td>
+<td>Peer and manager feedback campaigns</td>
+</tr>
+<tr>
+<td><strong>Goals</strong></td>
+<td>OKR-style objectives and key results</td>
+</tr>
+<tr>
+<td><strong>Surveys</strong></td>
+<td>Pulse / engagement surveys</td>
+</tr>
+<tr>
+<td><strong>Calibration</strong></td>
+<td>Talent grid (nine-box) sessions</td>
+</tr>
+<tr>
+<td><strong>Compensation</strong></td>
+<td>Merit and bonus recommendations</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="dashboard-pages">8. Dashboard Pages</h2>
+<table>
+<thead>
+<tr>
+<th>Page</th>
+<th>Who uses it</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Unit Picker</td>
+<td>Admin</td>
+<td>Choose which plant to view</td>
+</tr>
+<tr>
+<td>KPI Dashboard</td>
+<td>All</td>
+<td>Gauges, charts, health mix</td>
+</tr>
+<tr>
+<td>KPI Library</td>
+<td>All</td>
+<td>Table of all KPIs</td>
+</tr>
+<tr>
+<td>Update Data</td>
+<td>All</td>
+<td>Log new KPI values</td>
+</tr>
+<tr>
+<td>KRA Master Sheet</td>
+<td>Admin, Manager</td>
+<td>Spreadsheet view of KRAs</td>
+</tr>
+<tr>
+<td>Maya AI</td>
+<td>Admin, Manager</td>
+<td>Chat + voice assistant</td>
+</tr>
+<tr>
+<td>Department Master</td>
+<td>Admin</td>
+<td>Manage departments</td>
+</tr>
+<tr>
+<td>Employee Master</td>
+<td>Admin</td>
+<td>Manage employees</td>
+</tr>
+<tr>
+<td>Reports</td>
+<td>Admin</td>
+<td>League table / rankings</td>
+</tr>
+<tr>
+<td>Employee Report</td>
+<td>Admin</td>
+<td>Individual employee report</td>
+</tr>
+<tr>
+<td>Team Reports</td>
+<td>Manager</td>
+<td>Team performance view</td>
+</tr>
+<tr>
+<td>My Team KRA</td>
+<td>Manager</td>
+<td>Edit team KRAs</td>
+</tr>
+<tr>
+<td>Reviews</td>
+<td>All (scoped)</td>
+<td>Performance reviews</td>
+</tr>
+<tr>
+<td>Goals</td>
+<td>Admin, Manager</td>
+<td>OKRs</td>
+</tr>
+<tr>
+<td>360° Feedback</td>
+<td>Admin, Manager</td>
+<td>Peer feedback</td>
+</tr>
+<tr>
+<td>Surveys</td>
+<td>Admin, Manager</td>
+<td>Pulse surveys</td>
+</tr>
+<tr>
+<td>Analytics</td>
+<td>Admin, Manager</td>
+<td>Charts and insights</td>
+</tr>
+<tr>
+<td>Calibration</td>
+<td>Admin, Manager</td>
+<td>Nine-box sessions</td>
+</tr>
+<tr>
+<td>Compensation</td>
+<td>Admin, Manager</td>
+<td>Pay recommendations</td>
+</tr>
+<tr>
+<td>Settings</td>
+<td>Admin, Manager</td>
+<td>Integrations</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="kpi-system-explained">9. KPI System Explained</h2>
+<h3 id="kpi-levels">KPI levels</h3>
+<table>
+<thead>
+<tr>
+<th>Level</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Plant</strong></td>
+<td>Overall production output for 37P</td>
+</tr>
+<tr>
+<td><strong>Department</strong></td>
+<td>IT uptime, Billing accuracy</td>
+</tr>
+<tr>
+<td><strong>Individual</strong></td>
+<td>Employee-specific targets</td>
+</tr>
+</tbody>
+</table>
+<h3 id="status-colors">Status colors</h3>
+<table>
+<thead>
+<tr>
+<th>Color</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Green</strong></td>
+<td>On track — progress at or above 20% of target</td>
+</tr>
+<tr>
+<td><strong>Red</strong></td>
+<td>Off target — below threshold</td>
+</tr>
+</tbody>
+</table>
+<h3 id="kpi-categories">KPI categories</h3>
+<p>Production · Quality · Sales · Maintenance · Safety · Finance ·
+Process · Store · Billing · HR · IT</p>
+<h3 id="how-progress-is-calculated">How progress is calculated</h3>
+<ul>
+<li>System compares <strong>actual value</strong> vs <strong>target
+value</strong></li>
+<li>Direction matters: some KPIs are “higher is better”, others “lower
+is better”</li>
+<li>KRA weightage is factored in for weighted scores</li>
+<li>Latest logged entry or quarterly achieved value is used as current
+value</li>
+</ul>
+<hr />
+<h2 id="multi-plant-structure">10. Multi-Plant Structure</h2>
+<p>Bony Polymers operates multiple plants. Each is a
+<strong>unit</strong> in the system.</p>
+<table>
+<thead>
+<tr>
+<th>Plant</th>
+<th>Unit ID</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Bony 37P</td>
+<td>bony-37p</td>
+</tr>
+<tr>
+<td>Bony 77</td>
+<td>bony-77</td>
+</tr>
+<tr>
+<td>Bony 24</td>
+<td>bony-24</td>
+</tr>
+<tr>
+<td>Maneshar</td>
+<td>bony-maneshar</td>
+</tr>
+<tr>
+<td>(+ more plants)</td>
+<td>…</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>Admin</strong> can switch between any plant</li>
+<li><strong>Manager / Employee</strong> see data scoped to their plant
+and role</li>
+<li>Primary demo data is loaded for <strong>Bony 37P</strong></li>
+</ul>
+<hr />
+<h2 id="technical-overview">11. Technical Overview</h2>
+<h3 id="architecture-simple">Architecture (simple)</h3>
+<pre><code>Browser (User)
+    ↓
+Next.js App (pages + API)
+    ↓
+Business Logic (src/lib)
+    ↓
+Database (SQLite via Prisma)
+    ↓
+External: OpenAI (chat, voice, TTS)</code></pre>
+<h3 id="key-folders">Key folders</h3>
+<pre><code>nova/
+├── prisma/          Database schema + seed data
+├── scripts/         Import tools (Excel, KRA workbooks)
+├── src/
+│   ├── app/         Pages and API routes
+│   ├── components/  UI components
+│   ├── hooks/       Voice / Maya hooks
+│   └── lib/         Business logic
+└── public/          Logos and assets</code></pre>
+<h3 id="demo-login-accounts">Demo login accounts</h3>
+<table>
+<thead>
+<tr>
+<th>Role</th>
+<th>User ID</th>
+<th>Password</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Admin</td>
+<td>demo-admin</td>
+<td>admin123</td>
+</tr>
+<tr>
+<td>Manager (Store)</td>
+<td>demo-manager</td>
+<td>praveen123</td>
+</tr>
+<tr>
+<td>Manager (IT)</td>
+<td>demo-it-manager</td>
+<td>bhupesh123</td>
+</tr>
+<tr>
+<td>Employee</td>
+<td>demo-employee</td>
+<td>mahima123</td>
+</tr>
+<tr>
+<td>Employee</td>
+<td>demo-sudha</td>
+<td>sudha123</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="setup-environment">12. Setup &amp; Environment</h2>
+<h3 id="run-locally">Run locally</h3>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> nova</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> install</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> run db:seed    <span class="co"># Load demo data</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> run dev        <span class="co"># Start at http://localhost:3000</span></span></code></pre></div>
+<h3 id="environment-variables">Environment variables</h3>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Required</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>DATABASE_URL</td>
+<td>Yes</td>
+<td>SQLite database path</td>
+</tr>
+<tr>
+<td>OPENAI_API_KEY</td>
+<td>Optional</td>
+<td>Maya AI, voice, TTS</td>
+</tr>
+<tr>
+<td>OPENAI_MODEL</td>
+<td>Optional</td>
+<td>Default: gpt-4o-mini</td>
+</tr>
+<tr>
+<td>NEXT_PUBLIC_APP_URL</td>
+<td>Optional</td>
+<td>App base URL</td>
+</tr>
+</tbody>
+</table>
+<h3 id="import-commands">Import commands</h3>
+<div class="sourceCode" id="cb11"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> run import:37p        <span class="co"># Import 37P employee roster</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> run import:kra        <span class="co"># Import KRA employee workbook</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> run import:plant-kra  <span class="co"># Import plant-level KRA workbook</span></span></code></pre></div>
+<hr />
+<h2 id="project-status">13. Project Status</h2>
+<table>
+<thead>
+<tr>
+<th>Area</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>KPI dashboard, tracking, library</td>
+<td>✅ Complete</td>
+</tr>
+<tr>
+<td>Multi-unit org structure</td>
+<td>✅ Complete</td>
+</tr>
+<tr>
+<td>Department &amp; employee masters</td>
+<td>✅ Complete</td>
+</tr>
+<tr>
+<td>Data import (Excel/CSV/seed)</td>
+<td>✅ Complete</td>
+</tr>
+<tr>
+<td>Maya AI text chat + reports</td>
+<td>✅ Complete</td>
+</tr>
+<tr>
+<td>Maya voice (Hey Maya)</td>
+<td>✅ Working</td>
+</tr>
+<tr>
+<td>Role-based access control</td>
+<td>✅ Complete</td>
+</tr>
+<tr>
+<td>Performance reviews, 360°, goals</td>
+<td>✅ UI + API (demo data)</td>
+</tr>
+<tr>
+<td>HRIS / Teams integrations</td>
+<td>⚠️ Partial (stubs)</td>
+</tr>
+<tr>
+<td>Production auth (OAuth)</td>
+<td>❌ Demo login only</td>
+</tr>
+<tr>
+<td>PostgreSQL / production deploy</td>
+<td>❌ SQLite dev only</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="one-line-summary">One-Line Summary</h2>
+<table>
+<colgroup>
+<col style="width: 40%" />
+<col style="width: 60%" />
+</colgroup>
+<thead>
+<tr>
+<th>Role</th>
+<th>Summary</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Admin</strong></td>
+<td>Sets up data, sees everything, runs HR, asks Maya anything</td>
+</tr>
+<tr>
+<td><strong>Manager</strong></td>
+<td>Monitors their team, updates team KPIs, views team reports</td>
+</tr>
+<tr>
+<td><strong>Employee</strong></td>
+<td>Updates only their own KPIs and completes their reviews</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><em>Document generated for Bony Polymers — Bony KPI
+Project</em><br />
+<em>Path: <code>/nova/BONY_KPI_PROJECT_GUIDE.md</code></em></p>
+</body>
+</html>
