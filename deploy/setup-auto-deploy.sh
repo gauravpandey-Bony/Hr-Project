@@ -19,7 +19,11 @@ git checkout main
 git pull origin main
 
 CRON_LINE="*/2 * * * * APP_DIR=$APP_DIR BACKUP_ROOT=$BACKUP_ROOT $APP_DIR/deploy/auto-sync.sh"
-( crontab -l 2>/dev/null | grep -v "deploy/auto-sync.sh" || true; echo "$CRON_LINE" ) | crontab -
+TMP_CRON="$(mktemp)"
+crontab -l 2>/dev/null | grep -v "deploy/auto-sync.sh" >"$TMP_CRON" || true
+echo "$CRON_LINE" >>"$TMP_CRON"
+crontab "$TMP_CRON"
+rm -f "$TMP_CRON"
 
 touch /var/log/hr-project-auto-deploy.log
 chmod 644 /var/log/hr-project-auto-deploy.log
