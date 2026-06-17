@@ -8,7 +8,7 @@ import {
   OFF_TARGET_THRESHOLD,
   type KpiStatus,
 } from "@/lib/kpi";
-import { parseQuarterNumber, parseQuarterTarget } from "@/lib/kpi-quarters";
+import { parseQuarterNumber } from "@/lib/kpi-quarters";
 
 export type QuarterFilter = "all" | "annual" | "q1" | "q2" | "q3" | "q4";
 

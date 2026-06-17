@@ -35,7 +35,7 @@ export async function GET(request: Request) {
   const buffer = departmentMasterXlsxBuffer(departments);
   const filename = departmentMasterFilename(workspace.unitId);
 
-  return new NextResponse(buffer, {
+  return new NextResponse(new Uint8Array(buffer), {
     headers: {
       "Content-Type":
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

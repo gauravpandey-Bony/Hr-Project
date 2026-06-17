@@ -174,19 +174,6 @@ export function parseEmployeeCsv(text: string): {
   return { rows, errors };
 }
 
-function parseHeaderBlock(text: string): Partial<EmployeeImportRow> {
-  const out: Partial<EmployeeImportRow> = {};
-  const dept = text.match(/Department:\s*([^\r\n]+)/i);
-  const desig = text.match(/Designation:\s*([^\r\n]+)/i);
-  const loc = text.match(/Location:\s*([^\r\n]+)/i);
-  const doj = text.match(/DOJ:\s*([^\r\n]+)/i);
-  if (dept) out.department = dept[1].trim().replace(/\.$/, "");
-  if (desig) out.designation = desig[1].trim();
-  if (loc) out.location = loc[1].trim();
-  if (doj) out.doj = doj[1].trim();
-  return out;
-}
-
 /** Multi-sheet KRA Excel (New KRA KPI) → employees with full details */
 export function parseEmployeeKraWorkbook(buffer: ArrayBuffer): {
   rows: EmployeeImportRow[];

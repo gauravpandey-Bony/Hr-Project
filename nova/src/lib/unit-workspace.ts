@@ -60,7 +60,7 @@ export function resolveUserPlantUnitKeySync(userId: string): string {
   return "Bony 37P";
 }
 
-export function employeeDashboardPathForUser(userId: string): string {
+export function employeeDashboardPathForUser(_userId: string): string {
   return `/dashboard/units/${DATA_UNIT_ID}`;
 }
 

@@ -4,7 +4,7 @@ import { RankBadge } from "./rank-badge";
 import { StatusPill } from "@/components/kpi/kpi-card";
 import { formatKpiValue, type KpiStatus } from "@/lib/kpi";
 import { cn } from "@/lib/utils";
-import { ArrowRight, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { ArrowRight, TrendingUp, TrendingDown } from "lucide-react";
 
 type RankedKpi = {
   id: string;

@@ -3,7 +3,7 @@ import type { EmployeeImportRow } from "./import";
 import { normalizeRosterDepartment } from "./37p-roster";
 import { normalizeKraCellValue } from "@/lib/kra/target-format";
 import { readNumericWeightage, readSheetCell } from "./excel-cell-read";
-import { parseNumericTarget, resolveImportTargetValue } from "./parse-numeric-target";
+import { resolveImportTargetValue } from "./parse-numeric-target";
 
 export type KraWorkbookEmployee = EmployeeImportRow & {
   sheetName: string;
@@ -137,16 +137,6 @@ function normalizeUnit(uom: string): string {
   if (/minute|hour|day/i.test(u)) return "Hours";
   if (/number|nos|count/i.test(u)) return "Count";
   return u || "%";
-}
-
-function perspectiveToCategory(perspective: string): string {
-  const p = perspective.toLowerCase();
-  if (p.includes("finance")) return "Finance";
-  if (p.includes("quality")) return "Quality";
-  if (p.includes("user")) return "Process";
-  if (p.includes("security")) return "Process";
-  if (p.includes("process")) return "Process";
-  return "IT";
 }
 
 function cellStr(v: unknown): string {

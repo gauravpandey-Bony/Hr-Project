@@ -293,7 +293,7 @@ export function KraSheetEditable({
       <div className="space-y-4 p-4 sm:p-5">
         {kpis.map((kpi, idx) => {
           const d = drafts[kpi.id] ?? kpiToDraft(kpi);
-          const { current, progressNum: progress, status } = evaluateKpiCurrent(kpi);
+          const { progressNum: progress, status } = evaluateKpiCurrent(kpi);
           const busy = savingId === kpi.id;
 
           return (

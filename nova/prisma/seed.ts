@@ -656,7 +656,7 @@ async function main() {
           organizationId: org.id,
           name: d.name,
           headName: "headName" in d ? (d.headName || null) : null,
-          location: d.location ?? "Bony Polymers 37-P",
+          location: "location" in d ? (d.location ?? "Bony Polymers 37-P") : "Bony Polymers 37-P",
           kraSheetId: d.kraSheetId,
           sortOrder: d.sortOrder,
         },
