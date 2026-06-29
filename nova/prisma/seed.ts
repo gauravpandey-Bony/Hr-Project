@@ -1,14 +1,12 @@
 import { PrismaClient } from "@prisma/client";
 import { ALL_PLANT_KPIS, PLANT_UNIT } from "../src/lib/plant-37p";
-import { DEFAULT_DEPARTMENTS, DEFAULT_EMPLOYEES } from "../src/lib/master-defaults";
+import { DEFAULT_DEPARTMENTS } from "../src/lib/master-defaults";
 import { sync37pFromDefaultFile } from "../src/lib/masters/sync-37p";
-import { syncKraFromDefaultFile } from "../src/lib/masters/sync-kra-workbook";
 import { syncPlantKraFromDefaultFile } from "../src/lib/masters/sync-plant-kra-workbook";
 import {
   ensureAllKpisHaveQuarterTargets,
   syncAllQuarterTargetsToEntries,
 } from "../src/lib/kpi-quarters";
-import { ensureAllKpisHaveQuarterTargets, syncAllQuarterTargetsToEntries } from "../src/lib/kpi-quarters";
 import { hashPassword } from "../src/lib/auth/password";
 import { SEED_USERS, seedPasswordForUser } from "./seed-users";
 import { COMPANY } from "../src/lib/company";
@@ -99,8 +97,8 @@ const DEPT_KRA_META: Record<
   production: { kpiLevel: "DEPARTMENT", category: "Production", showPerspective: false },
   qa: { kpiLevel: "DEPARTMENT", category: "Quality", showPerspective: false },
   maintenance: { kpiLevel: "DEPARTMENT", category: "Maintenance", showPerspective: false },
-  store: { kpiLevel: "INDIVIDUAL", category: "Process", showPerspective: true },
-  billing: { kpiLevel: "INDIVIDUAL", category: "Process", showPerspective: true },
+  store: { kpiLevel: "DEPARTMENT", category: "Process", showPerspective: true },
+  billing: { kpiLevel: "DEPARTMENT", category: "Process", showPerspective: true },
   it: { kpiLevel: "DEPARTMENT", category: "IT", showPerspective: true },
 };
 
@@ -545,21 +543,6 @@ async function main() {
     }
   }
 
-  await db.kpi.updateMany({
-    where: { organizationId: org.id, ownerName: "Ms. Mahima" },
-    data: { ownerId: employee.id },
-  });
-
-  await db.kpi.updateMany({
-    where: { organizationId: org.id, ownerName: "Sikandar Khan" },
-    data: { ownerId: sikandarKhan.id },
-  });
-
-  await db.kpi.updateMany({
-    where: { organizationId: org.id, ownerName: "Ms. Sudha Jetli" },
-    data: { ownerId: sudha.id },
-  });
-
   // Masters: 37P roster departments + legacy defaults
   const allDeptDefs = [
     ...ROSTER_DEPARTMENTS,
@@ -604,8 +587,12 @@ async function main() {
     where: { organizationId: org.id },
   });
 
+  await db.kpi.deleteMany({
+    where: { organizationId: org.id, kpiLevel: "INDIVIDUAL" },
+  });
+  await db.employeeMaster.deleteMany({ where: { organizationId: org.id } });
+
   const rosterSync = await sync37pFromDefaultFile(db, org.id);
-  const kraSync = await syncKraFromDefaultFile(db, org.id, undefined, admin.id);
   const plantKraSync = await syncPlantKraFromDefaultFile(
     db,
     org.id,
@@ -613,32 +600,6 @@ async function main() {
     admin.id,
     rajKumar.id
   );
-  let empCount = kraSync.employeeCount || rosterSync.employeeCount;
-  if (empCount === 0) {
-    const deptRows = await db.departmentMaster.findMany({
-      where: { organizationId: org.id },
-    });
-    const deptByName = new Map(deptRows.map((x) => [x.name, x.id]));
-    for (const e of DEFAULT_EMPLOYEES) {
-      const departmentId = deptByName.get(e.department);
-      await db.employeeMaster.create({
-        data: {
-          organizationId: org.id,
-          name: e.name,
-          designation: e.designation,
-          departmentId: departmentId ?? null,
-          department: e.department,
-          location: e.location,
-          doj: e.doj,
-          ecn: e.ecn || null,
-          managerName: e.managerName || null,
-          sortOrder: e.sortOrder,
-          isActive: true,
-        },
-      });
-    }
-    empCount = DEFAULT_EMPLOYEES.length;
-  }
 
   const quarterTargetsBackfilled = await ensureAllKpisHaveQuarterTargets(org.id);
   const quarterEntriesSynced = await syncAllQuarterTargetsToEntries(org.id, admin.id);
@@ -648,11 +609,9 @@ async function main() {
     admin: admin.email,
     kpis: ALL_PLANT_KPIS.length,
     departments: deptCount,
-    employees: empCount,
     quarterTargetsBackfilled,
     quarterEntriesSynced,
     roster37p: rosterSync,
-    kraWorkbook: kraSync,
     plantKraWorkbook: plantKraSync,
   });
 }

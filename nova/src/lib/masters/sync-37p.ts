@@ -171,27 +171,15 @@ export async function sync37pRoster(
   const { deptByName, created: departmentsCreated, updated: departmentsUpdated } =
     await upsertDepartments(db, organizationId);
 
-  const { created: employeesCreated, updated: employeesUpdated } = await upsertEmployees(
-    db,
-    organizationId,
-    rows,
-    deptByName
-  );
-
-  await dedupeLegacyEmployees(db, organizationId, rows);
-
   const kpisLinked = await linkKpisToDepartments(db, organizationId);
-  const employeeCount = await db.employeeMaster.count({
-    where: { organizationId, isActive: true },
-  });
 
   return {
     departmentsCreated,
     departmentsUpdated,
-    employeesCreated,
-    employeesUpdated,
+    employeesCreated: 0,
+    employeesUpdated: 0,
     kpisLinked,
-    employeeCount,
+    employeeCount: 0,
     errors: [],
   };
 }

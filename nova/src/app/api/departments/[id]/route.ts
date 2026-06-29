@@ -34,13 +34,6 @@ export async function PATCH(
     data: body,
   });
 
-  if (body.name && body.name !== existing.name) {
-    await db.employeeMaster.updateMany({
-      where: { departmentId: params.id, organizationId: user.organizationId },
-      data: { department: body.name },
-    });
-  }
-
   return NextResponse.json(department);
 }
 

@@ -691,51 +691,11 @@ async function employeeMatchesUnit(
 }
 
 export async function tryEmployeeReportBlocks(
-  message: string,
-  organizationId: string,
-  requesterRole: UserRole,
-  plantUnitKey?: string | null,
-  unitName?: string | null
+  _message: string,
+  _organizationId: string,
+  _requesterRole: UserRole,
+  _plantUnitKey?: string | null,
+  _unitName?: string | null
 ): Promise<ChatBlock[] | null> {
-  if (requesterRole === "EMPLOYEE") return null;
-
-  if (!looksLikeEmployeeReportQuery(message)) return null;
-
-  const resolved = await resolveEmployeeFromQuery(message, organizationId);
-  if (!resolved) {
-    return suggestSimilarEmployees(
-      message,
-      organizationId,
-      requesterRole === "ADMIN" ? null : plantUnitKey
-    );
-  }
-
-  if (plantUnitKey && requesterRole !== "ADMIN" && !(await employeeMatchesUnit(organizationId, resolved, plantUnitKey))) {
-    const name = resolvedOwnerName(resolved);
-    return [
-      {
-        type: "text",
-        content: `**${name}** is not in **${unitName ?? plantUnitKey}**. Maya only shows employees and KPIs for your current unit workspace.`,
-      },
-    ];
-  }
-
-  const dashboard = await buildEmployeeDashboard(
-    organizationId,
-    resolved,
-    requesterRole === "ADMIN" ? null : plantUnitKey
-  );
-  const name = dashboard.employee.name;
-  const total = dashboard.stats[0]?.value ?? "0";
-  const onTrack = dashboard.stats[1]?.value ?? "0";
-
-  const intro =
-    Number(total) > 0
-      ? `**${name}** — full performance report: ${total} KPIs, **${onTrack}** on track.`
-      : `**${name}** found (ECN: ${dashboard.employee.ecn ?? "—"}). No KPIs assigned yet — profile below.`;
-
-  return [
-    { type: "text", content: `${intro} Charts and details are below.` },
-    { type: "employee_dashboard", data: dashboard },
-  ];
+  return null;
 }

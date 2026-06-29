@@ -20,7 +20,7 @@ export async function fetchKraSheets(
   });
 
   return departments
-    .filter((d) => d.kraSheetId)
+    .filter((d) => d.kraSheetId && d.kpiLevel !== "INDIVIDUAL")
     .map((d) => ({
       id: d.kraSheetId!,
       label: d.name,

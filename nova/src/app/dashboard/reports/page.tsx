@@ -86,24 +86,6 @@ export default async function ReportsPage({
               <Sparkles className="h-4 w-4" />
               AI insights
             </Link>
-            {user.role === "ADMIN" && (
-              <Link
-                href={`/dashboard/reports/employee${unitQuery}`}
-                className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-5 py-3 text-sm font-semibold backdrop-blur-md transition hover:bg-white/20"
-              >
-                <BarChart3 className="h-4 w-4" />
-                Employee reports
-              </Link>
-            )}
-            {user.role === "MANAGER" && (
-              <Link
-                href="/dashboard/team/reports"
-                className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-5 py-3 text-sm font-semibold backdrop-blur-md transition hover:bg-white/20"
-              >
-                <BarChart3 className="h-4 w-4" />
-                Team reports
-              </Link>
-            )}
             <Link
               href={workspace.unitId ? appendUnitQueryForAdmin("/dashboard/kpis", workspace.unitId) : "/dashboard/kpis"}
               className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-5 py-3 text-sm font-semibold backdrop-blur-md transition hover:bg-white/20"
