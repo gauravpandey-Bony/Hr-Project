@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2, Save, Loader2, Users, Upload, BarChart3, Download } from "lucide-react";
+import { Plus, Trash2, Save, Loader2, Users, Upload, BarChart3, Download, UserCircle } from "lucide-react";
 import Link from "next/link";
 import { UploadMasterModal } from "./upload-master-modal";
 import { toast } from "sonner";
@@ -353,8 +353,19 @@ export function EmployeeMasterClient({
                     <TableCell className={MASTER_CELL}>
                       <div className="flex gap-1">
                         <Link
-                          href={`/dashboard/reports/employee?q=${encodeURIComponent(d.ecn.trim() || d.name.trim())}`}
-                          title="Full KPI report"
+                          href={
+                            unitId
+                              ? `/dashboard/masters/employees/${row.id}?unit=${encodeURIComponent(unitId)}`
+                              : `/dashboard/masters/employees/${row.id}`
+                          }
+                          title="Employee profile"
+                          className="rounded-md p-1.5 text-sky-600 hover:bg-sky-500/10"
+                        >
+                          <UserCircle className="h-4 w-4" />
+                        </Link>
+                        <Link
+                          href={`/dashboard/reports/quarterly${unitId ? `?unit=${encodeURIComponent(unitId)}` : ""}`}
+                          title="Quarterly KPI report"
                           className="rounded-md p-1.5 text-violet-600 hover:bg-violet-500/10"
                         >
                           <BarChart3 className="h-4 w-4" />

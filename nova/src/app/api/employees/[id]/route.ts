@@ -11,11 +11,37 @@ const updateSchema = z.object({
   department: z.string().optional().nullable(),
   location: z.string().optional().nullable(),
   doj: z.string().optional().nullable(),
+  dob: z.string().optional().nullable(),
   ecn: z.string().optional().nullable(),
+  email: z.string().optional().nullable(),
+  phone: z.string().optional().nullable(),
+  grade: z.string().optional().nullable(),
+  lastIncrementPercent: z.number().min(0).max(2).optional().nullable(),
+  lastCtc: z.string().optional().nullable(),
   managerName: z.string().optional().nullable(),
   sortOrder: z.number().int().optional(),
   isActive: z.boolean().optional(),
 });
+
+export async function GET(
+  _request: Request,
+  { params }: { params: { id: string } }
+) {
+  const user = await getCurrentUser();
+  if (!user || user.role === "EMPLOYEE") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const employee = await db.employeeMaster.findFirst({
+    where: { id: params.id, organizationId: user.organizationId },
+    include: { dept: { select: { id: true, name: true } } },
+  });
+  if (!employee) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  return NextResponse.json(employee);
+}
 
 export async function PATCH(
   request: Request,

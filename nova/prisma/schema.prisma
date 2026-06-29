@@ -495,7 +495,13 @@ model EmployeeMaster {
   department     String?
   location       String?  @default("Bony Polymers")
   doj            String?
+  dob            String?
   ecn            String?
+  email          String?
+  phone          String?
+  grade          String?
+  lastIncrementPercent Float?
+  lastCtc        String?
   managerName    String?
   sortOrder      Int      @default(0)
   isActive       Boolean  @default(true)
