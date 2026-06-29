@@ -33,7 +33,8 @@ async function ensureDepartments(
   db: PrismaClient,
   organizationId: string,
   employees: KraWorkbookEmployee[],
-  defaultLocation = "Bony Polymers"
+  defaultLocation = "Bony Polymers",
+  plantUnitKey?: string | null
 ): Promise<{ deptByName: Map<string, string>; created: number; updated: number }> {
   const deptByName = new Map<string, string>();
   let created = 0;
@@ -47,8 +48,11 @@ async function ensureDepartments(
     extraDepts.set(masterName, { kraSheetId });
   }
 
+  const isBonyImport =
+    !plantUnitKey?.trim() || /bony/i.test(plantUnitKey);
+
   const allDefs = [
-    ...ROSTER_DEPARTMENTS,
+    ...(isBonyImport ? ROSTER_DEPARTMENTS : []),
     ...[...extraDepts.entries()].map(([name, meta], i) => ({
       name,
       kraSheetId: meta.kraSheetId,
@@ -59,34 +63,45 @@ async function ensureDepartments(
 
   const seen = new Set<string>();
   for (const d of allDefs) {
-    if (seen.has(d.name)) continue;
-    seen.add(d.name);
+    const loc = d.location ?? defaultLocation;
+    const dedupeKey = `${d.name}::${loc}`;
+    if (seen.has(dedupeKey)) continue;
+    seen.add(dedupeKey);
 
-    const existing = await db.departmentMaster.findFirst({
-      where: { organizationId, name: d.name },
+    let existing = await db.departmentMaster.findFirst({
+      where: { organizationId, name: d.name, location: loc },
     });
+    if (!existing && isBonyImport) {
+      existing = await db.departmentMaster.findFirst({
+        where: { organizationId, name: d.name },
+      });
+    }
+
     if (existing) {
       await db.departmentMaster.update({
         where: { id: existing.id },
         data: {
           kraSheetId: d.kraSheetId ?? existing.kraSheetId,
+          location: plantUnitKey?.trim() ? loc : existing.location ?? loc,
           isActive: true,
         },
       });
       deptByName.set(d.name, existing.id);
+      deptByName.set(`${d.name}::${loc}`, existing.id);
       updated++;
     } else {
       const row = await db.departmentMaster.create({
         data: {
           organizationId,
           name: d.name,
-          location: d.location ?? "Bony Polymers",
+          location: loc,
           kraSheetId: d.kraSheetId ?? null,
           sortOrder: d.sortOrder ?? 0,
           isActive: true,
         },
       });
       deptByName.set(d.name, row.id);
+      deptByName.set(`${d.name}::${loc}`, row.id);
       created++;
     }
   }
@@ -105,7 +120,11 @@ async function upsertEmployees(
   let updated = 0;
 
   for (const row of employees) {
-    const departmentId = deptByName.get(row.department) ?? null;
+    const loc = defaultLocation?.trim() || "";
+    const departmentId =
+      deptByName.get(`${row.department}::${loc}`) ??
+      deptByName.get(row.department) ??
+      null;
     const ecnKey = isValidKraEcn(row.ecn) ? row.ecn!.trim() : null;
     const existing = ecnKey
       ? await db.employeeMaster.findFirst({
@@ -294,7 +313,13 @@ export async function syncKraWorkbook(
   }
 
   const { deptByName, created: departmentsCreated, updated: departmentsUpdated } =
-    await ensureDepartments(db, organizationId, employees, defaultLocation);
+    await ensureDepartments(
+      db,
+      organizationId,
+      employees,
+      defaultLocation,
+      plantUnitKey
+    );
 
   const { created: employeesCreated, updated: employeesUpdated } =
     await upsertEmployees(db, organizationId, employees, deptByName, defaultLocation);

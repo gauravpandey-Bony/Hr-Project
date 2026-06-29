@@ -482,7 +482,7 @@ model DepartmentMaster {
   organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   employees    EmployeeMaster[]
 
-  @@unique([organizationId, name])
+  @@unique([organizationId, name, location])
   @@index([organizationId])
 }
 

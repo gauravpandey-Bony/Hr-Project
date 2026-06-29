@@ -20,18 +20,39 @@ export function plantDataScope(
   };
 }
 
+/** Bony 37P keeps legacy rows with blank plant/location; other units are strict. */
+export function plantScopeIncludesUnassigned(scope: PlantDataScope): boolean {
+  const key = scope.plantUnitKey.toLowerCase();
+  return (
+    key.includes("bony") ||
+    key.includes("37p") ||
+    scope.kpiPlantAliases.some((a) => /bony|37p/i.test(a))
+  );
+}
+
+function locationOrClauses(
+  aliases: string[]
+): Prisma.EmployeeMasterWhereInput[] {
+  return aliases.map((location) => ({ location }));
+}
+
 export function employeeMasterWhereForPlant(
   organizationId: string,
   scope: PlantDataScope | string
 ): Prisma.EmployeeMasterWhereInput {
   const resolved = typeof scope === "string" ? plantDataScope(scope) : scope;
+  const locationMatches = locationOrClauses(resolved.locationAliases);
+
+  if (plantScopeIncludesUnassigned(resolved)) {
+    return {
+      organizationId,
+      OR: [...locationMatches, { location: null }, { location: "" }],
+    };
+  }
+
   return {
     organizationId,
-    OR: [
-      ...resolved.locationAliases.map((location) => ({ location })),
-      { location: null },
-      { location: "" },
-    ],
+    OR: locationMatches,
   };
 }
 
@@ -40,9 +61,18 @@ export function departmentMasterWhereForPlant(
   scope: PlantDataScope | string
 ): Prisma.DepartmentMasterWhereInput {
   const resolved = typeof scope === "string" ? plantDataScope(scope) : scope;
+  const locationMatches = locationOrClauses(resolved.locationAliases);
+
+  if (plantScopeIncludesUnassigned(resolved)) {
+    return {
+      organizationId,
+      OR: [...locationMatches, { location: null }, { location: "" }],
+    };
+  }
+
   return {
     organizationId,
-    OR: resolved.locationAliases.map((location) => ({ location })),
+    OR: locationMatches,
   };
 }
 
@@ -50,9 +80,14 @@ export function kpiWhereForPlantScope(
   scope: PlantDataScope
 ): Pick<Prisma.KpiWhereInput, "plantUnit" | "OR"> {
   const plantMatches = scope.kpiPlantAliases.map((plantUnit) => ({ plantUnit }));
-  return {
-    OR: [...plantMatches, { plantUnit: null }, { plantUnit: "" }],
-  };
+
+  if (plantScopeIncludesUnassigned(scope)) {
+    return {
+      OR: [...plantMatches, { plantUnit: null }, { plantUnit: "" }],
+    };
+  }
+
+  return { OR: plantMatches };
 }
 
 export function resolveUserPlantUnitKeySync(_userId: string): string {

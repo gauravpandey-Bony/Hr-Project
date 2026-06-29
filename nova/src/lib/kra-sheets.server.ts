@@ -4,6 +4,11 @@ import type { Kpi } from "@prisma/client";
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import type { SheetMeta } from "@/lib/kra-sheets";
+import {
+  departmentMasterWhereForPlant,
+  employeeMasterWhereForPlant,
+  type PlantDataScope,
+} from "@/lib/unit-workspace";
 
 export type KraSheetFromDb = {
   id: string;
@@ -12,33 +17,85 @@ export type KraSheetFromDb = {
   meta: SheetMeta;
 };
 
+function slugDept(name: string): string {
+  return (
+    name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "") || "general"
+  );
+}
+
 export async function fetchKraSheets(
-  organizationId: string
+  organizationId: string,
+  scope?: PlantDataScope | null
 ): Promise<KraSheetFromDb[]> {
-  const departments = await db.departmentMaster.findMany({
-    where: { organizationId, isActive: true },
-    orderBy: { sortOrder: "asc" },
-  });
+  const deptWhere: Prisma.DepartmentMasterWhereInput = scope
+    ? { ...departmentMasterWhereForPlant(organizationId, scope), isActive: true }
+    : { organizationId, isActive: true };
+
+  const [departments, scopedEmployees] = await Promise.all([
+    db.departmentMaster.findMany({
+      where: deptWhere,
+      orderBy: { sortOrder: "asc" },
+    }),
+    scope
+      ? db.employeeMaster.findMany({
+          where: {
+            organizationId,
+            isActive: true,
+            ...employeeMasterWhereForPlant(organizationId, scope),
+          },
+          select: { department: true },
+        })
+      : Promise.resolve([]),
+  ]);
+
+  const deptNamesFromStaff = new Set(
+    scopedEmployees
+      .map((e) => e.department?.trim())
+      .filter((n): n is string => Boolean(n))
+  );
+
+  const deptByName = new Map(departments.map((d) => [d.name, d]));
 
   const withSheetId = departments.filter(
     (d) => d.kraSheetId && d.kpiLevel !== "INDIVIDUAL"
   );
 
-  const source =
+  let source =
     withSheetId.length > 0
       ? withSheetId
       : departments.filter((d) => d.kpiLevel !== "INDIVIDUAL");
+
+  for (const name of deptNamesFromStaff) {
+    if (!deptByName.has(name)) {
+      source = [
+        ...source,
+        {
+          id: `virtual-${slugDept(name)}`,
+          organizationId,
+          name,
+          headName: null,
+          location: scope?.plantUnitKey ?? null,
+          kraSheetId: slugDept(name),
+          kpiLevel: "INDIVIDUAL",
+          category: name,
+          showPerspective: true,
+          sortOrder: 100,
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ];
+    }
+  }
 
   const seen = new Set<string>();
   const sheets: KraSheetFromDb[] = [];
 
   for (const d of source) {
-    const id =
-      d.kraSheetId ??
-      (d.name
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-|-$/g, "") || "general");
+    const id = d.kraSheetId ?? slugDept(d.name);
     if (seen.has(id)) continue;
     seen.add(id);
     sheets.push({
@@ -54,10 +111,24 @@ export async function fetchKraSheets(
     });
   }
 
-  const employees = await db.employeeMaster.findMany({
-    where: { organizationId, isActive: true },
-    orderBy: [{ department: "asc" }, { name: "asc" }],
-  });
+  if (sheets.length === 0 && deptNamesFromStaff.size > 0) {
+    for (const name of [...deptNamesFromStaff].sort()) {
+      const id = slugDept(name);
+      if (seen.has(id)) continue;
+      seen.add(id);
+      sheets.push({
+        id,
+        label: name,
+        department: name,
+        meta: {
+          kpiLevel: "INDIVIDUAL",
+          department: name,
+          category: name,
+          showPerspective: true,
+        },
+      });
+    }
+  }
 
   return sheets;
 }
