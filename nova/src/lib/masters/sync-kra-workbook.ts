@@ -7,6 +7,7 @@ import {
   normalizeKraDepartment,
   type KraWorkbookEmployee,
   type KraWorkbookKpi,
+  type KraWorkbookParseResult,
 } from "./kra-workbook";
 import { weightageFraction } from "@/lib/kra/weightage";
 import { isLegacyBony37pPlant } from "@/lib/unit-workspace";
@@ -21,6 +22,7 @@ export type SyncKraWorkbookOptions = {
   location?: string | null;
   sourceFileName?: string | null;
   departmentOverrides?: Record<string, string>;
+  preParsed?: KraWorkbookParseResult;
 };
 
 export type SyncKraWorkbookResult = {
@@ -304,10 +306,9 @@ export async function syncKraWorkbook(
 ): Promise<SyncKraWorkbookResult & { parseErrors: string[] }> {
   const plantUnitKey = options?.plantUnitKey ?? null;
   const defaultLocation = options?.location ?? (plantUnitKey || "Bony Polymers");
-  const { employees, kpis, errors } = parseKraWorkbook(
-    buffer,
-    options?.sourceFileName ?? undefined
-  );
+  const { employees, kpis, errors } =
+    options?.preParsed ??
+    parseKraWorkbook(buffer, options?.sourceFileName ?? undefined);
   applyDepartmentOverrides(employees, kpis, options?.departmentOverrides ?? {});
   if (!employees.length) {
     return {

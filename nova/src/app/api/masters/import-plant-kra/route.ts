@@ -1,16 +1,13 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
-import { isKraEmployeeWorkbook, parseKraWorkbook } from "@/lib/masters/kra-workbook";
+import { parseKraWorkbook, isValidKraEcn } from "@/lib/masters/kra-workbook";
 import { previewKraUpload, parseDepartmentOverrides } from "@/lib/masters/preview-kra-upload";
-import { previewKraWorkbookUpload } from "@/lib/masters/preview-employee-upload";
+import { findEmployeeEcnConflicts } from "@/lib/masters/preview-employee-upload";
 import { syncKraWorkbook } from "@/lib/masters/sync-kra-workbook";
 import { syncPlantKraWorkbook } from "@/lib/masters/sync-plant-kra-workbook";
 
-function isEmployeeKraBuffer(buffer: ArrayBuffer, sourceFileName?: string): boolean {
-  if (isKraEmployeeWorkbook(buffer)) return true;
-  return parseKraWorkbook(buffer, sourceFileName).employees.length > 0;
-}
+export const maxDuration = 120;
 
 export async function POST(request: Request) {
   const user = await getCurrentUser();
@@ -37,21 +34,27 @@ export async function POST(request: Request) {
   const skipDepartmentCheck = formData.get("skipDepartmentCheck") === "true";
   const departmentOverrides = parseDepartmentOverrides(formData.get("departmentOverrides"));
   const plantUnitKey = String(formData.get("plantUnitKey") ?? "").trim() || null;
-  const employeeKra = isEmployeeKraBuffer(buffer, file.name);
+
+  const parsed = parseKraWorkbook(buffer, file.name);
+  const employeeKra = parsed.employees.length > 0;
   const syncOptions = employeeKra
     ? {
         ...(plantUnitKey
           ? { plantUnitKey, location: plantUnitKey, sourceFileName: file.name }
           : { sourceFileName: file.name }),
         departmentOverrides,
+        preParsed: parsed,
       }
     : undefined;
 
   if (employeeKra && !skipDepartmentCheck && !Object.keys(departmentOverrides).length) {
-    const deptPreview = await previewKraUpload(db, user.organizationId, buffer, {
-      plantUnitKey,
-      sourceFileName: file.name,
-    });
+    const deptPreview = await previewKraUpload(
+      db,
+      user.organizationId,
+      buffer,
+      { plantUnitKey, sourceFileName: file.name },
+      parsed
+    );
     if (deptPreview.needsDepartmentPick) {
       return NextResponse.json(
         {
@@ -65,18 +68,26 @@ export async function POST(request: Request) {
   }
 
   if (employeeKra && !confirmOverwrite) {
-    const preview = await previewKraWorkbookUpload(
+    const conflicts = await findEmployeeEcnConflicts(
       db,
       user.organizationId,
-      buffer,
-      file.name
+      parsed.employees
     );
-    if (preview.requiresConfirmation) {
+    if (conflicts.length) {
+      const withEcn = parsed.employees.filter((e) => isValidKraEcn(e.ecn));
+      const updateCount = conflicts.length;
+      const newCount =
+        withEcn.length -
+        updateCount +
+        parsed.employees.filter((e) => !isValidKraEcn(e.ecn)).length;
+
       return NextResponse.json(
         {
-          ...preview,
-          error: "Existing Employee ID (ECN) found. Confirm before updating.",
+          conflicts,
+          newCount,
+          updateCount,
           requiresConfirmation: true,
+          error: "Existing Employee ID (ECN) found. Confirm before updating.",
         },
         { status: 409 }
       );

@@ -2,11 +2,11 @@ import type { PrismaClient } from "@prisma/client";
 import { departmentMasterWhereForPlant, plantDataScope } from "@/lib/unit-workspace";
 import {
   departmentNameKey,
-  findExistingDepartmentMaster,
   normalizeDepartmentMasterName,
 } from "./department-master-sync";
 import { parseKraWorkbook } from "./kra-workbook";
-import { findEmployeeEcnConflicts } from "./preview-employee-upload";
+import type { KraWorkbookParseResult } from "./kra-workbook";
+import type { KraWorkbookParseResult } from "./kra-workbook";
 
 export type KraUploadEmployeePreview = {
   sheetName: string;
@@ -48,32 +48,16 @@ async function listDepartmentsForPlant(
 }
 
 async function matchToMasterDepartment(
-  db: PrismaClient,
-  organizationId: string,
   departmentName: string | null | undefined,
-  plantUnitKey?: string | null,
-  masterList?: { id: string; name: string }[]
+  departments: { id: string; name: string }[]
 ): Promise<{ id: string | null; name: string | null; matched: boolean }> {
   if (!departmentName?.trim()) {
     return { id: null, name: null, matched: false };
   }
 
   const normalized = normalizeDepartmentMasterName(departmentName);
-  const existing = await findExistingDepartmentMaster(
-    db,
-    organizationId,
-    normalized,
-    plantUnitKey ?? undefined,
-    plantUnitKey
-  );
-  if (existing) {
-    return { id: existing.id, name: existing.name, matched: true };
-  }
-
   const key = departmentNameKey(normalized);
-  const list =
-    masterList ?? (await listDepartmentsForPlant(db, organizationId, plantUnitKey));
-  const fuzzy = list.find((d) => departmentNameKey(d.name) === key);
+  const fuzzy = departments.find((d) => departmentNameKey(d.name) === key);
   if (fuzzy) {
     return { id: fuzzy.id, name: fuzzy.name, matched: true };
   }
@@ -85,12 +69,11 @@ export async function previewKraUpload(
   db: PrismaClient,
   organizationId: string,
   buffer: ArrayBuffer,
-  options?: { plantUnitKey?: string | null; sourceFileName?: string }
+  options?: { plantUnitKey?: string | null; sourceFileName?: string },
+  preParsed?: KraWorkbookParseResult
 ): Promise<KraUploadPreview> {
-  const { employees, kpis, errors } = parseKraWorkbook(
-    buffer,
-    options?.sourceFileName
-  );
+  const { employees, kpis, errors } =
+    preParsed ?? parseKraWorkbook(buffer, options?.sourceFileName);
   const employeeKra = employees.length > 0;
   const departments = await listDepartmentsForPlant(
     db,
@@ -116,10 +99,7 @@ export async function previewKraUpload(
   const employeePreviews: KraUploadEmployeePreview[] = [];
   for (const emp of employees) {
     const match = await matchToMasterDepartment(
-      db,
-      organizationId,
       emp.department ?? emp.departmentRaw,
-      options?.plantUnitKey,
       departments
     );
     employeePreviews.push({

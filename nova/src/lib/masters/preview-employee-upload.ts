@@ -29,15 +29,26 @@ export async function findEmployeeEcnConflicts(
 ): Promise<EmployeeUploadConflict[]> {
   const conflicts: EmployeeUploadConflict[] = [];
   const seen = new Set<string>();
+  const ecnKeys: string[] = [];
 
   for (const row of rows) {
     const ecnKey = isValidKraEcn(row.ecn) ? row.ecn!.trim() : null;
     if (!ecnKey || seen.has(ecnKey)) continue;
     seen.add(ecnKey);
+    ecnKeys.push(ecnKey);
+  }
 
-    const existing = await db.employeeMaster.findFirst({
-      where: { organizationId, ecn: ecnKey },
-    });
+  if (!ecnKeys.length) return conflicts;
+
+  const existingRows = await db.employeeMaster.findMany({
+    where: { organizationId, ecn: { in: ecnKeys } },
+  });
+  const byEcn = new Map(existingRows.map((e) => [e.ecn!, e]));
+
+  for (const row of rows) {
+    const ecnKey = isValidKraEcn(row.ecn) ? row.ecn!.trim() : null;
+    if (!ecnKey) continue;
+    const existing = byEcn.get(ecnKey);
     if (existing) {
       conflicts.push({
         ecn: ecnKey,

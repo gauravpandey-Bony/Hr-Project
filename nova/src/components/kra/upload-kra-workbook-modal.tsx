@@ -21,6 +21,7 @@ import {
 import type { EmployeeUploadConflict } from "@/lib/masters/preview-employee-upload";
 
 type Step = "file" | "department" | "confirm";
+type LoadingPhase = "idle" | "importing";
 
 export function UploadKraWorkbookModal({
   open,
@@ -34,7 +35,7 @@ export function UploadKraWorkbookModal({
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loadingPhase, setLoadingPhase] = useState<LoadingPhase>("idle");
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [step, setStep] = useState<Step>("file");
@@ -44,6 +45,8 @@ export function UploadKraWorkbookModal({
   const [employeeRows, setEmployeeRows] = useState<KraDepartmentPickRow[]>([]);
   const [departments, setDepartments] = useState<{ id: string; name: string }[]>([]);
   const [departmentPicks, setDepartmentPicks] = useState<Record<string, string>>({});
+
+  const loading = loadingPhase !== "idle";
 
   function resetFlow() {
     setStep("file");
@@ -60,6 +63,7 @@ export function UploadKraWorkbookModal({
     setFile(null);
     setResult(null);
     setError(null);
+    setLoadingPhase("idle");
     onClose();
   }
 
@@ -81,101 +85,76 @@ export function UploadKraWorkbookModal({
 
   async function runImport(confirmOverwrite: boolean, includeDepartmentOverrides = false) {
     if (!file) return;
-    setLoading(true);
+    setLoadingPhase("importing");
     setError(null);
     if (!confirmOverwrite && step === "file") setResult(null);
 
-    const res = await fetch("/api/masters/import-plant-kra", {
-      method: "POST",
-      body: buildFormData(confirmOverwrite, includeDepartmentOverrides),
-    });
-    const data = await res.json();
-    setLoading(false);
+    try {
+      const controller = new AbortController();
+      const timeout = window.setTimeout(() => controller.abort(), 120_000);
 
-    if (res.status === 422 && data.needsDepartmentPick) {
-      setEmployeeRows(data.employees ?? []);
-      setDepartments(data.departments ?? []);
-      const initial: Record<string, string> = {};
-      for (const row of (data.employees ?? []) as KraDepartmentPickRow[]) {
-        if (!row.needsDepartmentPick && row.matchedDepartmentName) {
-          initial[row.sheetName] = row.matchedDepartmentName;
+      const res = await fetch("/api/masters/import-plant-kra", {
+        method: "POST",
+        body: buildFormData(confirmOverwrite, includeDepartmentOverrides),
+        signal: controller.signal,
+      });
+      window.clearTimeout(timeout);
+
+      let data: Record<string, unknown> = {};
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error("Server response invalid — try again.");
+      }
+
+      if (res.status === 422 && data.needsDepartmentPick) {
+        setEmployeeRows((data.employees as KraDepartmentPickRow[]) ?? []);
+        setDepartments((data.departments as { id: string; name: string }[]) ?? []);
+        const initial: Record<string, string> = {};
+        for (const row of (data.employees as KraDepartmentPickRow[]) ?? []) {
+          if (!row.needsDepartmentPick && row.matchedDepartmentName) {
+            initial[row.sheetName] = row.matchedDepartmentName;
+          }
         }
+        setDepartmentPicks(initial);
+        setStep("department");
+        return;
       }
-      setDepartmentPicks(initial);
-      setStep("department");
-      return;
-    }
 
-    if (res.status === 409 && data.requiresConfirmation) {
-      setConflicts(data.conflicts ?? []);
-      setNewCount(data.newCount ?? 0);
-      setUpdateCount(data.updateCount ?? 0);
-      setStep("confirm");
-      return;
-    }
+      if (res.status === 409 && data.requiresConfirmation) {
+        setConflicts((data.conflicts as EmployeeUploadConflict[]) ?? []);
+        setNewCount((data.newCount as number) ?? 0);
+        setUpdateCount((data.updateCount as number) ?? 0);
+        setStep("confirm");
+        return;
+      }
 
-    if (res.ok) {
+      if (res.ok) {
+        const msg =
+          (data.message as string) ??
+          `Imported ${(data.kpisCreated as number) ?? 0} KPIs with ${(data.entriesCreated as number) ?? 0} entries.`;
+        setResult(msg);
+        resetFlow();
+        setStep("file");
+        toast.success(msg);
+        router.refresh();
+      } else {
+        const errMsg = (data.error as string) ?? "Upload failed";
+        setError(errMsg);
+        toast.error(errMsg);
+      }
+    } catch (e) {
       const msg =
-        data.message ??
-        `Imported ${data.kpisCreated ?? 0} KPIs with ${data.entriesCreated ?? 0} entries.`;
-      setResult(msg);
-      resetFlow();
-      setStep("file");
-      toast.success(msg);
-      router.refresh();
-    } else {
-      const errMsg = data.error ?? "Upload failed";
-      setError(errMsg);
-      toast.error(errMsg);
+        e instanceof Error && e.name === "AbortError"
+          ? "Import timed out after 2 minutes — file may be too large."
+          : e instanceof Error
+            ? e.message
+            : "Upload failed";
+      setError(msg);
+      toast.error(msg);
+    } finally {
+      setLoadingPhase("idle");
     }
-  }
-
-  async function startImport() {
-    if (!file) return;
-    setLoading(true);
-    setError(null);
-
-    const previewForm = new FormData();
-    previewForm.append("file", file);
-    if (plantUnitKey?.trim()) {
-      previewForm.append("plantUnitKey", plantUnitKey.trim());
-    }
-
-    const previewRes = await fetch("/api/masters/preview-kra-upload", {
-      method: "POST",
-      body: previewForm,
-    });
-    const preview = await previewRes.json();
-    setLoading(false);
-
-    if (!previewRes.ok) {
-      const errMsg = preview.error ?? "Could not read workbook";
-      setError(errMsg);
-      toast.error(errMsg);
-      return;
-    }
-
-    setEmployeeRows(preview.employees ?? []);
-    setDepartments(preview.departments ?? []);
-
-    const initial: Record<string, string> = {};
-    for (const row of (preview.employees ?? []) as KraDepartmentPickRow[]) {
-      if (!row.needsDepartmentPick && row.matchedDepartmentName) {
-        initial[row.sheetName] = row.matchedDepartmentName;
-      }
-    }
-    setDepartmentPicks(initial);
-
-    if (preview.needsDepartmentPick) {
-      setStep("department");
-      return;
-    }
-
-    await runImport(false);
-  }
-
-  async function continueAfterDepartmentPick() {
-    await runImport(false, true);
   }
 
   return (
@@ -199,7 +178,9 @@ export function UploadKraWorkbookModal({
             newCount={newCount}
             updateCount={updateCount}
             loading={loading}
-            onCancel={() => setStep(employeeRows.some((e) => e.needsDepartmentPick) ? "department" : "file")}
+            onCancel={() =>
+              setStep(employeeRows.some((e) => e.needsDepartmentPick) ? "department" : "file")
+            }
             onConfirm={() => runImport(true, Object.keys(departmentPicks).length > 0)}
           />
         ) : step === "department" ? (
@@ -215,7 +196,7 @@ export function UploadKraWorkbookModal({
               setStep("file");
               setError(null);
             }}
-            onContinue={continueAfterDepartmentPick}
+            onContinue={() => runImport(false, true)}
           />
         ) : (
           <>
@@ -242,6 +223,12 @@ export function UploadKraWorkbookModal({
                 />
               </div>
 
+              {loading && (
+                <p className="text-center text-sm text-muted-foreground">
+                  Importing employees & KPIs — please wait…
+                </p>
+              )}
+
               {result && (
                 <p className="rounded-lg bg-emerald-500/10 p-3 text-sm text-emerald-700 dark:text-emerald-300">
                   {result}
@@ -255,11 +242,15 @@ export function UploadKraWorkbookModal({
             </div>
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={handleClose}>
+              <Button type="button" variant="outline" onClick={handleClose} disabled={loading}>
                 Cancel
               </Button>
-              <Button type="button" onClick={startImport} disabled={!file || loading}>
-                {loading ? "Checking…" : "Import Excel"}
+              <Button
+                type="button"
+                onClick={() => runImport(false)}
+                disabled={!file || loading}
+              >
+                {loading ? "Importing…" : "Import Excel"}
               </Button>
             </DialogFooter>
           </>
