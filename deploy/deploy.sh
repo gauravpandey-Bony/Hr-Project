@@ -39,6 +39,9 @@ npm run db:seed || true
 echo "==> Purge logistics KPI junk from database"
 npm run db:purge-junk || true
 
+echo "==> Import KRA workbooks (37P + Fluid 58)"
+npm run import:kra-data || true
+
 echo "==> Building application"
 npm run build
 
