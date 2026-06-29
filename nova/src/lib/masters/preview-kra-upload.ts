@@ -4,7 +4,7 @@ import {
   findMatchingDepartmentInList,
   normalizeDepartmentMasterName,
 } from "./department-master-sync";
-import { parseKraWorkbook } from "./kra-workbook";
+import { parseKraWorkbook, normalizeKraDepartment } from "./kra-workbook";
 import type { KraWorkbookParseResult } from "./kra-workbook";
 import { findEmployeeEcnConflicts } from "./preview-employee-upload";
 
@@ -61,6 +61,14 @@ async function matchToMasterDepartment(
     if (fuzzy) {
       return { id: fuzzy.id, name: fuzzy.name, matched: true };
     }
+  }
+
+  // Workbook has a department — use normalized name even if Department Master row is missing yet.
+  const resolved =
+    departmentName?.trim() ||
+    (departmentRaw?.trim() ? normalizeKraDepartment(departmentRaw).masterName : null);
+  if (resolved) {
+    return { id: null, name: normalizeDepartmentMasterName(resolved), matched: true };
   }
 
   const fallback = departmentName?.trim() || departmentRaw?.trim();

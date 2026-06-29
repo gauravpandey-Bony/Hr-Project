@@ -42,7 +42,7 @@ export function KraDepartmentPick({
         <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-800 dark:text-emerald-200">
           <p className="font-medium">
             {autoMatched.length} employee{autoMatched.length === 1 ? "" : "s"} — department
-            auto-matched
+            assigned from workbook
           </p>
           <ul className="mt-2 space-y-1 text-xs">
             {autoMatched.slice(0, 5).map((e) => (
@@ -63,11 +63,11 @@ export function KraDepartmentPick({
             <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
             <div className="space-y-1 text-sm">
               <p className="font-semibold text-amber-900 dark:text-amber-100">
-                Choose department for unmatched employees
+                Choose department — not found in workbook
               </p>
               <p className="text-amber-800/90 dark:text-amber-200/90">
-                No matching department found in Department Master — select the correct department
-                below.
+                The workbook did not include a readable department for these employees. Select the
+                correct department below.
               </p>
             </div>
           </div>

@@ -163,8 +163,8 @@ export function UploadKraWorkbookModal({
           </DialogTitle>
           <DialogDescription>
             Upload an employee KRA workbook (<strong>.xlsx</strong> / <strong>.xls</strong>).
-            When a department matches Department Master, employees are assigned automatically;
-            otherwise choose a department from the dropdown.
+            Departments are read from the workbook and assigned automatically. You only need to
+            pick a department manually when the workbook does not include one.
           </DialogDescription>
         </DialogHeader>
 

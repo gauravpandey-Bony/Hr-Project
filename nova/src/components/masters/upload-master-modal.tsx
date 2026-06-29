@@ -195,9 +195,9 @@ export function UploadMasterModal({
             {isEmployees ? (
               <>
                 Upload <strong>CSV</strong> or an employee KRA workbook (<strong>.xlsx</strong> /{" "}
-                <strong>.xls</strong>). When a department matches Department Master, employees are
-                assigned automatically; otherwise choose a department from the dropdown.{" "}
-                {template.hint}
+                <strong>.xls</strong>). Departments are read from the workbook and assigned
+                automatically. You only need to pick a department manually when the workbook does
+                not include one. {template.hint}
               </>
             ) : (
               <>
