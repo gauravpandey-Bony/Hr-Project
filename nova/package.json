@@ -13,6 +13,7 @@
     "db:purge-junk": "tsx scripts/purge-logistics-junk.ts",
     "import:37p": "tsx scripts/import-37p-roster.ts",
     "import:plant-kra": "tsx scripts/import-plant-kra-workbook.ts",
+    "import:kra-data": "tsx scripts/import-kra-data.ts",
     "db:push": "prisma db push",
     "db:reset": "prisma migrate reset --force",
     "postinstall": "prisma generate"

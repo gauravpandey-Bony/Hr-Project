@@ -16,7 +16,10 @@ import { purgeLogisticsJunkData } from "../src/lib/masters/logistics-kra-junk";
 const BONY_37P_PLANT = "Bony Polymers";
 const BONY_37P_LOCATION = "Bony Polymers 37-P";
 
-const BONY_37P_KRA_FILES = ["Costing & MIS KRA KPI 26-27.xlsx"] as const;
+const BONY_37P_KRA_FILES = [
+  "Costing & MIS KRA KPI 26-27.xlsx",
+  "New KRA KPI 2026.xlsx",
+] as const;
 
 const SAKET_UNIT1_PLANT = "Saket Fabs Sheet Metal";
 
@@ -34,17 +37,15 @@ const SAKET_UNIT1_KRA_FILES = [
 const BONY_FLUID_58_PLANT = "Bony Fluid 58";
 
 const BONY_FLUID_58_KRA_FILES = [
-  "Basant Kumar KRA.xlsx",
   "Suraj KRA.xlsx",
+  "Raman Singh KRA.xlsx",
   "Rahul Narwar- Dispatch & Assembly.xlsx",
+  "Quality.xlsx",
   "Pardeep Dagar KRA & KPI.xlsx",
   "Maintenance.XLSX",
   "Jitender KRA & KPI_Plant 58.xlsx",
   "Gulab Singh KRA & KPI_Plant 58.xlsx",
-  "Raman Singh KRA.xlsx",
   "Dinesh KRA.xlsx",
-  "Quality.xlsx",
-  "Dilip Kumar KRA & KPI_Plant 58.xlsx",
 ] as const;
 
 const db = new PrismaClient();

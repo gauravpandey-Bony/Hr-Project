@@ -342,6 +342,12 @@ function parseLogisticKraHeaderRow(row: unknown[]): Partial<KraWorkbookEmployee>
   const out: Partial<KraWorkbookEmployee> = {};
 
   for (let i = 0; i < cells.length; i++) {
+    const inlineName = cells[i].match(/^name\s+(.+)$/i);
+    if (inlineName?.[1]?.trim()) {
+      out.name = titleCaseName(inlineName[1]);
+      continue;
+    }
+
     const label = cells[i].toLowerCase().replace(/[^a-z.]/g, "");
     let val = "";
     for (let j = i + 1; j < cells.length; j++) {
@@ -354,6 +360,7 @@ function parseLogisticKraHeaderRow(row: unknown[]): Partial<KraWorkbookEmployee>
     if (label === "department" || label === "dept") {
       if (/^designation$/i.test(val)) continue;
     }
+    if (label === "name" && isKraHeaderLabelValue(val)) continue;
 
     if (label === "name") out.name = titleCaseName(val);
     else if (label === "doj") out.doj = excelSerialToDoj(val) ?? val;
@@ -366,6 +373,18 @@ function parseLogisticKraHeaderRow(row: unknown[]): Partial<KraWorkbookEmployee>
   }
 
   return out;
+}
+
+function isKraHeaderLabelValue(val: string): boolean {
+  return /^(doj|e\.?code|ecode|department|dept|designation|location|name)$/i.test(
+    val.trim()
+  );
+}
+
+function isMisreadEmployeeName(name: string | null | undefined): boolean {
+  const n = (name ?? "").trim();
+  if (!n) return true;
+  return isKraHeaderLabelValue(n);
 }
 
 function findLogisticKpiHeaderRow(matrix: string[][]): number {
@@ -730,7 +749,9 @@ function parseSf1KraSheet(
   }
 
   const displayName =
-    meta.name?.trim() || parseEmployeeNameFromSheetName(sheetName) || `Employee ${idx + 1}`;
+    (!isMisreadEmployeeName(meta.name) ? meta.name?.trim() : null) ||
+    parseEmployeeNameFromSheetName(sheetName) ||
+    `Employee ${idx + 1}`;
 
   const employee: KraWorkbookEmployee = {
     sheetName: sheetName.trim(),
@@ -790,7 +811,9 @@ function parseLogisticKraSheet(
   }
 
   const displayName =
-    meta.name?.trim() || sheetName.trim() || `Employee ${idx + 1}`;
+    (!isMisreadEmployeeName(meta.name) ? meta.name?.trim() : null) ||
+    sheetName.trim() ||
+    `Employee ${idx + 1}`;
 
   const employee: KraWorkbookEmployee = {
     sheetName: sheetName.trim(),
@@ -959,7 +982,9 @@ export function parseKraWorkbook(
     }
 
     const displayName =
-      meta.name?.trim() || sheetName.trim() || `Employee ${idx + 1}`;
+      (!isMisreadEmployeeName(meta.name) ? meta.name?.trim() : null) ||
+      sheetName.trim() ||
+      `Employee ${idx + 1}`;
 
     employees.push({
       sheetName: sheetName.trim(),
