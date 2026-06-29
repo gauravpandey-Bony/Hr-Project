@@ -45,12 +45,18 @@ export function UploadSpreadsheetModal({
     const formData = new FormData();
     formData.append("file", file);
 
-    const res = await fetch("/api/kpis/upload", { method: "POST", body: formData });
+    const isExcel = /\.xlsx?$/i.test(file.name);
+    const endpoint = isExcel ? "/api/masters/import-plant-kra" : "/api/kpis/upload";
+
+    const res = await fetch(endpoint, { method: "POST", body: formData });
     const data = await res.json();
     setLoading(false);
 
     if (res.ok) {
-      const msg = `Imported ${data.kpisCreated} new KPI(s) and ${data.entriesCreated} data entries from ${data.rowsProcessed} rows.`;
+      const msg = isExcel
+        ? (data.message ??
+          `Imported ${data.kpisCreated ?? 0} KPIs with ${data.entriesCreated ?? 0} entries.`)
+        : `Imported ${data.kpisCreated} new KPI(s) and ${data.entriesCreated} data entries from ${data.rowsProcessed} rows.`;
       setResult(msg);
       toast.success(msg);
       router.refresh();
@@ -107,8 +113,8 @@ Production Output,MT produced,Production,MT,3000,Higher,Monthly,Production,2840,
             Upload a Spreadsheet
           </DialogTitle>
           <DialogDescription>
-            Upload a <strong>CSV</strong> file (Excel: Save As → CSV). New KPIs are created;
-            existing names get new data entries.
+            Upload <strong>Excel (.xlsx)</strong> KRA workbook or a <strong>CSV</strong> file for
+            simple KPI rows. Excel imports all department sheets; CSV creates KPIs row by row.
           </DialogDescription>
         </DialogHeader>
 
@@ -141,12 +147,12 @@ Production Output,MT produced,Production,MT,3000,Higher,Monthly,Production,2840,
           >
             <Upload className="mx-auto h-8 w-8 text-slate-400" />
             <p className="mt-2 text-sm font-medium text-slate-700">
-              {file ? file.name : "Click to choose CSV file"}
+              {file ? file.name : "Choose Excel (.xlsx) or CSV file"}
             </p>
             <input
               ref={inputRef}
               type="file"
-              accept=".csv,.txt,text/csv"
+              accept=".csv,.txt,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
               className="hidden"
               onChange={(e) => setFile(e.target.files?.[0] ?? null)}
             />

@@ -15,14 +15,33 @@ export async function fetchKraSheets(
   organizationId: string
 ): Promise<KraSheetFromDb[]> {
   const departments = await db.departmentMaster.findMany({
-    where: { organizationId, isActive: true, kraSheetId: { not: null } },
+    where: { organizationId, isActive: true },
     orderBy: { sortOrder: "asc" },
   });
 
-  return departments
-    .filter((d) => d.kraSheetId && d.kpiLevel !== "INDIVIDUAL")
-    .map((d) => ({
-      id: d.kraSheetId!,
+  const withSheetId = departments.filter(
+    (d) => d.kraSheetId && d.kpiLevel !== "INDIVIDUAL"
+  );
+
+  const source =
+    withSheetId.length > 0
+      ? withSheetId
+      : departments.filter((d) => d.kpiLevel !== "INDIVIDUAL");
+
+  const seen = new Set<string>();
+  const sheets: KraSheetFromDb[] = [];
+
+  for (const d of source) {
+    const id =
+      d.kraSheetId ??
+      (d.name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "") || "general");
+    if (seen.has(id)) continue;
+    seen.add(id);
+    sheets.push({
+      id,
       label: d.name,
       department: d.name,
       meta: {
@@ -31,7 +50,10 @@ export async function fetchKraSheets(
         category: d.category ?? d.name,
         showPerspective: d.showPerspective,
       },
-    }));
+    });
+  }
+
+  return sheets;
 }
 
 export function kpisForSheetFromDb(

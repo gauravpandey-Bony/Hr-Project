@@ -473,6 +473,7 @@ async function main() {
     ),
   ];
   for (const d of allDeptDefs) {
+    const kraSheetId = "kraSheetId" in d ? (d.kraSheetId ?? null) : null;
     const exists = await db.departmentMaster.findFirst({
       where: { organizationId: org.id, name: d.name },
     });
@@ -484,7 +485,13 @@ async function main() {
           headName: "headName" in d ? (d.headName || null) : null,
           location: "location" in d ? (d.location ?? "Bony Polymers 37-P") : "Bony Polymers 37-P",
           sortOrder: d.sortOrder,
+          kraSheetId,
         },
+      });
+    } else if (kraSheetId && !exists.kraSheetId) {
+      await db.departmentMaster.update({
+        where: { id: exists.id },
+        data: { kraSheetId, location: exists.location ?? "Bony Polymers 37-P" },
       });
     }
   }

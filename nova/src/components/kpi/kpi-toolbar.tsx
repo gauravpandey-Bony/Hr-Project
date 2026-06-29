@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Plus, ChevronDown, Download, Loader2 } from "lucide-react";
+import { Plus, ChevronDown, Download, Loader2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { downloadFromApi } from "@/lib/download-from-api";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { GenerateKpiPromptButton } from "@/components/ai/generate-kpi-prompt-modal";
 import { UploadSpreadsheetModal } from "./upload-spreadsheet-modal";
+import { UploadKraWorkbookModal } from "@/components/kra/upload-kra-workbook-modal";
 import { ConnectAppModal } from "./connect-app-modal";
 import { KpiSearchBar } from "./kpi-search-bar";
 import { KPI_CATEGORIES } from "@/lib/company";
@@ -32,6 +33,7 @@ export function KpiToolbar({
   unitId?: string;
 }) {
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [kraUploadOpen, setKraUploadOpen] = useState(false);
   const [connectOpen, setConnectOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
 
@@ -68,6 +70,10 @@ export function KpiToolbar({
               </Link>
             </Button>
             <GenerateKpiPromptButton isAdmin={isAdmin} />
+            <Button variant="default" onClick={() => setKraUploadOpen(true)}>
+              <Upload className="h-4 w-4" />
+              Upload Excel
+            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline">
@@ -117,6 +123,7 @@ export function KpiToolbar({
         category={currentCategory}
         query={query}
       />
+      <UploadKraWorkbookModal open={kraUploadOpen} onClose={() => setKraUploadOpen(false)} />
       <ConnectAppModal open={connectOpen} onClose={() => setConnectOpen(false)} />
     </>
   );

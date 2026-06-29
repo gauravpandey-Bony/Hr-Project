@@ -9,6 +9,7 @@ import { kpisForSheet } from "@/lib/kra-sheets";
 import { cn } from "@/lib/utils";
 import { Building2, FileSpreadsheet, Pencil } from "lucide-react";
 import type { Kpi, KpiEntry } from "@prisma/client";
+import { UploadKraWorkbookButton } from "@/components/kra/upload-kra-workbook-button";
 
 type KpiWithEntries = Kpi & { entries: KpiEntry[] };
 
@@ -32,9 +33,26 @@ export function KraPageClient({
   const sheet = sheets.find((s) => s.id === activeSheet) ?? sheets[0];
   if (!sheet) {
     return (
-      <p className="text-sm text-muted-foreground">
-        No KRA departments configured. Add departments in Master Data.
-      </p>
+      <div className="reports-grid-bg space-y-6 pb-10">
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950 px-8 py-10 text-white shadow-2xl">
+          <div className="relative">
+            <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+              {company.kraMasterSheetLabel}
+            </h1>
+            <p className="mt-2 max-w-2xl text-slate-300">
+              Upload your KRA / KPI Excel workbook to populate department sheets.
+            </p>
+            {isAdmin && (
+              <div className="mt-6">
+                <UploadKraWorkbookButton variant="hero" label="Upload Excel Sheet" />
+              </div>
+            )}
+          </div>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          No KRA departments configured yet. Upload Excel or add departments in Department Master.
+        </p>
+      </div>
     );
   }
 
@@ -58,10 +76,13 @@ export function KraPageClient({
             {company.name} — select a department below
           </p>
           {isAdmin && (
-            <p className="mt-3 inline-flex items-center gap-2 rounded-lg bg-amber-500/20 px-3 py-1.5 text-sm text-amber-100">
-              <Pencil className="h-4 w-4" />
-              Admin: edit fields, add rows, or remove rows — then click Save on each row
-            </p>
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <p className="inline-flex items-center gap-2 rounded-lg bg-amber-500/20 px-3 py-1.5 text-sm text-amber-100">
+                <Pencil className="h-4 w-4" />
+                Admin: edit fields, add rows, or remove rows — then click Save on each row
+              </p>
+              <UploadKraWorkbookButton variant="hero-outline" label="Upload Excel" />
+            </div>
           )}
         </div>
       </div>

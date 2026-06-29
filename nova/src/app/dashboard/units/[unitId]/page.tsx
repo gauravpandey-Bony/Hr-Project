@@ -16,6 +16,7 @@ import { aliasesForUnit } from "@/lib/org-units";
 import { plantDataScope } from "@/lib/unit-workspace";
 import { MyDashboardClient } from "@/components/dashboard/my-dashboard-client";
 import { GenerateKpiPromptButton } from "@/components/ai/generate-kpi-prompt-modal";
+import { UploadKraWorkbookButton } from "@/components/kra/upload-kra-workbook-button";
 import {
   ArrowLeft,
   BarChart3,
@@ -128,6 +129,7 @@ export default async function UnitDashboardPage({
             )}
             {user.role === "ADMIN" && (
               <>
+                <UploadKraWorkbookButton variant="hero-outline" label="Upload Excel" />
                 <GenerateKpiPromptButton isAdmin />
                 <Link
                   href={createHref}
@@ -162,6 +164,7 @@ export default async function UnitDashboardPage({
           </p>
           {user.role === "ADMIN" && (
             <div className="mt-6 flex flex-wrap justify-center gap-3">
+              <UploadKraWorkbookButton variant="hero" label="Upload Excel Sheet" />
               <GenerateKpiPromptButton isAdmin />
               <Link
                 href={createHref}
