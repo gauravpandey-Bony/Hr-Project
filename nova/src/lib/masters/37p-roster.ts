@@ -1,5 +1,6 @@
 import * as XLSX from "xlsx";
 import type { DepartmentImportRow, EmployeeImportRow } from "./import";
+import { dedupeDepartmentMasters } from "./department-master-sync";
 
 /** Excel Department column → master name, KRA sheet, KPI library department */
 export const ROSTER_DEPT_MAP: Record<
@@ -50,15 +51,21 @@ export const ROSTER_DEPT_MAP: Record<
   },
   MIS: {
     masterName: "MIS",
-    kraSheetId: "it",
-    kpiDepartment: "IT",
+    kraSheetId: "mis",
+    kpiDepartment: "MIS",
     sortOrder: 9,
   },
   OPERATIONS: {
-    masterName: "Operations",
+    masterName: "Production",
     kraSheetId: "plant",
     kpiDepartment: "Plant Head",
-    sortOrder: 10,
+    sortOrder: 2,
+  },
+  "PLANT HEAD": {
+    masterName: "Production",
+    kraSheetId: "plant",
+    kpiDepartment: "Plant Head",
+    sortOrder: 2,
   },
   PPC: {
     masterName: "PPC",
@@ -76,13 +83,6 @@ export const ROSTER_DEPT_MAP: Record<
 
 function buildRosterDepartments(): DepartmentImportRow[] {
   const byName = new Map<string, DepartmentImportRow>();
-
-  byName.set("Plant Head", {
-    name: "Plant Head",
-    kraSheetId: "plant",
-    location: "Bony Polymers 37-P",
-    sortOrder: 1,
-  });
 
   for (const mapped of Object.values(ROSTER_DEPT_MAP)) {
     if (!byName.has(mapped.masterName)) {
@@ -119,6 +119,38 @@ function buildRosterDepartments(): DepartmentImportRow[] {
 }
 
 export const ROSTER_DEPARTMENTS: DepartmentImportRow[] = buildRosterDepartments();
+
+/** Plant Head is a KRA sheet role — employees belong under Production in master data */
+export const PLANT_HEAD_EMPLOYEE_DEPARTMENT = "Production";
+
+export async function reconcilePlantHeadEmployeesAsProduction(
+  db: import("@prisma/client").PrismaClient,
+  organizationId: string
+): Promise<number> {
+  const production = await db.departmentMaster.findFirst({
+    where: { organizationId, name: PLANT_HEAD_EMPLOYEE_DEPARTMENT },
+  });
+
+  const updated = await db.employeeMaster.updateMany({
+    where: {
+      organizationId,
+      department: { in: ["Plant Head", "Operations"] },
+    },
+    data: {
+      department: PLANT_HEAD_EMPLOYEE_DEPARTMENT,
+      departmentId: production?.id ?? null,
+    },
+  });
+
+  await db.departmentMaster.updateMany({
+    where: { organizationId, name: { in: ["Plant Head", "Operations"] } },
+    data: { isActive: false },
+  });
+
+  await dedupeDepartmentMasters(db, organizationId, "Bony 37P");
+
+  return updated.count;
+}
 
 export function normalizeRosterDepartment(raw: string): {
   masterName: string;

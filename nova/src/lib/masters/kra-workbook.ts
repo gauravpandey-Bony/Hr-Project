@@ -131,7 +131,7 @@ export function normalizeKraDepartment(raw: string): {
     return { masterName: "HR", kraSheetId: "hr" };
   }
   if (/^operations$|plant head/i.test(d)) {
-    return { masterName: "Plant Head", kraSheetId: "plant-head" };
+    return { masterName: "Production", kraSheetId: "plant" };
   }
   if (/^production$/i.test(d)) {
     return { masterName: "Production", kraSheetId: "production" };
@@ -285,7 +285,7 @@ function inferDepartmentFromTitle(title: string, sheetName = ""): string {
   if (/it\s*&?\s*system/i.test(t)) return "IT";
   if (/\bstore\b/i.test(t)) return "Store";
   if (/human resource|\bhr\b/i.test(t)) return "HR";
-  if (/plant head|operations|sf-1 prithla/i.test(t)) return "Plant Head";
+  if (/plant head|operations|sf-1 prithla/i.test(t)) return "Production";
   if (/production/i.test(t)) return "Production";
   if (/costing\s*&?\s*mis/i.test(t)) return "Costing & MIS";
   if (/dispatch|assembly/i.test(t)) return "Dispatch & Assembly";

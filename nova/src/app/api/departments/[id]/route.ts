@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import {
+  findExistingDepartmentMaster,
+  normalizeDepartmentMasterName,
+} from "@/lib/masters/department-master-sync";
 
 const updateSchema = z.object({
   name: z.string().min(1).optional(),
@@ -29,6 +33,26 @@ export async function PATCH(
   }
 
   const body = updateSchema.parse(await request.json());
+  if (body.name) {
+    const name = normalizeDepartmentMasterName(body.name);
+    const duplicate = await findExistingDepartmentMaster(
+      db,
+      user.organizationId,
+      name,
+      body.location ?? existing.location
+    );
+    if (duplicate && duplicate.id !== existing.id) {
+      return NextResponse.json(
+        {
+          error: `Department "${name}" already exists for this plant.`,
+          existingId: duplicate.id,
+        },
+        { status: 409 }
+      );
+    }
+    body.name = name;
+  }
+
   const department = await db.departmentMaster.update({
     where: { id: params.id },
     data: body,

@@ -5,6 +5,7 @@ import {
   resolvePlantKpiId,
   type PlantKraWorkbookKpi,
 } from "./plant-kra-workbook";
+import { reconcilePlantHeadEmployeesAsProduction } from "./37p-roster";
 import { PLANT_UNIT } from "@/lib/plant-37p";
 
 export type SyncPlantKraResult = {
@@ -22,7 +23,7 @@ async function ensureRajKumarEmployee(
   organizationId: string
 ): Promise<boolean> {
   const dept = await db.departmentMaster.findFirst({
-    where: { organizationId, name: "Plant Head" },
+    where: { organizationId, name: "Production" },
   });
 
   const existing = await db.employeeMaster.findFirst({
@@ -39,7 +40,7 @@ async function ensureRajKumarEmployee(
       data: {
         name: "Raj Kumar",
         designation: "Manager",
-        department: "Plant Head",
+        department: "Production",
         departmentId: dept?.id ?? existing.departmentId,
         location: "Bony Polymers",
         isActive: true,
@@ -53,7 +54,7 @@ async function ensureRajKumarEmployee(
       organizationId,
       name: "Raj Kumar",
       designation: "Manager",
-      department: "Plant Head",
+      department: "Production",
       departmentId: dept?.id ?? null,
       location: "Bony Polymers",
       sortOrder: 0,
@@ -162,6 +163,7 @@ export async function syncPlantKraWorkbook(
   }
 
   const employeeEnsured = await ensureRajKumarEmployee(db, organizationId);
+  await reconcilePlantHeadEmployeesAsProduction(db, organizationId);
 
   const rajUser =
     rajKumarUserId ??

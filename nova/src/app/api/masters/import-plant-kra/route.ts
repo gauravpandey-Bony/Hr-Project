@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { isKraEmployeeWorkbook } from "@/lib/masters/kra-workbook";
+import { previewKraWorkbookUpload } from "@/lib/masters/preview-employee-upload";
 import { syncKraWorkbook } from "@/lib/masters/sync-kra-workbook";
 import { syncPlantKraWorkbook } from "@/lib/masters/sync-plant-kra-workbook";
 
@@ -27,6 +28,7 @@ export async function POST(request: Request) {
 
   const buffer = await file.arrayBuffer();
   const employeeKra = isKraEmployeeWorkbook(buffer);
+  const confirmOverwrite = formData.get("confirmOverwrite") === "true";
   const plantUnitKey = String(formData.get("plantUnitKey") ?? "").trim() || null;
   const syncOptions =
     employeeKra && plantUnitKey
@@ -38,6 +40,25 @@ export async function POST(request: Request) {
       : employeeKra
         ? { sourceFileName: file.name }
         : undefined;
+
+  if (employeeKra && !confirmOverwrite) {
+    const preview = await previewKraWorkbookUpload(
+      db,
+      user.organizationId,
+      buffer,
+      file.name
+    );
+    if (preview.requiresConfirmation) {
+      return NextResponse.json(
+        {
+          ...preview,
+          error: "Existing Employee ID (ECN) found. Confirm before updating.",
+          requiresConfirmation: true,
+        },
+        { status: 409 }
+      );
+    }
+  }
 
   const result = employeeKra
     ? await syncKraWorkbook(db, user.organizationId, buffer, user.id, syncOptions)

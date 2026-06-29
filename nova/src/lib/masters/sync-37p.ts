@@ -4,8 +4,13 @@ import type { PrismaClient } from "@prisma/client";
 import {
   parse37pRoster,
   ROSTER_DEPARTMENTS,
+  reconcilePlantHeadEmployeesAsProduction,
   type Roster37pRow,
 } from "./37p-roster";
+import {
+  dedupeDepartmentMasters,
+  upsertDepartmentMaster,
+} from "./department-master-sync";
 
 export type Sync37pResult = {
   departmentsCreated: number;
@@ -26,36 +31,24 @@ async function upsertDepartments(
   let updated = 0;
 
   for (const d of ROSTER_DEPARTMENTS) {
-    const existing = await db.departmentMaster.findFirst({
-      where: { organizationId, name: d.name },
-    });
-    if (existing) {
-      await db.departmentMaster.update({
-        where: { id: existing.id },
-        data: {
-          location: d.location ?? existing.location,
-          kraSheetId: d.kraSheetId ?? existing.kraSheetId,
-          sortOrder: d.sortOrder ?? existing.sortOrder,
-          isActive: true,
-        },
-      });
-      deptByName.set(d.name, existing.id);
-      updated++;
-    } else {
-      const row = await db.departmentMaster.create({
-        data: {
-          organizationId,
-          name: d.name,
-          location: d.location ?? "Bony Polymers 37-P",
-          kraSheetId: d.kraSheetId ?? null,
-          sortOrder: d.sortOrder ?? 0,
-          isActive: true,
-        },
-      });
-      deptByName.set(d.name, row.id);
-      created++;
-    }
+    const { department, created: wasCreated } = await upsertDepartmentMaster(
+      db,
+      organizationId,
+      {
+        name: d.name,
+        location: d.location ?? "Bony Polymers 37-P",
+        plantUnitKey: "Bony 37P",
+        kraSheetId: d.kraSheetId ?? null,
+        sortOrder: d.sortOrder ?? 0,
+        isActive: true,
+      }
+    );
+    deptByName.set(d.name, department.id);
+    if (wasCreated) created++;
+    else updated++;
   }
+
+  await dedupeDepartmentMasters(db, organizationId, "Bony 37P");
 
   return { deptByName, created, updated };
 }
@@ -170,6 +163,8 @@ export async function sync37pRoster(
 ): Promise<Sync37pResult> {
   const { deptByName, created: departmentsCreated, updated: departmentsUpdated } =
     await upsertDepartments(db, organizationId);
+
+  await reconcilePlantHeadEmployeesAsProduction(db, organizationId);
 
   const kpisLinked = await linkKpisToDepartments(db, organizationId);
 

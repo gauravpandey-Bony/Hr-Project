@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
-import { parseUploadFile } from "@/lib/masters/import";
+import { parseUploadFile, type DepartmentImportRow } from "@/lib/masters/import";
+import {
+  dedupeDepartmentMasters,
+  upsertDepartmentMaster,
+} from "@/lib/masters/department-master-sync";
 
 export async function POST(request: Request) {
   const user = await getCurrentUser();
@@ -15,7 +19,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
   }
 
-  const { rows, errors } = await parseUploadFile(file, "departments");
+  const plantUnitKey = String(formData.get("plantUnitKey") ?? "").trim() || null;
+  const { rows: parsedRows, errors } = await parseUploadFile(file, "departments");
+  const rows = parsedRows as DepartmentImportRow[];
   if (!rows.length) {
     return NextResponse.json(
       { error: "No valid rows found", parseErrors: errors },
@@ -27,40 +33,33 @@ export async function POST(request: Request) {
   let updated = 0;
 
   for (const row of rows) {
-    const existing = await db.departmentMaster.findFirst({
-      where: { organizationId: user.organizationId, name: row.name },
-    });
-    if (existing) {
-      await db.departmentMaster.update({
-        where: { id: existing.id },
-        data: {
-          headName: row.headName ?? null,
-          location: row.location ?? "Bony Polymers",
-          kraSheetId: row.kraSheetId ?? null,
-          sortOrder: row.sortOrder ?? existing.sortOrder,
-          isActive: row.isActive ?? true,
-        },
-      });
-      updated++;
-    } else {
-      await db.departmentMaster.create({
-        data: {
-          organizationId: user.organizationId,
-          name: row.name,
-          headName: row.headName ?? null,
-          location: row.location ?? "Bony Polymers",
-          kraSheetId: row.kraSheetId ?? null,
-          sortOrder: row.sortOrder ?? 0,
-          isActive: row.isActive ?? true,
-        },
-      });
-      created++;
-    }
+    const { created: wasCreated } = await upsertDepartmentMaster(
+      db,
+      user.organizationId,
+      {
+        name: row.name,
+        headName: row.headName ?? null,
+        location: row.location ?? "Bony Polymers",
+        plantUnitKey,
+        kraSheetId: row.kraSheetId ?? null,
+        sortOrder: row.sortOrder ?? 0,
+        isActive: row.isActive ?? true,
+      }
+    );
+    if (wasCreated) created++;
+    else updated++;
   }
+
+  const { merged } = await dedupeDepartmentMasters(
+    db,
+    user.organizationId,
+    plantUnitKey
+  );
 
   return NextResponse.json({
     created,
     updated,
+    merged,
     rowsProcessed: rows.length,
     parseErrors: errors,
   });

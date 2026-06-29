@@ -50,7 +50,7 @@ export const SEED_USERS: SeedUserDef[] = [
     name: "Raj Kumar",
     role: "EMPLOYEE",
     title: "Manager",
-    department: "Plant Head",
+    department: "Production",
     defaultPassword: "raj123",
   },
   {

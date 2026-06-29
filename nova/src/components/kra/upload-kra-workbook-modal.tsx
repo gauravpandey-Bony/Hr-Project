@@ -13,6 +13,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { EmployeeUploadConfirm } from "@/components/masters/employee-upload-confirm";
+import type { EmployeeUploadConflict } from "@/lib/masters/preview-employee-upload";
 
 export function UploadKraWorkbookModal({
   open,
@@ -29,17 +31,39 @@ export function UploadKraWorkbookModal({
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
+  const [conflicts, setConflicts] = useState<EmployeeUploadConflict[]>([]);
+  const [newCount, setNewCount] = useState(0);
+  const [updateCount, setUpdateCount] = useState(0);
 
-  async function upload() {
+  function resetConfirm() {
+    setConfirming(false);
+    setConflicts([]);
+    setNewCount(0);
+    setUpdateCount(0);
+  }
+
+  function handleClose() {
+    resetConfirm();
+    setFile(null);
+    setResult(null);
+    setError(null);
+    onClose();
+  }
+
+  async function runImport(confirmOverwrite: boolean) {
     if (!file) return;
     setLoading(true);
     setError(null);
-    setResult(null);
+    if (!confirmOverwrite) setResult(null);
 
     const formData = new FormData();
     formData.append("file", file);
     if (plantUnitKey?.trim()) {
       formData.append("plantUnitKey", plantUnitKey.trim());
+    }
+    if (confirmOverwrite) {
+      formData.append("confirmOverwrite", "true");
     }
 
     const res = await fetch("/api/masters/import-plant-kra", {
@@ -49,11 +73,20 @@ export function UploadKraWorkbookModal({
     const data = await res.json();
     setLoading(false);
 
+    if (res.status === 409 && data.requiresConfirmation) {
+      setConflicts(data.conflicts ?? []);
+      setNewCount(data.newCount ?? 0);
+      setUpdateCount(data.updateCount ?? 0);
+      setConfirming(true);
+      return;
+    }
+
     if (res.ok) {
       const msg =
         data.message ??
         `Imported ${data.kpisCreated ?? 0} KPIs with ${data.entriesCreated ?? 0} entries.`;
       setResult(msg);
+      resetConfirm();
       toast.success(msg);
       router.refresh();
     } else {
@@ -64,7 +97,7 @@ export function UploadKraWorkbookModal({
   }
 
   return (
-    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+    <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -78,44 +111,62 @@ export function UploadKraWorkbookModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
-          <div
-            className="cursor-pointer rounded-xl border-2 border-dashed border-input bg-muted/30 p-8 text-center transition hover:border-primary/50"
-            onClick={() => inputRef.current?.click()}
-          >
-            <Upload className="mx-auto h-8 w-8 text-muted-foreground" />
-            <p className="mt-2 text-sm font-medium">
-              {file ? file.name : "Choose Excel file (.xlsx / .xls)"}
-            </p>
-            <input
-              ref={inputRef}
-              type="file"
-              accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
-              className="hidden"
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-            />
-          </div>
+        {confirming ? (
+          <EmployeeUploadConfirm
+            conflicts={conflicts}
+            newCount={newCount}
+            updateCount={updateCount}
+            loading={loading}
+            onCancel={resetConfirm}
+            onConfirm={() => runImport(true)}
+          />
+        ) : (
+          <>
+            <div className="space-y-4">
+              <div
+                className="cursor-pointer rounded-xl border-2 border-dashed border-input bg-muted/30 p-8 text-center transition hover:border-primary/50"
+                onClick={() => inputRef.current?.click()}
+              >
+                <Upload className="mx-auto h-8 w-8 text-muted-foreground" />
+                <p className="mt-2 text-sm font-medium">
+                  {file ? file.name : "Choose Excel file (.xlsx / .xls)"}
+                </p>
+                <input
+                  ref={inputRef}
+                  type="file"
+                  accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+                  className="hidden"
+                  onChange={(e) => {
+                    setFile(e.target.files?.[0] ?? null);
+                    resetConfirm();
+                    setError(null);
+                    setResult(null);
+                  }}
+                />
+              </div>
 
-          {result && (
-            <p className="rounded-lg bg-emerald-500/10 p-3 text-sm text-emerald-700 dark:text-emerald-300">
-              {result}
-            </p>
-          )}
-          {error && (
-            <p className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
-              {error}
-            </p>
-          )}
-        </div>
+              {result && (
+                <p className="rounded-lg bg-emerald-500/10 p-3 text-sm text-emerald-700 dark:text-emerald-300">
+                  {result}
+                </p>
+              )}
+              {error && (
+                <p className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+                  {error}
+                </p>
+              )}
+            </div>
 
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button type="button" onClick={upload} disabled={!file || loading}>
-            {loading ? "Importing…" : "Import Excel"}
-          </Button>
-        </DialogFooter>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={handleClose}>
+                Cancel
+              </Button>
+              <Button type="button" onClick={() => runImport(false)} disabled={!file || loading}>
+                {loading ? "Checking…" : "Import Excel"}
+              </Button>
+            </DialogFooter>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );

@@ -1,9 +1,19 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
-import { parseUploadFile } from "@/lib/masters/import";
+import { parseUploadFile, type EmployeeImportRow } from "@/lib/masters/import";
 import { normalizeRosterDepartment, ROSTER_DEPARTMENTS } from "@/lib/masters/37p-roster";
+import {
+  dedupeDepartmentMasters,
+  findExistingDepartmentMaster,
+  normalizeDepartmentMasterName,
+  upsertDepartmentMaster,
+} from "@/lib/masters/department-master-sync";
 import { isKraEmployeeWorkbook } from "@/lib/masters/kra-workbook";
+import {
+  previewEmployeeRowsUpload,
+  previewKraWorkbookUpload,
+} from "@/lib/masters/preview-employee-upload";
 import { syncKraWorkbook } from "@/lib/masters/sync-kra-workbook";
 import { assignDepartmentKpisToEmployee } from "@/lib/kpi/assign-department-kpis";
 
@@ -24,7 +34,28 @@ export async function POST(request: Request) {
   }
 
   const buffer = await file.arrayBuffer();
+  const confirmOverwrite = formData.get("confirmOverwrite") === "true";
+
   if (isKraEmployeeWorkbook(buffer)) {
+    if (!confirmOverwrite) {
+      const preview = await previewKraWorkbookUpload(
+        db,
+        user.organizationId,
+        buffer,
+        file.name
+      );
+      if (preview.requiresConfirmation) {
+        return NextResponse.json(
+          {
+            ...preview,
+            error: "Existing Employee ID (ECN) found. Confirm before updating.",
+            requiresConfirmation: true,
+          },
+          { status: 409 }
+        );
+      }
+    }
+
     const result = await syncKraWorkbook(
       db,
       user.organizationId,
@@ -54,7 +85,23 @@ export async function POST(request: Request) {
 
   const blob = new Blob([buffer]);
   const clone = new File([blob], file.name, { type: file.type });
-  const { rows, errors } = await parseUploadFile(clone, "employees");
+  const { rows: parsedRows, errors } = await parseUploadFile(clone, "employees");
+  const rows = parsedRows as EmployeeImportRow[];
+  if (!confirmOverwrite) {
+    const preview = await previewEmployeeRowsUpload(db, user.organizationId, rows);
+    if (preview.requiresConfirmation) {
+      return NextResponse.json(
+        {
+          ...preview,
+          parseErrors: errors,
+          error: "Existing Employee ID (ECN) found. Confirm before updating.",
+          requiresConfirmation: true,
+        },
+        { status: 409 }
+      );
+    }
+  }
+
   if (!rows.length) {
     return NextResponse.json(
       { error: "No valid rows found", parseErrors: errors },
@@ -63,25 +110,28 @@ export async function POST(request: Request) {
   }
 
   const depts = await db.departmentMaster.findMany({
-    where: { organizationId: user.organizationId },
+    where: { organizationId: user.organizationId, isActive: true },
   });
-  const deptByName = new Map(depts.map((d) => [d.name.toLowerCase(), d.id]));
+  const deptByName = new Map(
+    depts.map((d) => [normalizeDepartmentMasterName(d.name).toLowerCase(), d.id])
+  );
 
   for (const d of ROSTER_DEPARTMENTS) {
-    if (!deptByName.has(d.name.toLowerCase())) {
-      const created = await db.departmentMaster.create({
-        data: {
-          organizationId: user.organizationId,
-          name: d.name,
-          location: d.location ?? "Bony Polymers 37-P",
-          kraSheetId: d.kraSheetId ?? null,
-          sortOrder: d.sortOrder ?? 0,
-          isActive: true,
-        },
+    const key = normalizeDepartmentMasterName(d.name).toLowerCase();
+    if (!deptByName.has(key)) {
+      const { department } = await upsertDepartmentMaster(db, user.organizationId, {
+        name: d.name,
+        location: d.location ?? "Bony Polymers 37-P",
+        plantUnitKey: "Bony 37P",
+        kraSheetId: d.kraSheetId ?? null,
+        sortOrder: d.sortOrder ?? 0,
+        isActive: true,
       });
-      deptByName.set(d.name.toLowerCase(), created.id);
+      deptByName.set(key, department.id);
     }
   }
+
+  await dedupeDepartmentMasters(db, user.organizationId, "Bony 37P");
 
   let created = 0;
   let updated = 0;
@@ -91,7 +141,15 @@ export async function POST(request: Request) {
     const deptName = normalizeDepartment(row.department);
     const departmentId =
       deptByName.get(deptName.toLowerCase()) ??
-      deptByName.get(row.department.toLowerCase()) ??
+      deptByName.get(normalizeDepartmentMasterName(row.department).toLowerCase()) ??
+      (
+        await findExistingDepartmentMaster(
+          db,
+          user.organizationId,
+          deptName,
+          row.location
+        )
+      )?.id ??
       null;
 
     const existing = row.ecn

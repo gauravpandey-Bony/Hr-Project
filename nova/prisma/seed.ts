@@ -6,6 +6,10 @@ import { hashPassword } from "../src/lib/auth/password";
 import { SEED_USERS, seedPasswordForUser } from "./seed-users";
 import { COMPANY } from "../src/lib/company";
 import { ROSTER_DEPARTMENTS } from "../src/lib/masters/37p-roster";
+import {
+  dedupeDepartmentMasters,
+  upsertDepartmentMaster,
+} from "../src/lib/masters/department-master-sync";
 import { syncKraWorkbook } from "../src/lib/masters/sync-kra-workbook";
 
 const LOGISTICS_KRA_FILES = [
@@ -516,27 +520,17 @@ async function main() {
   ];
   for (const d of allDeptDefs) {
     const kraSheetId = "kraSheetId" in d ? (d.kraSheetId ?? null) : null;
-    const exists = await db.departmentMaster.findFirst({
-      where: { organizationId: org.id, name: d.name },
+    await upsertDepartmentMaster(db, org.id, {
+      name: d.name,
+      headName: "headName" in d ? (d.headName || null) : null,
+      location: "location" in d ? (d.location ?? "Bony Polymers 37-P") : "Bony Polymers 37-P",
+      plantUnitKey: "Bony 37P",
+      kraSheetId,
+      sortOrder: d.sortOrder,
+      isActive: true,
     });
-    if (!exists) {
-      await db.departmentMaster.create({
-        data: {
-          organizationId: org.id,
-          name: d.name,
-          headName: "headName" in d ? (d.headName || null) : null,
-          location: "location" in d ? (d.location ?? "Bony Polymers 37-P") : "Bony Polymers 37-P",
-          sortOrder: d.sortOrder,
-          kraSheetId,
-        },
-      });
-    } else if (kraSheetId && !exists.kraSheetId) {
-      await db.departmentMaster.update({
-        where: { id: exists.id },
-        data: { kraSheetId, location: exists.location ?? "Bony Polymers 37-P" },
-      });
-    }
   }
+  await dedupeDepartmentMasters(db, org.id, "Bony 37P");
   const deptCount = await db.departmentMaster.count({
     where: { organizationId: org.id },
   });
@@ -545,20 +539,14 @@ async function main() {
   await db.kpi.deleteMany({ where: { organizationId: org.id } });
   await db.employeeMaster.deleteMany({ where: { organizationId: org.id } });
 
-  const logisticsExists = await db.departmentMaster.findFirst({
-    where: { organizationId: org.id, name: "Logistics" },
+  await upsertDepartmentMaster(db, org.id, {
+    name: "Logistics",
+    plantUnitKey: "Bony 37P",
+    kraSheetId: "logistics",
+    sortOrder: 15,
+    isActive: true,
   });
-  if (!logisticsExists) {
-    await db.departmentMaster.create({
-      data: {
-        organizationId: org.id,
-        name: "Logistics",
-        kraSheetId: "logistics",
-        sortOrder: 15,
-        isActive: true,
-      },
-    });
-  }
+  await dedupeDepartmentMasters(db, org.id, "Bony 37P");
 
   const kraImports: Record<string, unknown>[] = [];
   for (const file of LOGISTICS_KRA_FILES) {

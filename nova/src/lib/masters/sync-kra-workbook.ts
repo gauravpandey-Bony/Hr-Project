@@ -10,7 +10,11 @@ import {
 } from "./kra-workbook";
 import { weightageFraction } from "@/lib/kra/weightage";
 import { isLegacyBony37pPlant } from "@/lib/unit-workspace";
-import { ROSTER_DEPARTMENTS } from "./37p-roster";
+import { ROSTER_DEPARTMENTS, reconcilePlantHeadEmployeesAsProduction } from "./37p-roster";
+import {
+  dedupeDepartmentMasters,
+  upsertDepartmentMaster,
+} from "./department-master-sync";
 
 export type SyncKraWorkbookOptions = {
   plantUnitKey?: string | null;
@@ -63,48 +67,30 @@ async function ensureDepartments(
 
   const seen = new Set<string>();
   for (const d of allDefs) {
-    const loc = d.location ?? defaultLocation;
-    const dedupeKey = `${d.name}::${loc}`;
+    const dedupeKey = d.name.toLowerCase();
     if (seen.has(dedupeKey)) continue;
     seen.add(dedupeKey);
 
-    let existing = await db.departmentMaster.findFirst({
-      where: { organizationId, name: d.name, location: loc },
-    });
-    if (!existing && isBonyImport) {
-      existing = await db.departmentMaster.findFirst({
-        where: { organizationId, name: d.name },
-      });
-    }
+    const { department, created: wasCreated } = await upsertDepartmentMaster(
+      db,
+      organizationId,
+      {
+        name: d.name,
+        location: d.location ?? defaultLocation,
+        plantUnitKey,
+        kraSheetId: d.kraSheetId ?? null,
+        sortOrder: d.sortOrder ?? 0,
+        isActive: true,
+      }
+    );
 
-    if (existing) {
-      await db.departmentMaster.update({
-        where: { id: existing.id },
-        data: {
-          kraSheetId: d.kraSheetId ?? existing.kraSheetId,
-          location: plantUnitKey?.trim() ? loc : existing.location ?? loc,
-          isActive: true,
-        },
-      });
-      deptByName.set(d.name, existing.id);
-      deptByName.set(`${d.name}::${loc}`, existing.id);
-      updated++;
-    } else {
-      const row = await db.departmentMaster.create({
-        data: {
-          organizationId,
-          name: d.name,
-          location: loc,
-          kraSheetId: d.kraSheetId ?? null,
-          sortOrder: d.sortOrder ?? 0,
-          isActive: true,
-        },
-      });
-      deptByName.set(d.name, row.id);
-      deptByName.set(`${d.name}::${loc}`, row.id);
-      created++;
-    }
+    deptByName.set(d.name, department.id);
+    deptByName.set(`${d.name}::${department.location ?? defaultLocation}`, department.id);
+    if (wasCreated) created++;
+    else updated++;
   }
+
+  await dedupeDepartmentMasters(db, organizationId, plantUnitKey);
 
   return { deptByName, created, updated };
 }
@@ -325,6 +311,8 @@ export async function syncKraWorkbook(
     await upsertEmployees(db, organizationId, employees, deptByName, defaultLocation);
 
   await dedupeKraEmployees(db, organizationId, employees);
+
+  await reconcilePlantHeadEmployeesAsProduction(db, organizationId);
 
   const {
     created: kpisCreated,

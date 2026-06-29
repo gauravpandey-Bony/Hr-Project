@@ -95,7 +95,7 @@ export async function fetchKraSheets(
   const sheets: KraSheetFromDb[] = [];
 
   for (const d of source) {
-    const id = d.kraSheetId ?? slugDept(d.name);
+    const id = slugDept(d.name);
     if (seen.has(id)) continue;
     seen.add(id);
     sheets.push({
