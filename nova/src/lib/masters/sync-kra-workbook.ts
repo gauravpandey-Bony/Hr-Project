@@ -222,6 +222,7 @@ async function upsertIndividualKpis(
       ownerName: k.ownerName,
       quarterTargets: JSON.stringify({
         annualTarget: k.targetAnnual,
+        lastYearAchieved: k.lastYearAchieved ?? "",
         ...k.quarterTargets,
       }),
       isActive: true,

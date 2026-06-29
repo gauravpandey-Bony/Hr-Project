@@ -58,29 +58,42 @@ export async function fetchKraSheets(
     orderBy: [{ department: "asc" }, { name: "asc" }],
   });
 
-  for (const emp of employees) {
-    const slug = emp.name
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-|-$/g, "");
-    const id = `emp-${slug}`;
-    if (seen.has(id)) continue;
-    seen.add(id);
-    sheets.push({
-      id,
-      label: emp.name,
-      department: emp.department ?? emp.name,
-      meta: {
-        kpiLevel: "INDIVIDUAL",
-        department: emp.department ?? "General",
-        category: emp.department ?? "Logistics",
-        showPerspective: true,
-        ownerName: emp.name,
-      },
-    });
-  }
-
   return sheets;
+}
+
+export type KraEmployeeRow = {
+  id: string;
+  name: string;
+  department: string | null;
+  designation: string | null;
+  ecn: string | null;
+  doj: string | null;
+  location: string | null;
+};
+
+export async function fetchKraEmployeesByDepartment(
+  organizationId: string
+): Promise<Record<string, KraEmployeeRow[]>> {
+  const employees = await db.employeeMaster.findMany({
+    where: { organizationId, isActive: true },
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    select: {
+      id: true,
+      name: true,
+      department: true,
+      designation: true,
+      ecn: true,
+      doj: true,
+      location: true,
+    },
+  });
+
+  const byDept: Record<string, KraEmployeeRow[]> = {};
+  for (const emp of employees) {
+    const dept = emp.department?.trim() || "General";
+    (byDept[dept] ??= []).push(emp);
+  }
+  return byDept;
 }
 
 export function kpisForSheetFromDb(

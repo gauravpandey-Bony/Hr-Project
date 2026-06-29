@@ -7,7 +7,7 @@ import {
 } from "@/lib/unit-workspace.server";
 import { KraPageClient } from "@/components/kra/kra-page-client";
 import { getCompanyContext } from "@/lib/company.server";
-import { fetchKraSheets } from "@/lib/kra-sheets.server";
+import { fetchKraSheets, fetchKraEmployeesByDepartment } from "@/lib/kra-sheets.server";
 
 export default async function KraPage({
   searchParams,
@@ -21,13 +21,14 @@ export default async function KraPage({
   const workspace = await resolveWorkspace(user, unitId);
   requireAdminWorkspace(user, workspace);
 
-  const [kpis, sheets, company] = await Promise.all([
+  const [kpis, sheets, employeesByDepartment, company] = await Promise.all([
     db.kpi.findMany({
       where: mergeKpiWhereForWorkspace(user, workspace.dataScope, {}),
       include: { entries: { orderBy: { recordedAt: "desc" }, take: 12 } },
       orderBy: [{ kpiLevel: "asc" }, { weightage: "desc" }],
     }),
     fetchKraSheets(user.organizationId),
+    fetchKraEmployeesByDepartment(user.organizationId),
     getCompanyContext(user.organizationId),
   ]);
 
@@ -35,6 +36,7 @@ export default async function KraPage({
     <KraPageClient
       allKpis={kpis}
       sheets={sheets}
+      employeesByDepartment={employeesByDepartment}
       company={company}
       isAdmin={user.role === "ADMIN"}
       plantUnit={workspace.plantUnitKey ?? "Bony Polymers"}

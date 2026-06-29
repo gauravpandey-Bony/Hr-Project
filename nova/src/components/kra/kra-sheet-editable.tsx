@@ -10,6 +10,7 @@ import { evaluateKpiCurrent } from "@/lib/kpi-quarters";
 import { emptyQuarterTargets, type SheetMeta } from "@/lib/kra-sheets";
 import { normalizeQuarterTargets } from "@/lib/kra/target-format";
 import { KraSheetTable } from "@/components/kra/kra-sheet";
+import { formatWeightage, weightagePercent } from "@/lib/kra/weightage";
 import { COMPANY } from "@/lib/company";
 
 type KpiWithEntries = Kpi & { entries: KpiEntry[] };
@@ -49,7 +50,7 @@ function kpiToDraft(kpi: KpiWithEntries): RowDraft {
     name: kpi.name,
     perspective: kpi.perspective ?? "",
     unit: kpi.unit,
-    weightage: kpi.weightage != null ? String(kpi.weightage * 100) : "",
+    weightage: kpi.weightage != null ? String(weightagePercent(kpi.weightage) ?? "") : "",
     targetValue: String(kpi.targetValue),
     quarters: normalizeQuarterTargets(parseQuarters(kpi.quarterTargets), kpi.unit),
   };
@@ -230,7 +231,9 @@ export function KraSheetEditable({
 
   const totalWeight = kpis.reduce((s, k) => {
     const w = drafts[k.id]?.weightage;
-    return s + (w ? parseFloat(w) / 100 : k.weightage ?? 0);
+    if (w) return s + parseFloat(w) / 100;
+    const pct = weightagePercent(k.weightage);
+    return s + (pct != null ? pct / 100 : 0);
   }, 0);
 
   if (!editable) {

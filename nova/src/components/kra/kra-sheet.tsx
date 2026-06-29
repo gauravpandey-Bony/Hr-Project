@@ -4,8 +4,8 @@ import type { Kpi, KpiEntry } from "@prisma/client";
 import { formatKpiValue } from "@/lib/kpi";
 import { evaluateKpiCurrent } from "@/lib/kpi-quarters";
 import { normalizeQuarterTargets } from "@/lib/kra/target-format";
-import { COMPANY } from "@/lib/company";
-import { RATING_SCALE } from "@/lib/company";
+import { formatWeightage } from "@/lib/kra/weightage";
+import { COMPANY, RATING_SCALE } from "@/lib/company";
 
 type KpiWithEntries = Kpi & { entries: KpiEntry[] };
 
@@ -114,7 +114,7 @@ export function KraSheetTable({
                   <td className="max-w-[180px] px-3 py-2.5 text-slate-900">{kpi.name}</td>
                   <td className="px-3 py-2.5 text-slate-500">{kpi.unit}</td>
                   <td className="px-3 py-2.5 text-right font-semibold text-slate-700">
-                    {kpi.weightage != null ? `${(kpi.weightage * 100).toFixed(0)}%` : "—"}
+                    {formatWeightage(kpi.weightage)}
                   </td>
                   <td className="border-l px-2 py-2.5 text-center font-medium text-slate-800">
                     {formatKpiValue(kpi.targetValue, kpi.unit)}

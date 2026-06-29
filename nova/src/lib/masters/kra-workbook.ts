@@ -56,6 +56,7 @@ export type KraWorkbookKpi = {
     q3: { target: string; achieved?: string };
     q4: { target: string; achieved?: string };
   };
+  lastYearAchieved?: string;
   entryValues: number[];
 };
 
@@ -305,6 +306,8 @@ function parseLogisticKpiRows(
       kpiName
     );
     const targetAnnual = readSheetCell(ws, r, 5, unit, "annual") || cellStr(row[5]);
+    const lastYearAchieved =
+      readSheetCell(ws, r, 4, unit, "quarterAchieved") || cellStr(row[4]);
     const q1t = readSheetCell(ws, r, 6, unit, "quarterTarget") || cellStr(row[6]);
     const q1a = normalizeKraCellValue(
       readSheetCell(ws, r, 7, unit, "quarterAchieved") || cellStr(row[7]),
@@ -347,6 +350,7 @@ function parseLogisticKpiRows(
       targetAnnual,
       targetValue,
       direction,
+      lastYearAchieved,
       quarterTargets: {
         q1: { target: q1t, achieved: q1a },
         q2: { target: q2t, achieved: q2a },
