@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Fragment } from "react";
+import { useMemo, useState, Fragment } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -197,9 +197,38 @@ function ScorecardSection({
 
 function EmployeeSummaryTable({ rows }: { rows: EmployeePerformanceRow[] }) {
   const [expanded, setExpanded] = useState<string | null>(null);
-  const allKpis = rows.flatMap((e) =>
-    e.breakdown.map((b) => ({ ...b, employeeName: e.employeeName, department: e.department }))
+  const [employeeFilter, setEmployeeFilter] = useState("all");
+  const [departmentFilter, setDepartmentFilter] = useState("all");
+
+  const departments = useMemo(
+    () => [...new Set(rows.map((e) => e.department).filter(Boolean))].sort(),
+    [rows]
   );
+
+  const employees = useMemo(
+    () => rows.map((e) => e.employeeName).sort((a, b) => a.localeCompare(b)),
+    [rows]
+  );
+
+  const allKpis = useMemo(
+    () =>
+      rows.flatMap((e) =>
+        e.breakdown.map((b) => ({
+          ...b,
+          employeeName: e.employeeName,
+          department: e.department,
+        }))
+      ),
+    [rows]
+  );
+
+  const filteredKpis = useMemo(() => {
+    return allKpis.filter((k) => {
+      if (employeeFilter !== "all" && k.employeeName !== employeeFilter) return false;
+      if (departmentFilter !== "all" && k.department !== departmentFilter) return false;
+      return true;
+    });
+  }, [allKpis, employeeFilter, departmentFilter]);
 
   return (
     <div className="space-y-4">
@@ -256,14 +285,64 @@ function EmployeeSummaryTable({ rows }: { rows: EmployeePerformanceRow[] }) {
       </div>
 
       <div>
-        <h3 className="mb-2 text-sm font-semibold text-muted-foreground">All employee KPIs (combined)</h3>
+        <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
+          <h3 className="text-sm font-semibold text-foreground">All employee KPIs (combined)</h3>
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="flex flex-col gap-1">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Department
+              </span>
+              <select
+                value={departmentFilter}
+                onChange={(e) => {
+                  setDepartmentFilter(e.target.value);
+                  if (e.target.value !== "all") setEmployeeFilter("all");
+                }}
+                className="min-w-[140px] rounded-lg border border-border bg-card px-3 py-1.5 text-sm"
+              >
+                <option value="all">All departments</option>
+                {departments.map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Employee
+              </span>
+              <select
+                value={employeeFilter}
+                onChange={(e) => setEmployeeFilter(e.target.value)}
+                className="min-w-[180px] rounded-lg border border-border bg-card px-3 py-1.5 text-sm"
+              >
+                <option value="all">All employees</option>
+                {employees
+                  .filter(
+                    (name) =>
+                      departmentFilter === "all" ||
+                      rows.find((r) => r.employeeName === name)?.department === departmentFilter
+                  )
+                  .map((name) => (
+                    <option key={name} value={name}>
+                      {name}
+                    </option>
+                  ))}
+              </select>
+            </label>
+          </div>
+        </div>
+        <p className="mb-2 text-xs text-muted-foreground">
+          Showing {filteredKpis.length} of {allKpis.length} KPI rows
+        </p>
         <LevelKpiTable
-          rows={allKpis}
+          rows={filteredKpis}
           extraColumns={[
             { header: "Employee", render: (r) => (r as LevelKpiRow & { employeeName: string }).employeeName ?? "—" },
             { header: "Dept", render: (r) => (r as LevelKpiRow & { department: string }).department ?? "—" },
           ]}
-          emptyMessage="No individual KPIs for this plant."
+          emptyMessage="No KPIs match the selected filters."
         />
       </div>
     </div>
