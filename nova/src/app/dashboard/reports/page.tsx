@@ -87,6 +87,13 @@ export default async function ReportsPage({
               Quarterly KRA report
             </Link>
             <Link
+              href={`/dashboard/reports/plant${unitQuery}`}
+              className="inline-flex items-center gap-2 rounded-xl border border-indigo-400/40 bg-indigo-600/20 px-5 py-3 text-sm font-semibold text-indigo-100 transition hover:bg-indigo-600/30"
+            >
+              <BarChart3 className="h-4 w-4" />
+              Plant scorecard
+            </Link>
+            <Link
               href={`/dashboard/ai${unitQuery}`}
               className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-5 py-3 text-sm font-semibold shadow-lg shadow-violet-900/40 transition hover:from-violet-500 hover:to-indigo-500"
             >
