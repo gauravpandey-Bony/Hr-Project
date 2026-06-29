@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { LogIn, Shield, Users, User, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -74,7 +74,6 @@ function AccountCard({
 }
 
 export function DemoLoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") ?? "/dashboard";
 
@@ -119,6 +118,7 @@ export function DemoLoginForm() {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
         body: JSON.stringify({ userId, password, redirect }),
       });
       const data = await res.json();
@@ -127,8 +127,9 @@ export function DemoLoginForm() {
         return;
       }
       toast.success(`Signed in as ${data.user.name}`);
-      router.push(data.redirect ?? "/dashboard");
-      router.refresh();
+      const target = data.redirect ?? "/dashboard";
+      // Full navigation so middleware sees the new session cookie immediately.
+      window.location.assign(target);
     } catch {
       toast.error("Network error — try again");
     } finally {
