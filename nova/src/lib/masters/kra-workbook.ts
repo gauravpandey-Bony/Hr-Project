@@ -8,13 +8,22 @@ import { parseNumericTarget, resolveImportTargetValue } from "./parse-numeric-ta
 
 function excelSerialToDoj(serial: unknown): string | undefined {
   if (serial === "" || serial == null) return undefined;
+  const numericSerial =
+    typeof serial === "number"
+      ? serial
+      : typeof serial === "string" && /^\d+(\.\d+)?$/.test(serial.trim())
+        ? Number(serial)
+        : null;
+  if (numericSerial != null && numericSerial >= 1000) {
+    const parsed = XLSX.SSF.parse_date_code(numericSerial);
+    if (parsed) {
+      const d = String(parsed.d).padStart(2, "0");
+      const m = String(parsed.m).padStart(2, "0");
+      return `${d}.${m}.${parsed.y}`;
+    }
+  }
   if (typeof serial === "string") return serial.trim() || undefined;
-  if (typeof serial !== "number" || serial < 1000) return undefined;
-  const parsed = XLSX.SSF.parse_date_code(serial);
-  if (!parsed) return undefined;
-  const d = String(parsed.d).padStart(2, "0");
-  const m = String(parsed.m).padStart(2, "0");
-  return `${d}.${m}.${parsed.y}`;
+  return undefined;
 }
 
 function formatEcn(code: unknown): string {
@@ -1024,9 +1033,7 @@ export function parseKraWorkbook(
   const cleanSheetNames = new Set(cleanEmployees.map((e) => e.sheetName));
   const cleanKpis = kpis.filter(
     (k) =>
-      cleanSheetNames.has(k.sheetName) &&
-      !isLogisticsJunkName(k.ownerName) &&
-      !isLogisticsJunkName(k.name)
+      cleanSheetNames.has(k.sheetName) && !isLogisticsJunkName(k.ownerName)
   );
 
   if (!cleanEmployees.length) errors.push("No employee sheets found in workbook");

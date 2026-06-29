@@ -76,11 +76,7 @@ export async function purgeLogisticsJunkData(
   });
 
   const junkKpiIds = kpis
-    .filter(
-      (k) =>
-        isLogisticsJunkName(k.ownerName) ||
-        (k.kpiLevel === "INDIVIDUAL" && isLogisticsJunkName(k.name))
-    )
+    .filter((k) => isLogisticsJunkName(k.ownerName))
     .map((k) => k.id);
 
   if (junkKpiIds.length) {
