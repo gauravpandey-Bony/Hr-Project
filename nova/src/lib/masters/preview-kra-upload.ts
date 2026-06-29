@@ -6,7 +6,7 @@ import {
 } from "./department-master-sync";
 import { parseKraWorkbook } from "./kra-workbook";
 import type { KraWorkbookParseResult } from "./kra-workbook";
-import type { KraWorkbookParseResult } from "./kra-workbook";
+import { findEmployeeEcnConflicts } from "./preview-employee-upload";
 
 export type KraUploadEmployeePreview = {
   sheetName: string;

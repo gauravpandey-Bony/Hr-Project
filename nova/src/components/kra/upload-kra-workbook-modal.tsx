@@ -166,9 +166,9 @@ export function UploadKraWorkbookModal({
             Upload KRA / KPI Excel
           </DialogTitle>
           <DialogDescription>
-            Upload employee KRA workbook (<strong>.xlsx</strong> / <strong>.xls</strong>).
-            Department match ho to employee seedha us department mein jayega; nahi to dropdown se
-            choose karein.
+            Upload an employee KRA workbook (<strong>.xlsx</strong> / <strong>.xls</strong>).
+            When a department matches Department Master, employees are assigned automatically;
+            otherwise choose a department from the dropdown.
           </DialogDescription>
         </DialogHeader>
 

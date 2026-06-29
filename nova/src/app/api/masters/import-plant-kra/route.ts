@@ -35,6 +35,7 @@ export async function POST(request: Request) {
   const departmentOverrides = parseDepartmentOverrides(formData.get("departmentOverrides"));
   const plantUnitKey = String(formData.get("plantUnitKey") ?? "").trim() || null;
 
+  try {
   const parsed = parseKraWorkbook(buffer, file.name);
   const employeeKra = parsed.employees.length > 0;
   const syncOptions = employeeKra
@@ -122,4 +123,10 @@ export async function POST(request: Request) {
     message,
     ...result,
   });
+  } catch (err) {
+    console.error("import-plant-kra failed:", err);
+    const msg =
+      err instanceof Error ? err.message : "Import failed unexpectedly";
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
 }

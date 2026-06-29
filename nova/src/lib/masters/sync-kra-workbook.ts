@@ -216,6 +216,14 @@ async function upsertIndividualKpis(
     new Date(2026, 3, 28),
   ];
 
+  const kpiIdsWithEntries: string[] = [];
+  const entryRows: {
+    kpiId: string;
+    value: number;
+    recordedAt: Date;
+    enteredById: string | null | undefined;
+  }[] = [];
+
   for (const k of kpis) {
     const id = kpiStableId(k.ownerName, k.srNo, k.name, plantUnitKey);
     const category = perspectiveToCategory(k.perspective);
@@ -255,18 +263,23 @@ async function upsertIndividualKpis(
     }
 
     if (k.entryValues.length) {
-      await db.kpiEntry.deleteMany({ where: { kpiId: id } });
+      kpiIdsWithEntries.push(id);
       for (let i = 0; i < k.entryValues.length; i++) {
-        await db.kpiEntry.create({
-          data: {
-            kpiId: id,
-            value: k.entryValues[i],
-            recordedAt: months[i] ?? months[months.length - 1],
-            enteredById: adminUserId,
-          },
+        entryRows.push({
+          kpiId: id,
+          value: k.entryValues[i],
+          recordedAt: months[i] ?? months[months.length - 1],
+          enteredById: adminUserId,
         });
-        entriesCreated++;
       }
+    }
+  }
+
+  if (kpiIdsWithEntries.length) {
+    await db.kpiEntry.deleteMany({ where: { kpiId: { in: kpiIdsWithEntries } } });
+    if (entryRows.length) {
+      await db.kpiEntry.createMany({ data: entryRows });
+      entriesCreated = entryRows.length;
     }
   }
 
@@ -324,6 +337,8 @@ export async function syncKraWorkbook(
       parseErrors: errors,
     };
   }
+
+  await dedupeDepartmentMasters(db, organizationId, plantUnitKey);
 
   const { deptByName, created: departmentsCreated, updated: departmentsUpdated } =
     await ensureDepartments(

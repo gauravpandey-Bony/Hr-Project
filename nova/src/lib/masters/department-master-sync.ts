@@ -119,13 +119,35 @@ export async function upsertDepartmentMaster(
     input.plantUnitKey
   );
 
+  const canonicalRow = await db.departmentMaster.findFirst({
+    where: { organizationId, name, location },
+    orderBy: [{ isActive: "desc" }, { sortOrder: "asc" }],
+  });
+
+  if (canonicalRow && existing && canonicalRow.id !== existing.id) {
+    await db.departmentMaster.update({
+      where: { id: existing.id },
+      data: archiveDepartmentRow(existing.name, existing.location, existing.id),
+    });
+    const department = await db.departmentMaster.update({
+      where: { id: canonicalRow.id },
+      data: {
+        headName: input.headName ?? canonicalRow.headName,
+        kraSheetId: input.kraSheetId ?? canonicalRow.kraSheetId,
+        sortOrder: input.sortOrder ?? canonicalRow.sortOrder,
+        isActive: input.isActive ?? true,
+      },
+    });
+    return { department, created: false };
+  }
+
   if (existing) {
     const department = await db.departmentMaster.update({
       where: { id: existing.id },
       data: {
         name,
         headName: input.headName ?? existing.headName,
-        location,
+        location: existing.location === location ? location : existing.location ?? location,
         kraSheetId: input.kraSheetId ?? existing.kraSheetId,
         sortOrder: input.sortOrder ?? existing.sortOrder,
         isActive: input.isActive ?? true,
@@ -134,19 +156,54 @@ export async function upsertDepartmentMaster(
     return { department, created: false };
   }
 
-  const department = await db.departmentMaster.create({
-    data: {
-      organizationId,
-      name,
-      headName: input.headName ?? null,
-      location,
-      kraSheetId: input.kraSheetId ?? null,
-      sortOrder: input.sortOrder ?? 0,
-      isActive: input.isActive ?? true,
-    },
-  });
+  if (canonicalRow) {
+    const department = await db.departmentMaster.update({
+      where: { id: canonicalRow.id },
+      data: {
+        headName: input.headName ?? canonicalRow.headName,
+        kraSheetId: input.kraSheetId ?? canonicalRow.kraSheetId,
+        sortOrder: input.sortOrder ?? canonicalRow.sortOrder,
+        isActive: input.isActive ?? true,
+      },
+    });
+    return { department, created: false };
+  }
 
-  return { department, created: true };
+  try {
+    const department = await db.departmentMaster.create({
+      data: {
+        organizationId,
+        name,
+        headName: input.headName ?? null,
+        location,
+        kraSheetId: input.kraSheetId ?? null,
+        sortOrder: input.sortOrder ?? 0,
+        isActive: input.isActive ?? true,
+      },
+    });
+    return { department, created: true };
+  } catch (err) {
+    const isUnique =
+      err &&
+      typeof err === "object" &&
+      "code" in err &&
+      (err as { code?: string }).code === "P2002";
+    if (!isUnique) throw err;
+
+    const fallback = await db.departmentMaster.findFirst({
+      where: { organizationId, name, location },
+    });
+    if (!fallback) throw err;
+    const department = await db.departmentMaster.update({
+      where: { id: fallback.id },
+      data: {
+        kraSheetId: input.kraSheetId ?? fallback.kraSheetId,
+        sortOrder: input.sortOrder ?? fallback.sortOrder,
+        isActive: input.isActive ?? true,
+      },
+    });
+    return { department, created: false };
+  }
 }
 
 type DeptCluster = DepartmentWithCount[];
@@ -172,7 +229,13 @@ function clusterDepartmentsByPlant(
   return clusters;
 }
 
-type DepartmentWithCount = DepartmentMaster & { _count?: { employees: number } };
+function archiveDepartmentRow(name: string, location: string | null, id: string) {
+  return {
+    isActive: false as const,
+    name: `${name} (archived ${id.slice(-6)})`,
+    location: `${location ?? "unknown"}#${id.slice(-6)}`,
+  };
+}
 
 function pickCanonicalDepartment(cluster: DepartmentWithCount[]): DepartmentMaster {
   return [...cluster].sort((a, b) => {
@@ -239,22 +302,54 @@ export async function dedupeDepartmentMasters(
 
         await db.departmentMaster.update({
           where: { id: dup.id },
-          data: { isActive: false },
+          data: archiveDepartmentRow(dup.name, dup.location, dup.id),
         });
 
         merged++;
         deactivated++;
       }
 
-      await db.departmentMaster.update({
-        where: { id: keeper.id },
-        data: {
-          name: normalizeDepartmentMasterName(keeper.name),
-          location: canonicalDepartmentLocation(keeper.location, plantUnitKey),
-          isActive: true,
-          kraSheetId: keeper.kraSheetId ?? duplicates.find((d) => d.kraSheetId)?.kraSheetId ?? null,
+      const canonicalName = normalizeDepartmentMasterName(keeper.name);
+      const canonicalLoc = canonicalDepartmentLocation(keeper.location, plantUnitKey);
+      const mergedKraSheetId =
+        keeper.kraSheetId ?? duplicates.find((d) => d.kraSheetId)?.kraSheetId ?? null;
+
+      const conflict = await db.departmentMaster.findFirst({
+        where: {
+          organizationId,
+          name: canonicalName,
+          location: canonicalLoc,
+          id: { notIn: [keeper.id, ...duplicates.map((d) => d.id)] },
         },
       });
+
+      if (conflict) {
+        await db.employeeMaster.updateMany({
+          where: { organizationId, departmentId: keeper.id },
+          data: { departmentId: conflict.id, department: conflict.name },
+        });
+        await db.departmentMaster.update({
+          where: { id: keeper.id },
+          data: archiveDepartmentRow(keeper.name, keeper.location, keeper.id),
+        });
+        await db.departmentMaster.update({
+          where: { id: conflict.id },
+          data: {
+            kraSheetId: mergedKraSheetId ?? conflict.kraSheetId,
+            isActive: true,
+          },
+        });
+      } else {
+        await db.departmentMaster.update({
+          where: { id: keeper.id },
+          data: {
+            name: canonicalName,
+            location: canonicalLoc,
+            isActive: true,
+            kraSheetId: mergedKraSheetId,
+          },
+        });
+      }
     }
   }
 

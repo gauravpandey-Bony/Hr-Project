@@ -66,7 +66,8 @@ export function KraDepartmentPick({
                 Choose department for unmatched employees
               </p>
               <p className="text-amber-800/90 dark:text-amber-200/90">
-                Department Master mein match nahi mila — neeche se sahi department select karein.
+                No matching department found in Department Master — select the correct department
+                below.
               </p>
             </div>
           </div>

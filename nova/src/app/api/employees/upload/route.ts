@@ -9,11 +9,15 @@ import {
   normalizeDepartmentMasterName,
   upsertDepartmentMaster,
 } from "@/lib/masters/department-master-sync";
-import { isKraEmployeeWorkbook } from "@/lib/masters/kra-workbook";
+import { isKraEmployeeWorkbook, parseKraWorkbook } from "@/lib/masters/kra-workbook";
 import {
   previewEmployeeRowsUpload,
-  previewKraWorkbookUpload,
+  findEmployeeEcnConflicts,
 } from "@/lib/masters/preview-employee-upload";
+import {
+  previewKraUpload,
+  parseDepartmentOverrides,
+} from "@/lib/masters/preview-kra-upload";
 import { syncKraWorkbook } from "@/lib/masters/sync-kra-workbook";
 import { assignDepartmentKpisToEmployee } from "@/lib/kpi/assign-department-kpis";
 
@@ -35,21 +39,61 @@ export async function POST(request: Request) {
 
   const buffer = await file.arrayBuffer();
   const confirmOverwrite = formData.get("confirmOverwrite") === "true";
+  const skipDepartmentCheck = formData.get("skipDepartmentCheck") === "true";
+  const departmentOverrides = parseDepartmentOverrides(formData.get("departmentOverrides"));
 
   if (isKraEmployeeWorkbook(buffer)) {
-    if (!confirmOverwrite) {
-      const preview = await previewKraWorkbookUpload(
+    const parsed = parseKraWorkbook(buffer, file.name);
+    const syncOptions = {
+      sourceFileName: file.name,
+      departmentOverrides,
+      preParsed: parsed,
+    };
+
+    if (!skipDepartmentCheck && !Object.keys(departmentOverrides).length) {
+      const deptPreview = await previewKraUpload(
         db,
         user.organizationId,
         buffer,
-        file.name
+        { sourceFileName: file.name },
+        parsed
       );
-      if (preview.requiresConfirmation) {
+      if (deptPreview.needsDepartmentPick) {
         return NextResponse.json(
           {
-            ...preview,
-            error: "Existing Employee ID (ECN) found. Confirm before updating.",
+            ...deptPreview,
+            error: "Choose department for employees without a matching Department Master row.",
+            needsDepartmentPick: true,
+          },
+          { status: 422 }
+        );
+      }
+    }
+
+    if (!confirmOverwrite) {
+      const employeesForConflict = parsed.employees
+        .filter((e) => e.name?.trim())
+        .map((e) => ({ ecn: e.ecn, name: e.name!.trim() }));
+      const conflicts = await findEmployeeEcnConflicts(
+        db,
+        user.organizationId,
+        employeesForConflict
+      );
+      if (conflicts.length) {
+        const withEcn = parsed.employees.filter((e) => e.ecn);
+        const updateCount = conflicts.length;
+        const newCount =
+          withEcn.length -
+          updateCount +
+          parsed.employees.filter((e) => !e.ecn).length;
+
+        return NextResponse.json(
+          {
+            conflicts,
+            newCount,
+            updateCount,
             requiresConfirmation: true,
+            error: "Existing Employee ID (ECN) found. Confirm before updating.",
           },
           { status: 409 }
         );
@@ -60,7 +104,8 @@ export async function POST(request: Request) {
       db,
       user.organizationId,
       buffer,
-      user.id
+      user.id,
+      syncOptions
     );
     if (
       result.errors.length &&
