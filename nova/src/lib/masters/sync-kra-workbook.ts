@@ -19,6 +19,7 @@ import { ROSTER_DEPARTMENTS, reconcilePlantHeadEmployeesAsProduction } from "./3
 import { purgeLogisticsJunkData } from "./logistics-kra-junk";
 import {
   dedupeDepartmentMasters,
+  deactivateEmptyDepartments,
   findMatchingDepartmentInList,
   upsertDepartmentMaster,
 } from "./department-master-sync";
@@ -401,6 +402,7 @@ export async function syncKraWorkbook(
 
   await reconcilePlantHeadEmployeesAsProduction(db, organizationId);
   await purgeLogisticsJunkData(db, organizationId);
+  await deactivateEmptyDepartments(db, organizationId, plantUnitKey);
 
   const {
     created: kpisCreated,

@@ -158,6 +158,17 @@ export async function fetchKraSheets(
   }
 
   attachProductionSubSheets(sheets);
+
+  if (scopedEmployees.length > 0) {
+    const employeeDisplayDepts = new Set(
+      scopedEmployees
+        .map((e) => e.department?.trim())
+        .filter((n): n is string => Boolean(n))
+        .map((n) => formatDepartmentDisplayName(n))
+    );
+    return sheets.filter((s) => employeeDisplayDepts.has(s.department));
+  }
+
   return sheets;
 }
 

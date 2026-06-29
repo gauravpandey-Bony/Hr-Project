@@ -2,12 +2,14 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { managerDashboardRedirect } from "@/lib/access-control";
 import { getCurrentUser } from "@/lib/auth";
-import { departmentMasterWhereForPlant } from "@/lib/unit-workspace";
+import { departmentMasterWhereForPlant, employeeMasterWhereForPlant } from "@/lib/unit-workspace";
 import {
   resolveWorkspace,
   requireAdminWorkspace,
 } from "@/lib/unit-workspace.server";
 import { DepartmentMasterClient } from "@/components/masters/department-master-client";
+import { formatDepartmentDisplayName } from "@/lib/masters/department-master-sync";
+import { filterRealKraEmployees } from "@/lib/masters/logistics-kra-junk";
 
 export default async function DepartmentMasterPage({
   searchParams,
@@ -29,9 +31,34 @@ export default async function DepartmentMasterPage({
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
   });
 
+  const employees = await db.employeeMaster.findMany({
+    where: workspace.dataScope
+      ? {
+          organizationId: user.organizationId,
+          isActive: true,
+          ...employeeMasterWhereForPlant(user.organizationId, workspace.dataScope),
+        }
+      : { organizationId: user.organizationId, isActive: true },
+    select: { departmentId: true, department: true, name: true },
+  });
+
+  const staffedDeptIds = new Set<string>();
+  const staffedDeptNames = new Set<string>();
+  for (const emp of filterRealKraEmployees(employees)) {
+    if (emp.departmentId) staffedDeptIds.add(emp.departmentId);
+    const name = emp.department?.trim();
+    if (name) staffedDeptNames.add(formatDepartmentDisplayName(name));
+  }
+
+  const departmentsWithEmployees = departments.filter(
+    (d) =>
+      staffedDeptIds.has(d.id) ||
+      staffedDeptNames.has(formatDepartmentDisplayName(d.name))
+  );
+
   return (
     <DepartmentMasterClient
-      initialRows={departments}
+      initialRows={departmentsWithEmployees}
       isAdmin={user.role === "ADMIN"}
       unitId={workspace.unitId}
     />

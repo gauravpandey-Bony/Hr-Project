@@ -1,6 +1,10 @@
 import type { DepartmentMaster, PrismaClient } from "@prisma/client";
 import { getLocationVariantsForPlant } from "@/lib/org-units";
-import { isLegacyBony37pPlant } from "@/lib/unit-workspace";
+import {
+  departmentMasterWhereForPlant,
+  isLegacyBony37pPlant,
+  plantDataScope,
+} from "@/lib/unit-workspace";
 import { normalizeRosterDepartment } from "./37p-roster";
 import { normalizeKraDepartment } from "./kra-workbook";
 
@@ -457,4 +461,50 @@ export async function dedupeDepartmentMasters(
   }
 
   return { merged, deactivated };
+}
+
+/** Deactivate department master rows in plant scope that have no active employees. */
+export async function deactivateEmptyDepartments(
+  db: PrismaClient,
+  organizationId: string,
+  plantUnitKey?: string | null
+): Promise<{ deactivated: number }> {
+  const where = plantUnitKey?.trim()
+    ? departmentMasterWhereForPlant(organizationId, plantDataScope(plantUnitKey))
+    : { organizationId };
+
+  const [departments, activeEmployees] = await Promise.all([
+    db.departmentMaster.findMany({
+      where: { ...where, isActive: true },
+      select: { id: true, name: true, location: true },
+    }),
+    db.employeeMaster.findMany({
+      where: { organizationId, isActive: true },
+      select: { departmentId: true, department: true },
+    }),
+  ]);
+
+  const staffedDeptIds = new Set<string>();
+  const staffedDeptNames = new Set<string>();
+  for (const emp of activeEmployees) {
+    if (emp.departmentId) staffedDeptIds.add(emp.departmentId);
+    const name = emp.department?.trim();
+    if (name) staffedDeptNames.add(departmentNameKey(name));
+  }
+
+  let deactivated = 0;
+  for (const dept of departments) {
+    const hasStaff =
+      staffedDeptIds.has(dept.id) ||
+      staffedDeptNames.has(departmentNameKey(dept.name));
+    if (hasStaff) continue;
+
+    await db.departmentMaster.update({
+      where: { id: dept.id },
+      data: archiveDepartmentRow(dept.name, dept.location, dept.id),
+    });
+    deactivated++;
+  }
+
+  return { deactivated };
 }

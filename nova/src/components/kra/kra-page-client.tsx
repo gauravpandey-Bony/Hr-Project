@@ -55,7 +55,15 @@ export function KraPageClient({
   const [activeSubSheetId, setActiveSubSheetId] = useState<string | null>(null);
   const [quarter, setQuarter] = useState<FiscalQuarter>("q1");
 
-  const sheet = sheets.find((s) => s.id === activeSheet) ?? sheets[0];
+  const visibleSheets = useMemo(
+    () =>
+      sheets.filter(
+        (s) => (employeesByDepartment[s.department] ?? EMPTY_EMPLOYEES).length > 0
+      ),
+    [sheets, employeesByDepartment]
+  );
+
+  const sheet = visibleSheets.find((s) => s.id === activeSheet) ?? visibleSheets[0];
   const activeSubSheet =
     sheet?.subSheets?.find((s) => s.id === activeSubSheetId) ?? sheet?.subSheets?.[0] ?? null;
 
@@ -76,13 +84,18 @@ export function KraPageClient({
   }, [deptEmployeesRaw, isAdmin, isManagerRole, viewerName]);
 
   useEffect(() => {
-    if (isEmployeeRole && sheets.length > 0) {
-      const deptWithEmployee = sheets.find(
-        (s) => (employeesByDepartment[s.department] ?? []).length > 0
-      );
+    if (isEmployeeRole && visibleSheets.length > 0) {
+      const deptWithEmployee = visibleSheets[0];
       if (deptWithEmployee) setActiveSheet(deptWithEmployee.id);
     }
-  }, [isEmployeeRole, sheets, employeesByDepartment]);
+  }, [isEmployeeRole, visibleSheets]);
+
+  useEffect(() => {
+    if (visibleSheets.length === 0) return;
+    if (!visibleSheets.some((s) => s.id === activeSheet)) {
+      setActiveSheet(visibleSheets[0]!.id);
+    }
+  }, [visibleSheets, activeSheet]);
 
   useEffect(() => {
     setActiveSubSheetId(sheet?.subSheets?.[0]?.id ?? null);
@@ -219,12 +232,7 @@ export function KraPageClient({
           Department
         </p>
         <div className="flex flex-wrap gap-2">
-          {(isEmployeeRole
-            ? sheets.filter(
-                (s) => (employeesByDepartment[s.department] ?? []).length > 0
-              )
-            : sheets
-          ).map((s) => (
+          {visibleSheets.map((s) => (
             <button
               key={s.id}
               type="button"
