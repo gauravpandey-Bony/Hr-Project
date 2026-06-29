@@ -21,13 +21,18 @@ export function plantDataScope(
 }
 
 /** Bony 37P keeps legacy rows with blank plant/location; other units are strict. */
+export function isLegacyBony37pPlant(plantUnitKey?: string | null): boolean {
+  if (!plantUnitKey?.trim()) return true;
+  const key = plantUnitKey.trim().toLowerCase();
+  return key === "bony polymers" || key.includes("37p") || key.includes("37-p");
+}
+
 export function plantScopeIncludesUnassigned(scope: PlantDataScope): boolean {
-  const key = scope.plantUnitKey.toLowerCase();
-  return (
-    key.includes("bony") ||
-    key.includes("37p") ||
-    scope.kpiPlantAliases.some((a) => /bony|37p/i.test(a))
-  );
+  if (isLegacyBony37pPlant(scope.plantUnitKey)) return true;
+  return scope.kpiPlantAliases.some((a) => {
+    const al = a.toLowerCase();
+    return al === "bony polymers" || al.includes("37p");
+  });
 }
 
 function locationOrClauses(

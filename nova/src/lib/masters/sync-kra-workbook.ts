@@ -9,6 +9,7 @@ import {
   type KraWorkbookKpi,
 } from "./kra-workbook";
 import { weightageFraction } from "@/lib/kra/weightage";
+import { isLegacyBony37pPlant } from "@/lib/unit-workspace";
 import { ROSTER_DEPARTMENTS } from "./37p-roster";
 
 export type SyncKraWorkbookOptions = {
@@ -48,8 +49,7 @@ async function ensureDepartments(
     extraDepts.set(masterName, { kraSheetId });
   }
 
-  const isBonyImport =
-    !plantUnitKey?.trim() || /bony/i.test(plantUnitKey);
+  const isBonyImport = isLegacyBony37pPlant(plantUnitKey);
 
   const allDefs = [
     ...(isBonyImport ? ROSTER_DEPARTMENTS : []),

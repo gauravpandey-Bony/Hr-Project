@@ -32,6 +32,22 @@ const SAKET_UNIT1_KRA_FILES = [
   "IT & System.xlsx",
 ] as const;
 
+const BONY_FLUID_58_PLANT = "Bony Fluid 58";
+
+const BONY_FLUID_58_KRA_FILES = [
+  "Basant Kumar KRA.xlsx",
+  "Suraj KRA.xlsx",
+  "Rahul Narwar- Dispatch & Assembly.xlsx",
+  "Pardeep Dagar KRA & KPI.xlsx",
+  "Maintenance.XLSX",
+  "Jitender KRA & KPI_Plant 58.xlsx",
+  "Gulab Singh KRA & KPI_Plant 58.xlsx",
+  "Raman Singh KRA.xlsx",
+  "Dinesh KRA.xlsx",
+  "Quality.xlsx",
+  "Dilip Kumar KRA & KPI_Plant 58.xlsx",
+] as const;
+
 const db = new PrismaClient();
 
 const ORG_SLUG = "bony-polymers";
@@ -600,6 +616,26 @@ async function main() {
     saketImports.push({ file, unit: SAKET_UNIT1_PLANT, ...result });
   }
 
+  const fluid58Imports: Record<string, unknown>[] = [];
+  for (const file of BONY_FLUID_58_KRA_FILES) {
+    const filePath = path.join(process.cwd(), "data/bony-fluid-58-kra", file);
+    if (!existsSync(filePath)) {
+      fluid58Imports.push({ file, error: `File not found: ${filePath}` });
+      continue;
+    }
+    const buffer = readFileSync(filePath);
+    const arrayBuffer = buffer.buffer.slice(
+      buffer.byteOffset,
+      buffer.byteOffset + buffer.byteLength
+    );
+    const result = await syncKraWorkbook(db, org.id, arrayBuffer, admin.id, {
+      plantUnitKey: BONY_FLUID_58_PLANT,
+      location: BONY_FLUID_58_PLANT,
+      sourceFileName: file,
+    });
+    fluid58Imports.push({ file, unit: BONY_FLUID_58_PLANT, ...result });
+  }
+
   const employeeCount = await db.employeeMaster.count({
     where: { organizationId: org.id, isActive: true },
   });
@@ -614,6 +650,7 @@ async function main() {
     logisticsKra: kraImports,
     bony37pKra: bony37pImports,
     saketUnit1Kra: saketImports,
+    bonyFluid58Kra: fluid58Imports,
   });
 }
 

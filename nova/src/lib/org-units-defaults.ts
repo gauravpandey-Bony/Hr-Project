@@ -218,6 +218,8 @@ export const DEFAULT_STANDALONE_UNITS: DefaultOrgUnit[] = [
     name: "Bony Fluid 58",
     subtitle: "Live · add KPI data",
     plantUnitKey: "Bony Fluid 58",
+    locationAliases: ["Bony Fluid 58", "Plant 58", "BF 58"],
+    kpiPlantAliases: ["Bony Fluid 58", "Plant 58"],
     gradientCss: "linear-gradient(135deg, #0891b2 0%, #14b8a6 50%, #10b981 100%)",
     accent: "text-cyan-600",
     emoji: "💧",

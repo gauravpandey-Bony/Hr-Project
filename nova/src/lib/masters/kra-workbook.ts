@@ -151,6 +151,15 @@ export function normalizeKraDepartment(raw: string): {
   if (/costing\s*&?\s*mis/i.test(d)) {
     return { masterName: "Costing & MIS", kraSheetId: "costing-mis" };
   }
+  if (/production\s*\/\s*dispatch|dispatch\s*&?\s*assembly/i.test(d)) {
+    return { masterName: "Dispatch & Assembly", kraSheetId: "dispatch-assembly" };
+  }
+  if (/maintenance\s*&?\s*project/i.test(d)) {
+    return { masterName: "Maintenance", kraSheetId: "maintenance" };
+  }
+  if (/bop\s*store|compound\s*store|green\s*hollow/i.test(d)) {
+    return { masterName: "Store", kraSheetId: "store" };
+  }
   const mapped = normalizeRosterDepartment(d);
   return {
     masterName: mapped.masterName,
@@ -279,6 +288,8 @@ function inferDepartmentFromTitle(title: string, sheetName = ""): string {
   if (/plant head|operations|sf-1 prithla/i.test(t)) return "Plant Head";
   if (/production/i.test(t)) return "Production";
   if (/costing\s*&?\s*mis/i.test(t)) return "Costing & MIS";
+  if (/dispatch|assembly/i.test(t)) return "Dispatch & Assembly";
+  if (/plant\s*58|fluid\s*58|bony\s*fluid/i.test(t)) return "Production";
   return "General";
 }
 
