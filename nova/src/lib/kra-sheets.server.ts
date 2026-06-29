@@ -5,16 +5,29 @@ import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import type { SheetMeta } from "@/lib/kra-sheets";
 import {
+  isPlantHeadRoleDepartment,
+  PLANT_HEAD_EMPLOYEE_DEPARTMENT,
+  PLANT_HEAD_KPI_DEPARTMENT,
+  PLANT_HEAD_KRA_SHEET_ID,
+} from "@/lib/masters/37p-roster";
+import {
   departmentMasterWhereForPlant,
   employeeMasterWhereForPlant,
   type PlantDataScope,
 } from "@/lib/unit-workspace";
+
+export type KraSubSheet = {
+  id: string;
+  label: string;
+  meta: SheetMeta;
+};
 
 export type KraSheetFromDb = {
   id: string;
   label: string;
   department: string;
   meta: SheetMeta;
+  subSheets?: KraSubSheet[];
 };
 
 function slugDept(name: string): string {
@@ -69,6 +82,7 @@ export async function fetchKraSheets(
       : departments.filter((d) => d.kpiLevel !== "INDIVIDUAL");
 
   for (const name of deptNamesFromStaff) {
+    if (isPlantHeadRoleDepartment(name)) continue;
     if (!deptByName.has(name)) {
       source = [
         ...source,
@@ -95,6 +109,7 @@ export async function fetchKraSheets(
   const sheets: KraSheetFromDb[] = [];
 
   for (const d of source) {
+    if (isPlantHeadRoleDepartment(d.name)) continue;
     const id = slugDept(d.name);
     if (seen.has(id)) continue;
     seen.add(id);
@@ -113,6 +128,7 @@ export async function fetchKraSheets(
 
   if (sheets.length === 0 && deptNamesFromStaff.size > 0) {
     for (const name of [...deptNamesFromStaff].sort()) {
+      if (isPlantHeadRoleDepartment(name)) continue;
       const id = slugDept(name);
       if (seen.has(id)) continue;
       seen.add(id);
@@ -130,7 +146,35 @@ export async function fetchKraSheets(
     }
   }
 
+  attachProductionSubSheets(sheets);
   return sheets;
+}
+
+function attachProductionSubSheets(sheets: KraSheetFromDb[]): void {
+  const production = sheets.find(
+    (s) =>
+      s.department === PLANT_HEAD_EMPLOYEE_DEPARTMENT ||
+      s.id === slugDept(PLANT_HEAD_EMPLOYEE_DEPARTMENT)
+  );
+  if (!production || production.subSheets?.length) return;
+
+  production.subSheets = [
+    {
+      id: PLANT_HEAD_KRA_SHEET_ID,
+      label: PLANT_HEAD_KPI_DEPARTMENT,
+      meta: {
+        kpiLevel: "PLANT",
+        department: PLANT_HEAD_KPI_DEPARTMENT,
+        category: "Sales",
+        showPerspective: true,
+      },
+    },
+    {
+      id: "production",
+      label: PLANT_HEAD_EMPLOYEE_DEPARTMENT,
+      meta: production.meta,
+    },
+  ];
 }
 
 export type KraEmployeeRow = {

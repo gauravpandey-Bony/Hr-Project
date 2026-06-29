@@ -122,6 +122,19 @@ export const ROSTER_DEPARTMENTS: DepartmentImportRow[] = buildRosterDepartments(
 
 /** Plant Head is a KRA sheet role — employees belong under Production in master data */
 export const PLANT_HEAD_EMPLOYEE_DEPARTMENT = "Production";
+export const PLANT_HEAD_KPI_DEPARTMENT = "Plant Head";
+export const PLANT_HEAD_KRA_SHEET_ID = "plant";
+
+/** KRA sheet roles nested under Production — not top-level departments */
+export function isPlantHeadRoleDepartment(name: string): boolean {
+  const trimmed = name.trim();
+  if (!trimmed) return false;
+  const key = trimmed.toLowerCase();
+  if (key === "plant head" || key === "operations") return true;
+  if (/^plant head\b/i.test(trimmed) && /archived/i.test(trimmed)) return true;
+  if (/^operations\b/i.test(trimmed) && /archived/i.test(trimmed)) return true;
+  return false;
+}
 
 export async function reconcilePlantHeadEmployeesAsProduction(
   db: import("@prisma/client").PrismaClient,

@@ -39,10 +39,15 @@ export function KraPageClient({
   plantUnit?: string;
   unitName?: string;
 }) {
-  const [activeSheet, setActiveSheet] = useState<string>(sheets[0]?.id ?? "plant");
+  const [activeSheet, setActiveSheet] = useState<string>(
+    sheets.find((s) => s.id === "production")?.id ?? sheets[0]?.id ?? "production"
+  );
   const [activeEmployeeId, setActiveEmployeeId] = useState<string | null>(null);
+  const [activeSubSheetId, setActiveSubSheetId] = useState<string | null>(null);
 
   const sheet = sheets.find((s) => s.id === activeSheet) ?? sheets[0];
+  const activeSubSheet =
+    sheet?.subSheets?.find((s) => s.id === activeSubSheetId) ?? sheet?.subSheets?.[0] ?? null;
   const deptEmployees = sheet
     ? (employeesByDepartment[sheet.department] ?? EMPTY_EMPLOYEES)
     : EMPTY_EMPLOYEES;
@@ -57,6 +62,10 @@ export function KraPageClient({
       if (deptWithEmployee) setActiveSheet(deptWithEmployee.id);
     }
   }, [isEmployeeRole, sheets, employeesByDepartment]);
+
+  useEffect(() => {
+    setActiveSubSheetId(sheet?.subSheets?.[0]?.id ?? null);
+  }, [activeSheet, sheet?.subSheets]);
 
   useEffect(() => {
     if (deptEmployees.length > 0) {
@@ -98,7 +107,8 @@ export function KraPageClient({
     );
   }
 
-  const sheetMeta = sheet.meta;
+  const sheetMeta = activeSubSheet?.meta ?? sheet.meta;
+  const sheetTitle = activeSubSheet?.label ?? sheet.label;
   const isEmployeeSheet = Boolean(activeEmployee);
 
   const individualMeta = activeEmployee
@@ -112,6 +122,7 @@ export function KraPageClient({
 
   const virtualSheet: KraSheetFromDb = {
     ...sheet,
+    label: sheetTitle,
     meta: individualMeta,
   };
 
@@ -183,6 +194,31 @@ export function KraPageClient({
         </div>
       </div>
 
+      {sheet.subSheets && sheet.subSheets.length > 1 && !isEmployeeRole && (
+        <div>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            {sheet.label} — KRA sheet
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {sheet.subSheets.map((sub) => (
+              <button
+                key={sub.id}
+                type="button"
+                onClick={() => setActiveSubSheetId(sub.id)}
+                className={cn(
+                  "rounded-full border px-4 py-2 text-sm font-medium transition",
+                  (activeSubSheetId ?? sheet.subSheets?.[0]?.id) === sub.id
+                    ? "border-violet-600 bg-violet-600 text-white shadow-md"
+                    : "border-border bg-card text-foreground hover:border-violet-400/60"
+                )}
+              >
+                {sub.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {deptEmployees.length > 0 && !isEmployeeRole && (
         <div>
           <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -213,10 +249,13 @@ export function KraPageClient({
         <Building2 className="h-4 w-4 text-emerald-600" />
         <span>
           <strong className="text-foreground">
-            {activeEmployee ? activeEmployee.name : sheet.label}
+            {activeEmployee ? activeEmployee.name : sheetTitle}
           </strong>
           {activeEmployee && (
             <span className="text-muted-foreground"> · {sheet.label} department</span>
+          )}
+          {!activeEmployee && activeSubSheet && sheet.subSheets && sheet.subSheets.length > 1 && (
+            <span className="text-muted-foreground"> · {sheet.label}</span>
           )}
           {" — "}
           {company.kraMasterSheetLabel}
@@ -233,8 +272,8 @@ export function KraPageClient({
         />
       ) : (
         <KraSheetEditable
-          key={activeSheet}
-          title={sheet.label}
+          key={`${activeSheet}-${activeSubSheetId ?? "default"}`}
+          title={sheetTitle}
           subtitle={company.shortName}
           kpis={kpis}
           showPerspective={sheetMeta.showPerspective}
