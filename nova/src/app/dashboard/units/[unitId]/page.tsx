@@ -9,12 +9,15 @@ import {
   UNIT_PICKER_PATH,
 } from "@/lib/access-control";
 import { resolveWorkspace } from "@/lib/unit-workspace.server";
-import { COMPANY, KPI_CATEGORIES } from "@/lib/company";
+import { KPI_CATEGORIES } from "@/lib/company";
 import { getOrgUnitBySlug } from "@/lib/org-units.server";
 import { OBSOLETE_UNIT_REDIRECTS } from "@/lib/org-units-defaults";
 import { aliasesForUnit } from "@/lib/org-units";
 import { plantDataScope } from "@/lib/unit-workspace";
 import { MyDashboardClient } from "@/components/dashboard/my-dashboard-client";
+import { PlantCommandCenter } from "@/components/dashboard/plant-command-center";
+import { buildPlantPerformanceReport } from "@/lib/kra/plant-performance-report";
+import type { FiscalQuarter } from "@/lib/kpi-quarters";
 import { GenerateKpiPromptButton } from "@/components/ai/generate-kpi-prompt-modal";
 import { UploadKraWorkbookButton } from "@/components/kra/upload-kra-workbook-button";
 import {
@@ -26,6 +29,21 @@ import {
   Sparkles,
   Target,
 } from "lucide-react";
+
+const QUARTERS: FiscalQuarter[] = ["q1", "q2", "q3", "q4"];
+
+const KPI_SELECT = {
+  id: true,
+  name: true,
+  kraName: true,
+  ownerName: true,
+  department: true,
+  weightage: true,
+  quarterTargets: true,
+  kpiLevel: true,
+  category: true,
+  unit: true,
+} as const;
 
 export default async function UnitDashboardPage({
   params,
@@ -61,6 +79,17 @@ export default async function UnitDashboardPage({
     orderBy: { category: "asc" },
   });
 
+  const scorecardKpis = isEmployeeRole(user.role)
+    ? []
+    : await db.kpi.findMany({
+        where: mergeKpiWhereForUnit(user, dataScope, { isActive: true }),
+        select: KPI_SELECT,
+      });
+
+  const reportsByQuarter = Object.fromEntries(
+    QUARTERS.map((q) => [q, buildPlantPerformanceReport(scorecardKpis, q, unit.name)])
+  ) as Record<FiscalQuarter, ReturnType<typeof buildPlantPerformanceReport>>;
+
   const categories = KPI_CATEGORIES.filter((cat) => kpis.some((k) => k.category === cat));
   const createHref = `/dashboard/kpis/create?unit=${encodeURIComponent(params.unitId)}`;
   const trackHref = `/dashboard/track?unit=${encodeURIComponent(params.unitId)}`;
@@ -92,12 +121,12 @@ export default async function UnitDashboardPage({
               <span className="text-emerald-100">{unit.name}</span>
             </div>
             <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-              {isEmployeeRole(user.role) ? "My KPI Dashboard" : "KPI Dashboard"}
+              {isEmployeeRole(user.role) ? "My KPI Dashboard" : "Plant Command Center"}
             </h1>
             <p className="mt-3 text-lg text-slate-300/90 text-balance">
               {isEmployeeRole(user.role)
                 ? `Your assigned KPIs at ${unit.name}.`
-                : `${COMPANY.shortName} — ${unit.name} · ${COMPANY.kraMasterSheetLabel}`}
+                : `${unit.name} — plant health, departments & business KPIs at a glance.`}
             </p>
           </div>
 
@@ -148,11 +177,27 @@ export default async function UnitDashboardPage({
         </div>
       </div>
 
-      {kpis.length > 0 && (
+      {kpis.length > 0 && isEmployeeRole(user.role) && (
         <MyDashboardClient
           kpis={kpis}
           categories={categories}
-          isEmployee={isEmployeeRole(user.role)}
+          isEmployee={true}
+        />
+      )}
+
+      {scorecardKpis.length > 0 && !isEmployeeRole(user.role) && (
+        <PlantCommandCenter
+          unitName={unit.name}
+          unitId={params.unitId}
+          reportsByQuarter={reportsByQuarter}
+        />
+      )}
+
+      {kpis.length > 0 && !isEmployeeRole(user.role) && scorecardKpis.length === 0 && (
+        <MyDashboardClient
+          kpis={kpis}
+          categories={categories}
+          isEmployee={false}
         />
       )}
 
