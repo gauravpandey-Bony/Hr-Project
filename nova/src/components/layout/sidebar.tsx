@@ -176,7 +176,7 @@ export function Sidebar({
         <nav className="space-y-1" aria-label="Main navigation">
           {!collapsed && (
             <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.14em] text-sidebar-foreground/35">
-              KPI tracking
+              Master data
             </p>
           )}
           {mainNav.map((item) => (
@@ -250,7 +250,7 @@ export function Sidebar({
             <p className="text-[11px] leading-snug text-sidebar-foreground/50">
               {selectedUnit && userRole === "ADMIN"
                 ? `Workspace · ${selectedUnit.name}`
-                : `KPI workspace for ${company.shortName}`}
+                : `${company.shortName} workspace`}
             </p>
           </div>
         )}

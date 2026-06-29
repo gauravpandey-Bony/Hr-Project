@@ -8,7 +8,6 @@ import {
   requireAdminWorkspace,
 } from "@/lib/unit-workspace.server";
 import { DepartmentMasterClient } from "@/components/masters/department-master-client";
-import { fetchKraSheets } from "@/lib/kra-sheets.server";
 
 export default async function DepartmentMasterPage({
   searchParams,
@@ -23,20 +22,16 @@ export default async function DepartmentMasterPage({
   const workspace = await resolveWorkspace(user, unitId);
   requireAdminWorkspace(user, workspace);
 
-  const [departments, kraSheets] = await Promise.all([
-    db.departmentMaster.findMany({
-      where: workspace.dataScope
-        ? departmentMasterWhereForPlant(user.organizationId, workspace.dataScope)
-        : { organizationId: user.organizationId },
-      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-    }),
-    fetchKraSheets(user.organizationId),
-  ]);
+  const departments = await db.departmentMaster.findMany({
+    where: workspace.dataScope
+      ? departmentMasterWhereForPlant(user.organizationId, workspace.dataScope)
+      : { organizationId: user.organizationId },
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+  });
 
   return (
     <DepartmentMasterClient
       initialRows={departments}
-      kraSheets={kraSheets}
       isAdmin={user.role === "ADMIN"}
       unitId={workspace.unitId}
     />

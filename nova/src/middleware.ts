@@ -4,11 +4,14 @@ import type { UserRole } from "@prisma/client";
 import {
   canAccessDashboardPath,
   canAccessUnitPicker,
+  departmentMasterRedirect,
   employeeDashboardRedirect,
+  isRemovedKpiPath,
   managerDashboardRedirect,
   roleHomeRedirect,
 } from "@/lib/access-control";
 import { ROLE_COOKIE, SESSION_COOKIE } from "@/lib/constants";
+import { ADMIN_UNIT_STORAGE_KEY } from "@/lib/admin-unit";
 
 export function middleware(request: NextRequest) {
   if (!request.nextUrl.pathname.startsWith("/dashboard")) {
@@ -29,9 +32,20 @@ export function middleware(request: NextRequest) {
     | UserRole
     | undefined;
 
+  const pathname = request.nextUrl.pathname;
+
+  if (role && isRemovedKpiPath(pathname)) {
+    const unitId = request.cookies.get(ADMIN_UNIT_STORAGE_KEY)?.value;
+    const target =
+      role === "ADMIN"
+        ? departmentMasterRedirect(unitId)
+        : roleHomeRedirect(role);
+    return NextResponse.redirect(new URL(target, request.url));
+  }
+
   if (
     role &&
-    request.nextUrl.pathname === "/dashboard" &&
+    pathname === "/dashboard" &&
     !canAccessUnitPicker(role)
   ) {
     return NextResponse.redirect(
@@ -41,7 +55,7 @@ export function middleware(request: NextRequest) {
 
   if (
     role === "EMPLOYEE" &&
-    !canAccessDashboardPath(role, request.nextUrl.pathname)
+    !canAccessDashboardPath(role, pathname)
   ) {
     return NextResponse.redirect(
       new URL(employeeDashboardRedirect(userId), request.url)
@@ -50,10 +64,10 @@ export function middleware(request: NextRequest) {
 
   if (
     role === "MANAGER" &&
-    !canAccessDashboardPath(role, request.nextUrl.pathname)
+    !canAccessDashboardPath(role, pathname)
   ) {
     return NextResponse.redirect(
-      new URL(managerDashboardRedirect(request.nextUrl.pathname), request.url)
+      new URL(managerDashboardRedirect(pathname), request.url)
     );
   }
 

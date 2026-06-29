@@ -47,17 +47,17 @@ export default async function LoginPage() {
               Performance tracking, reimagined.
             </h1>
             <p className="text-base leading-relaxed text-sidebar-foreground/65">
-              KRAs, quarterly targets, team reports — one modern workspace for{" "}
+              Department master and HR workflows — one modern workspace for{" "}
               {company.name}.
             </p>
             <ul className="space-y-3 text-sm text-sidebar-foreground/75">
               <li className="flex items-center gap-3">
                 <BarChart3 className="h-5 w-5 shrink-0 text-primary" />
-                Dashboards & league reports
+                Department master & org structure
               </li>
               <li className="flex items-center gap-3">
                 <Sparkles className="h-5 w-5 shrink-0 text-primary" />
-                AI-assisted KPI generation
+                Reviews, goals & HR modules
               </li>
             </ul>
           </div>

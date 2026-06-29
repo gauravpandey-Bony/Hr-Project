@@ -26,7 +26,6 @@ export async function GET(request: Request) {
       name: true,
       headName: true,
       location: true,
-      kraSheetId: true,
       sortOrder: true,
       isActive: true,
     },

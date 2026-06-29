@@ -1,13 +1,7 @@
 import {
   LayoutDashboard,
-  Target,
-  PenLine,
-  BarChart3,
   Settings,
-  Sparkles,
-  FileSpreadsheet,
   Building2,
-  Users,
   MessageSquare,
   Flag,
   LineChart,
@@ -23,6 +17,8 @@ export type NavItem = {
   keywords?: string[];
 };
 
+export const DEPARTMENT_MASTER_PATH = "/dashboard/masters/departments";
+
 export const mainNav: NavItem[] = [
   {
     href: "/dashboard",
@@ -31,46 +27,10 @@ export const mainNav: NavItem[] = [
     keywords: ["home", "units", "plants", "locations"],
   },
   {
-    href: "/dashboard/units/bony-37p",
-    label: "KPI Dashboard",
-    icon: BarChart3,
-    keywords: ["overview", "metrics", "37p", "dashboard"],
-  },
-  {
-    href: "/dashboard/kpis",
-    label: "KPI Library",
-    icon: Target,
-    keywords: ["metrics", "list", "library"],
-  },
-  {
-    href: "/dashboard/ai",
-    label: "Maya AI",
-    icon: Sparkles,
-    keywords: ["chat", "assistant", "copilot", "maya", "voice"],
-  },
-  {
-    href: "/dashboard/track",
-    label: "Update Data",
-    icon: PenLine,
-    keywords: ["entry", "log", "update"],
-  },
-  {
-    href: "/dashboard/kra",
-    label: "KRA / KPI Master Sheet",
-    icon: FileSpreadsheet,
-    keywords: ["sheet", "kra", "spreadsheet"],
-  },
-  {
-    href: "/dashboard/masters/departments",
+    href: DEPARTMENT_MASTER_PATH,
     label: "Department Master",
     icon: Building2,
     keywords: ["department", "master", "org"],
-  },
-  {
-    href: "/dashboard/reports",
-    label: "Reports",
-    icon: BarChart3,
-    keywords: ["analytics", "league", "ranking"],
   },
 ];
 
@@ -133,7 +93,7 @@ export const allNavItems: NavItem[] = [
 export const commandPaletteItems = allNavItems.map((item) => ({
   ...item,
   group: mainNav.some((m) => m.href === item.href)
-    ? "KPI tracking"
+    ? "Master data"
     : item.href === settingsNav.href
       ? "System"
       : "People & HR",

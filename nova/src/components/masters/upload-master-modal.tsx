@@ -17,10 +17,10 @@ import { Button } from "@/components/ui/button";
 
 const TEMPLATE = {
   filename: "department-master-template.csv",
-  csv: `department,head,location,kra_sheet_id,sort_order,active
-IT,,Bony Polymers,it,7,true
-Production,,Bony Polymers,production,2,true`,
-  hint: "Columns: department (required), head, location, kra_sheet_id, sort_order, active",
+    csv: `department,head,location,sort_order,active
+IT,,Bony Polymers,7,true
+Production,,Bony Polymers,2,true`,
+    hint: "Columns: department (required), head, location, sort_order, active",
 };
 
 export function UploadMasterModal({

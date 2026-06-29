@@ -1,12 +1,6 @@
 import { PrismaClient } from "@prisma/client";
-import { ALL_PLANT_KPIS, PLANT_UNIT } from "../src/lib/plant-37p";
 import { DEFAULT_DEPARTMENTS } from "../src/lib/master-defaults";
 import { sync37pFromDefaultFile } from "../src/lib/masters/sync-37p";
-import { syncPlantKraFromDefaultFile } from "../src/lib/masters/sync-plant-kra-workbook";
-import {
-  ensureAllKpisHaveQuarterTargets,
-  syncAllQuarterTargetsToEntries,
-} from "../src/lib/kpi-quarters";
 import { hashPassword } from "../src/lib/auth/password";
 import { SEED_USERS, seedPasswordForUser } from "./seed-users";
 import { COMPANY } from "../src/lib/company";
@@ -88,19 +82,6 @@ const defaultRatingScale = JSON.stringify({
   max: 5,
   labels: ["Needs improvement", "Developing", "Meets expectations", "Exceeds", "Exceptional"],
 });
-
-const DEPT_KRA_META: Record<
-  string,
-  { kpiLevel: string; category: string; showPerspective: boolean }
-> = {
-  plant: { kpiLevel: "PLANT", category: "Sales", showPerspective: false },
-  production: { kpiLevel: "DEPARTMENT", category: "Production", showPerspective: false },
-  qa: { kpiLevel: "DEPARTMENT", category: "Quality", showPerspective: false },
-  maintenance: { kpiLevel: "DEPARTMENT", category: "Maintenance", showPerspective: false },
-  store: { kpiLevel: "DEPARTMENT", category: "Process", showPerspective: true },
-  billing: { kpiLevel: "DEPARTMENT", category: "Process", showPerspective: true },
-  it: { kpiLevel: "DEPARTMENT", category: "IT", showPerspective: true },
-};
 
 async function main() {
   const org = await db.organization.upsert({
@@ -484,65 +465,6 @@ async function main() {
     update: { workspaceName: "Bony Polymers — Microsoft Teams" },
   });
 
-  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"].map((_, i) => new Date(2026, i, 28));
-
-  for (const def of ALL_PLANT_KPIS) {
-    await db.kpi.upsert({
-      where: { id: def.id },
-      create: {
-        id: def.id,
-        organizationId: org.id,
-        name: def.name,
-        description: def.kraName,
-        category: def.category,
-        unit: def.unit,
-        targetValue: def.targetValue,
-        direction: def.direction,
-        frequency: "MONTHLY",
-        department: def.department,
-        perspective: def.perspective,
-        kraName: def.kraName,
-        weightage: def.weightage,
-        fiscalYear: def.fiscalYear ?? null,
-        plantUnit: def.plantUnit ?? PLANT_UNIT,
-        kpiLevel: def.kpiLevel,
-        ownerName: def.ownerName,
-        quarterTargets: JSON.stringify(def.quarterTargets),
-      },
-      update: {
-        name: def.name,
-        description: def.kraName,
-        category: def.category,
-        unit: def.unit,
-        targetValue: def.targetValue,
-        direction: def.direction,
-        department: def.department,
-        perspective: def.perspective,
-        kraName: def.kraName,
-        weightage: def.weightage,
-        fiscalYear: null,
-        plantUnit: PLANT_UNIT,
-        kpiLevel: def.kpiLevel,
-        ownerName: def.ownerName,
-        quarterTargets: JSON.stringify(def.quarterTargets),
-      },
-    });
-
-    if (def.values?.length) {
-      await db.kpiEntry.deleteMany({ where: { kpiId: def.id } });
-      for (let i = 0; i < def.values.length; i++) {
-        await db.kpiEntry.create({
-          data: {
-            kpiId: def.id,
-            value: def.values[i],
-            recordedAt: months[i],
-            enteredById: admin.id,
-          },
-        });
-      }
-    }
-  }
-
   // Masters: 37P roster departments + legacy defaults
   const allDeptDefs = [
     ...ROSTER_DEPARTMENTS,
@@ -555,64 +477,32 @@ async function main() {
       where: { organizationId: org.id, name: d.name },
     });
     if (!exists) {
-      const meta = d.kraSheetId ? DEPT_KRA_META[d.kraSheetId] : undefined;
       await db.departmentMaster.create({
         data: {
           organizationId: org.id,
           name: d.name,
           headName: "headName" in d ? (d.headName || null) : null,
           location: "location" in d ? (d.location ?? "Bony Polymers 37-P") : "Bony Polymers 37-P",
-          kraSheetId: d.kraSheetId,
-          kpiLevel: meta?.kpiLevel ?? null,
-          category: meta?.category ?? null,
-          showPerspective: meta?.showPerspective ?? false,
           sortOrder: d.sortOrder,
         },
       });
-    } else if (d.kraSheetId) {
-      const meta = DEPT_KRA_META[d.kraSheetId];
-      if (meta) {
-        await db.departmentMaster.update({
-          where: { id: exists.id },
-          data: {
-            kpiLevel: meta.kpiLevel,
-            category: meta.category,
-            showPerspective: meta.showPerspective,
-          },
-        });
-      }
     }
   }
   const deptCount = await db.departmentMaster.count({
     where: { organizationId: org.id },
   });
 
-  await db.kpi.deleteMany({
-    where: { organizationId: org.id, kpiLevel: "INDIVIDUAL" },
-  });
+  await db.kpiEntry.deleteMany({ where: { kpi: { organizationId: org.id } } });
+  await db.kpi.deleteMany({ where: { organizationId: org.id } });
   await db.employeeMaster.deleteMany({ where: { organizationId: org.id } });
 
   const rosterSync = await sync37pFromDefaultFile(db, org.id);
-  const plantKraSync = await syncPlantKraFromDefaultFile(
-    db,
-    org.id,
-    undefined,
-    admin.id,
-    rajKumar.id
-  );
-
-  const quarterTargetsBackfilled = await ensureAllKpisHaveQuarterTargets(org.id);
-  const quarterEntriesSynced = await syncAllQuarterTargetsToEntries(org.id, admin.id);
 
   console.log("Seed complete:", {
     org: ORG_NAME,
     admin: admin.email,
-    kpis: ALL_PLANT_KPIS.length,
     departments: deptCount,
-    quarterTargetsBackfilled,
-    quarterEntriesSynced,
     roster37p: rosterSync,
-    plantKraWorkbook: plantKraSync,
   });
 }
 

@@ -4,7 +4,6 @@ export type DepartmentExportRow = {
   name: string;
   headName: string | null;
   location: string | null;
-  kraSheetId: string | null;
   sortOrder: number;
   isActive: boolean;
 };
@@ -13,7 +12,6 @@ const HEADERS = [
   "Department",
   "Head",
   "Location",
-  "KRA Sheet ID",
   "Sort Order",
   "Active",
 ] as const;
@@ -25,7 +23,6 @@ export function buildDepartmentMasterWorkbook(rows: DepartmentExportRow[]) {
       r.name,
       r.headName ?? "",
       r.location ?? "",
-      r.kraSheetId ?? "",
       r.sortOrder,
       r.isActive ? "Yes" : "No",
     ]),
@@ -36,7 +33,6 @@ export function buildDepartmentMasterWorkbook(rows: DepartmentExportRow[]) {
     { wch: 24 },
     { wch: 20 },
     { wch: 18 },
-    { wch: 16 },
     { wch: 10 },
     { wch: 8 },
   ];

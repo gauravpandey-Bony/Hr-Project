@@ -1,36 +1,51 @@
 import type { Prisma, User, UserRole } from "@prisma/client";
-import { mainNav, hrNav, settingsNav, type NavItem } from "@/lib/navigation";
+import {
+  mainNav,
+  hrNav,
+  settingsNav,
+  DEPARTMENT_MASTER_PATH,
+  type NavItem,
+} from "@/lib/navigation";
 import { adminHasUnitWorkspace, getAdminMainNav } from "@/lib/admin-unit";
 import type { OrgUnit } from "@/lib/org-units";
-import { DATA_UNIT_ID } from "@/lib/org-units";
-import { employeeDashboardPathForUser, kpiWhereForPlantScope, type PlantDataScope } from "@/lib/unit-workspace";
+import { kpiWhereForPlantScope, type PlantDataScope } from "@/lib/unit-workspace";
 import { kpiWhereForManager } from "@/lib/team-scope";
 
 export const ROLE_COOKIE = "nova_user_role";
 
-/** KPI dashboard with uploaded data (Bony 37P) */
-export const KPI_DASHBOARD_PATH = `/dashboard/units/${DATA_UNIT_ID}`;
-
 /** Admin-only unit tile picker */
 export const UNIT_PICKER_PATH = "/dashboard";
 
-/** Dashboard paths employees may open */
-const EMPLOYEE_ALLOWED = [
-  KPI_DASHBOARD_PATH,
+const REVIEWS_PATH = "/dashboard/reviews";
+
+/** KPI/KRA features removed — redirect these paths */
+export const REMOVED_KPI_PATH_PREFIXES = [
   "/dashboard/kpis",
+  "/dashboard/kra",
   "/dashboard/track",
-  "/dashboard/reviews",
+  "/dashboard/reports",
+  "/dashboard/ai",
+  "/dashboard/units/",
+  "/dashboard/masters/employees",
+  "/dashboard/reports/employee",
+  "/dashboard/team",
 ] as const;
 
+export function isRemovedKpiPath(pathname: string): boolean {
+  return REMOVED_KPI_PATH_PREFIXES.some(
+    (p) => pathname === p || pathname.startsWith(p)
+  );
+}
+
+/** Dashboard paths employees may open */
+const EMPLOYEE_ALLOWED = [REVIEWS_PATH] as const;
+
 /** Managers cannot edit department master */
-const MANAGER_BLOCKED_PREFIXES = ["/dashboard/masters/departments"] as const;
+const MANAGER_BLOCKED_PREFIXES = [DEPARTMENT_MASTER_PATH] as const;
 
 /** Blocked for employees (checked before allow-list) */
 const EMPLOYEE_BLOCKED_PREFIXES = [
   "/dashboard/masters",
-  "/dashboard/kra",
-  "/dashboard/reports",
-  "/dashboard/ai",
   "/dashboard/feedback",
   "/dashboard/goals",
   "/dashboard/surveys",
@@ -38,8 +53,8 @@ const EMPLOYEE_BLOCKED_PREFIXES = [
   "/dashboard/calibration",
   "/dashboard/compensation",
   "/dashboard/settings",
-  "/dashboard/kpis/create",
   "/dashboard/reviews/new",
+  ...REMOVED_KPI_PATH_PREFIXES,
 ];
 
 export function isEmployeeRole(role: UserRole): boolean {
@@ -57,14 +72,22 @@ export function canAccessUnitPicker(role: UserRole): boolean {
 /** Default landing page after login, by role */
 export function roleHomeRedirect(role: UserRole): string {
   if (role === "ADMIN") return UNIT_PICKER_PATH;
-  if (role === "MANAGER") return KPI_DASHBOARD_PATH;
-  return KPI_DASHBOARD_PATH;
+  return REVIEWS_PATH;
+}
+
+export function departmentMasterRedirect(unitId?: string | null): string {
+  if (!unitId) return DEPARTMENT_MASTER_PATH;
+  return `${DEPARTMENT_MASTER_PATH}?unit=${encodeURIComponent(unitId)}`;
 }
 
 export function canAccessDashboardPath(role: UserRole, pathname: string): boolean {
+  if (isRemovedKpiPath(pathname)) return false;
+
   if (pathname === UNIT_PICKER_PATH && !canAccessUnitPicker(role)) {
     return false;
   }
+
+  if (role === "ADMIN") return true;
 
   if (role === "MANAGER") {
     for (const blocked of MANAGER_BLOCKED_PREFIXES) {
@@ -76,8 +99,6 @@ export function canAccessDashboardPath(role: UserRole, pathname: string): boolea
   }
 
   if (role !== "EMPLOYEE") return true;
-
-  if (pathname.startsWith("/dashboard/units/")) return true;
 
   for (const blocked of EMPLOYEE_BLOCKED_PREFIXES) {
     if (pathname === blocked || pathname.startsWith(`${blocked}/`)) {
@@ -96,14 +117,13 @@ export function canAccessDashboardPath(role: UserRole, pathname: string): boolea
   return false;
 }
 
-export function employeeDashboardRedirect(userId?: string): string {
-  if (userId) return employeeDashboardPathForUser(userId);
-  return KPI_DASHBOARD_PATH;
+export function employeeDashboardRedirect(_userId?: string): string {
+  return REVIEWS_PATH;
 }
 
 export function managerDashboardRedirect(pathname: string): string {
-  if (pathname === UNIT_PICKER_PATH) {
-    return KPI_DASHBOARD_PATH;
+  if (pathname === UNIT_PICKER_PATH || isRemovedKpiPath(pathname)) {
+    return REVIEWS_PATH;
   }
   return roleHomeRedirect("MANAGER");
 }
@@ -134,7 +154,6 @@ export function mergeKpiWhere(
   return { AND: [scoped, extra] };
 }
 
-/** Scope KPI queries to a plant / unit workspace */
 export function mergeKpiWhereForUnit(
   user: User,
   scope: PlantDataScope | string,
@@ -186,66 +205,31 @@ export function canAccessReviewAssignment(
 export async function employeeMasterWhereForUserAsync(
   user: User
 ): Promise<Prisma.EmployeeMasterWhereInput> {
-  const base = { organizationId: user.organizationId };
-  if (user.role === "ADMIN") return base;
-  if (user.role === "MANAGER" && user.department) {
-    return { ...base, department: user.department, isActive: true };
-  }
-  if (user.role === "EMPLOYEE" && user.name?.trim()) {
-    return { ...base, name: user.name.trim() };
-  }
-  if (user.role === "EMPLOYEE") return { ...base, id: "__none__" };
-  return base;
+  return { organizationId: user.organizationId, id: "__none__" };
 }
 
 export function employeeMasterWhereForUser(
   user: User
 ): Prisma.EmployeeMasterWhereInput {
-  const base = { organizationId: user.organizationId };
-  if (user.role !== "EMPLOYEE") {
-    if (user.role === "MANAGER" && user.department) {
-      return { ...base, department: user.department, isActive: true };
-    }
-    return base;
-  }
-
-  if (user.name?.trim()) {
-    return { ...base, name: user.name.trim() };
-  }
-
-  return { ...base, id: "__none__" };
+  return { organizationId: user.organizationId, id: "__none__" };
 }
 
 export function getMainNavForRole(role: UserRole): NavItem[] {
-  if (role === "EMPLOYEE") {
-    return mainNav
-      .filter((item) =>
-        [KPI_DASHBOARD_PATH, "/dashboard/kpis", "/dashboard/track"].includes(item.href)
-      )
-      .map((item) =>
-        item.href === KPI_DASHBOARD_PATH
-          ? { ...item, label: "My Dashboard" }
-          : item.href === "/dashboard/kpis"
-            ? { ...item, label: "My KPIs" }
-            : item
-      );
+  if (role === "ADMIN") {
+    return mainNav;
   }
 
   if (role === "MANAGER") {
-    return mainNav.filter(
-      (item) =>
-        item.href !== UNIT_PICKER_PATH &&
-        item.href !== "/dashboard/masters/departments"
-    );
+    return mainNav.filter((item) => item.href !== UNIT_PICKER_PATH);
   }
 
-  return mainNav;
+  return [];
 }
 
 export function getHrNavForRole(role: UserRole): NavItem[] {
   if (role !== "EMPLOYEE") return hrNav;
   return hrNav
-    .filter((item) => item.href === "/dashboard/reviews")
+    .filter((item) => item.href === REVIEWS_PATH)
     .map((item) => ({ ...item, label: "My Reviews" }));
 }
 
@@ -278,7 +262,7 @@ export function getCommandPaletteItemsForRole(
   return items.map((item) => ({
     ...item,
     group: main.some((m) => m.href === item.href)
-      ? "KPI tracking"
+      ? "Master data"
       : item.href === settingsNav.href
         ? "System"
         : "People & HR",

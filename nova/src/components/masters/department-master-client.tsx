@@ -6,7 +6,6 @@ import { Plus, Trash2, Save, Loader2, Building2, Upload, Download } from "lucide
 import { UploadMasterModal } from "./upload-master-modal";
 import { COMPANY } from "@/lib/company";
 import { downloadFromApi } from "@/lib/download-from-api";
-import type { KraSheetFromDb } from "@/lib/kra-sheets.server";
 import { StickyTableShell } from "@/components/ui/sticky-table-shell";
 import {
   TableBody,
@@ -28,7 +27,6 @@ type Draft = {
   name: string;
   headName: string;
   location: string;
-  kraSheetId: string;
   sortOrder: string;
   isActive: boolean;
 };
@@ -38,7 +36,6 @@ function toDraft(d: DeptRow): Draft {
     name: d.name,
     headName: d.headName ?? "",
     location: d.location ?? "Bony Polymers",
-    kraSheetId: d.kraSheetId ?? "",
     sortOrder: String(d.sortOrder),
     isActive: d.isActive,
   };
@@ -46,12 +43,10 @@ function toDraft(d: DeptRow): Draft {
 
 export function DepartmentMasterClient({
   initialRows,
-  kraSheets,
   isAdmin,
   unitId,
 }: {
   initialRows: DeptRow[];
-  kraSheets: KraSheetFromDb[];
   isAdmin: boolean;
   unitId?: string | null;
 }) {
@@ -104,7 +99,6 @@ export function DepartmentMasterClient({
           name: d.name.trim(),
           headName: d.headName || null,
           location: d.location || "Bony Polymers",
-          kraSheetId: d.kraSheetId || null,
           sortOrder: parseInt(d.sortOrder, 10) || 0,
           isActive: d.isActive,
         }),
@@ -160,7 +154,7 @@ export function DepartmentMasterClient({
             </div>
             <h1 className="text-3xl font-bold">Department Master</h1>
             <p className="mt-1 text-sm text-slate-300">
-              Plant departments linked to KRA sheets — {rows.length} records
+              Plant departments — {rows.length} records
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -217,7 +211,6 @@ export function DepartmentMasterClient({
               <TableHead className="min-w-[200px]">Department</TableHead>
               <TableHead className="min-w-[160px]">Head</TableHead>
               <TableHead className="min-w-[180px]">Location</TableHead>
-              <TableHead className="min-w-[200px]">KRA sheet</TableHead>
               <TableHead className="min-w-[64px]">Order</TableHead>
               <TableHead className="min-w-[56px]">Active</TableHead>
             </TableRow>
@@ -286,24 +279,6 @@ export function DepartmentMasterClient({
                       />
                     ) : (
                       <span className="block leading-snug">{row.location ?? "—"}</span>
-                    )}
-                  </TableCell>
-                  <TableCell className={MASTER_CELL}>
-                    {isAdmin ? (
-                      <select
-                        className={masterCellInput("min-w-[200px]")}
-                        value={d.kraSheetId}
-                        onChange={(e) => patch(row.id, { kraSheetId: e.target.value })}
-                      >
-                        <option value="">—</option>
-                        {kraSheets.map((s) => (
-                          <option key={s.id} value={s.id}>
-                            {s.label}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <span className="block leading-snug">{row.kraSheetId ?? "—"}</span>
                     )}
                   </TableCell>
                   <TableCell className={MASTER_CELL}>
