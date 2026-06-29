@@ -27,7 +27,11 @@ export function employeeMasterWhereForPlant(
   const resolved = typeof scope === "string" ? plantDataScope(scope) : scope;
   return {
     organizationId,
-    OR: resolved.locationAliases.map((location) => ({ location })),
+    OR: [
+      ...resolved.locationAliases.map((location) => ({ location })),
+      { location: null },
+      { location: "" },
+    ],
   };
 }
 
@@ -45,10 +49,10 @@ export function departmentMasterWhereForPlant(
 export function kpiWhereForPlantScope(
   scope: PlantDataScope
 ): Pick<Prisma.KpiWhereInput, "plantUnit" | "OR"> {
-  if (scope.kpiPlantAliases.length === 1) {
-    return { plantUnit: scope.kpiPlantAliases[0] };
-  }
-  return { OR: scope.kpiPlantAliases.map((plantUnit) => ({ plantUnit })) };
+  const plantMatches = scope.kpiPlantAliases.map((plantUnit) => ({ plantUnit }));
+  return {
+    OR: [...plantMatches, { plantUnit: null }, { plantUnit: "" }],
+  };
 }
 
 export function resolveUserPlantUnitKeySync(_userId: string): string {

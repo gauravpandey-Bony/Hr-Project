@@ -45,3 +45,4 @@ next-env.d.ts
 /prisma/ci.db
 /prisma/shadow.db
 /prisma/prisma/
+data/logistics-kra/*.xlsx

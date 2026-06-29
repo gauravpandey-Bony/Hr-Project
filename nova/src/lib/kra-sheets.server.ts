@@ -53,6 +53,33 @@ export async function fetchKraSheets(
     });
   }
 
+  const employees = await db.employeeMaster.findMany({
+    where: { organizationId, isActive: true },
+    orderBy: [{ department: "asc" }, { name: "asc" }],
+  });
+
+  for (const emp of employees) {
+    const slug = emp.name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
+    const id = `emp-${slug}`;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    sheets.push({
+      id,
+      label: emp.name,
+      department: emp.department ?? emp.name,
+      meta: {
+        kpiLevel: "INDIVIDUAL",
+        department: emp.department ?? "General",
+        category: emp.department ?? "Logistics",
+        showPerspective: true,
+        ownerName: emp.name,
+      },
+    });
+  }
+
   return sheets;
 }
 

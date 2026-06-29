@@ -1,10 +1,18 @@
 import { PrismaClient } from "@prisma/client";
+import { readFileSync, existsSync } from "fs";
+import path from "path";
 import { DEFAULT_DEPARTMENTS } from "../src/lib/master-defaults";
-import { sync37pFromDefaultFile } from "../src/lib/masters/sync-37p";
 import { hashPassword } from "../src/lib/auth/password";
 import { SEED_USERS, seedPasswordForUser } from "./seed-users";
 import { COMPANY } from "../src/lib/company";
 import { ROSTER_DEPARTMENTS } from "../src/lib/masters/37p-roster";
+import { syncKraWorkbook } from "../src/lib/masters/sync-kra-workbook";
+
+const LOGISTICS_KRA_FILES = [
+  "Deepak KRA 2026-2027 April-June-2026.xlsx",
+  "LOKRANJAN KRA APRIL 26 TO JUNE 26 (2).xlsx",
+  "Logistic Ravi KRA 2026-2027 April-June-2026.xlsx",
+] as const;
 
 const db = new PrismaClient();
 
@@ -503,13 +511,49 @@ async function main() {
   await db.kpi.deleteMany({ where: { organizationId: org.id } });
   await db.employeeMaster.deleteMany({ where: { organizationId: org.id } });
 
-  const rosterSync = await sync37pFromDefaultFile(db, org.id);
+  const logisticsExists = await db.departmentMaster.findFirst({
+    where: { organizationId: org.id, name: "Logistics" },
+  });
+  if (!logisticsExists) {
+    await db.departmentMaster.create({
+      data: {
+        organizationId: org.id,
+        name: "Logistics",
+        kraSheetId: "logistics",
+        sortOrder: 15,
+        isActive: true,
+      },
+    });
+  }
+
+  const kraImports: Record<string, unknown>[] = [];
+  for (const file of LOGISTICS_KRA_FILES) {
+    const filePath = path.join(process.cwd(), "data/logistics-kra", file);
+    if (!existsSync(filePath)) {
+      kraImports.push({ file, error: `File not found: ${filePath}` });
+      continue;
+    }
+    const buffer = readFileSync(filePath);
+    const arrayBuffer = buffer.buffer.slice(
+      buffer.byteOffset,
+      buffer.byteOffset + buffer.byteLength
+    );
+    const result = await syncKraWorkbook(db, org.id, arrayBuffer, admin.id);
+    kraImports.push({ file, ...result });
+  }
+
+  const employeeCount = await db.employeeMaster.count({
+    where: { organizationId: org.id, isActive: true },
+  });
+  const kpiCount = await db.kpi.count({ where: { organizationId: org.id } });
 
   console.log("Seed complete:", {
     org: ORG_NAME,
     admin: admin.email,
     departments: deptCount,
-    roster37p: rosterSync,
+    employees: employeeCount,
+    kpis: kpiCount,
+    logisticsKra: kraImports,
   });
 }
 

@@ -7,6 +7,7 @@ import {
   Sparkles,
   FileSpreadsheet,
   Building2,
+  Users,
   MessageSquare,
   Flag,
   LineChart,
@@ -64,6 +65,12 @@ export const mainNav: NavItem[] = [
     label: "Department Master",
     icon: Building2,
     keywords: ["department", "master", "org"],
+  },
+  {
+    href: "/dashboard/masters/employees",
+    label: "Employee Master",
+    icon: Users,
+    keywords: ["employee", "master", "staff"],
   },
   {
     href: "/dashboard/reports",

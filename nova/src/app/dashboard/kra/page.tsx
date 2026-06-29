@@ -23,9 +23,7 @@ export default async function KraPage({
 
   const [kpis, sheets, company] = await Promise.all([
     db.kpi.findMany({
-      where: mergeKpiWhereForWorkspace(user, workspace.dataScope, {
-        kpiLevel: { not: "INDIVIDUAL" },
-      }),
+      where: mergeKpiWhereForWorkspace(user, workspace.dataScope, {}),
       include: { entries: { orderBy: { recordedAt: "desc" }, take: 12 } },
       orderBy: [{ kpiLevel: "asc" }, { weightage: "desc" }],
     }),

@@ -5,24 +5,10 @@ import {
   canAccessDashboardPath,
   canAccessUnitPicker,
   employeeDashboardRedirect,
-  KPI_DASHBOARD_PATH,
   managerDashboardRedirect,
   roleHomeRedirect,
-  UNIT_PICKER_PATH,
 } from "@/lib/access-control";
 import { ROLE_COOKIE, SESSION_COOKIE } from "@/lib/constants";
-
-const REMOVED_PATH_PREFIXES = [
-  "/dashboard/masters/employees",
-  "/dashboard/reports/employee",
-  "/dashboard/team",
-] as const;
-
-function isRemovedPath(pathname: string): boolean {
-  return REMOVED_PATH_PREFIXES.some(
-    (p) => pathname === p || pathname.startsWith(`${p}/`)
-  );
-}
 
 export function middleware(request: NextRequest) {
   if (!request.nextUrl.pathname.startsWith("/dashboard")) {
@@ -44,11 +30,6 @@ export function middleware(request: NextRequest) {
     | undefined;
 
   const pathname = request.nextUrl.pathname;
-
-  if (role && isRemovedPath(pathname)) {
-    const target = role === "ADMIN" ? UNIT_PICKER_PATH : KPI_DASHBOARD_PATH;
-    return NextResponse.redirect(new URL(target, request.url));
-  }
 
   if (
     role &&

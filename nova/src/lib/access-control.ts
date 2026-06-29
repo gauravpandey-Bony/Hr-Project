@@ -186,13 +186,34 @@ export function canAccessReviewAssignment(
 export async function employeeMasterWhereForUserAsync(
   user: User
 ): Promise<Prisma.EmployeeMasterWhereInput> {
-  return { organizationId: user.organizationId, id: "__none__" };
+  const base = { organizationId: user.organizationId };
+  if (user.role === "ADMIN") return base;
+  if (user.role === "MANAGER" && user.department) {
+    return { ...base, department: user.department, isActive: true };
+  }
+  if (user.role === "EMPLOYEE" && user.name?.trim()) {
+    return { ...base, name: user.name.trim() };
+  }
+  if (user.role === "EMPLOYEE") return { ...base, id: "__none__" };
+  return base;
 }
 
 export function employeeMasterWhereForUser(
   user: User
 ): Prisma.EmployeeMasterWhereInput {
-  return { organizationId: user.organizationId, id: "__none__" };
+  const base = { organizationId: user.organizationId };
+  if (user.role !== "EMPLOYEE") {
+    if (user.role === "MANAGER" && user.department) {
+      return { ...base, department: user.department, isActive: true };
+    }
+    return base;
+  }
+
+  if (user.name?.trim()) {
+    return { ...base, name: user.name.trim() };
+  }
+
+  return { ...base, id: "__none__" };
 }
 
 export function getMainNavForRole(role: UserRole): NavItem[] {

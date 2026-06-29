@@ -1,5 +1,6 @@
 import * as XLSX from "xlsx";
 import { is37pRosterMatrix, parse37pRoster } from "./37p-roster";
+import { isKraEmployeeWorkbook, parseKraWorkbook } from "./kra-workbook";
 
 export type DepartmentImportRow = {
   name: string;
@@ -125,7 +126,7 @@ export function parseDepartmentCsv(text: string): {
     rows.push({
       name: row.name,
       headName: row.headName,
-      location: row.location ?? "Bony Polymers",
+      location: row.location?.trim() || undefined,
       kraSheetId: row.kraSheetId,
       sortOrder: row.sortOrder ?? rows.length + 1,
       isActive: row.isActive ?? true,
@@ -162,7 +163,7 @@ export function parseEmployeeCsv(text: string): {
       name: displayName,
       designation: row.designation,
       department: row.department,
-      location: row.location ?? "Bony Polymers",
+      location: row.location?.trim() || undefined,
       doj: row.doj,
       ecn: row.ecn,
       managerName: row.managerName,
@@ -173,14 +174,15 @@ export function parseEmployeeCsv(text: string): {
   return { rows, errors };
 }
 
-/** Multi-sheet employee roster workbooks are no longer imported. */
-export function parseEmployeeKraWorkbook(_buffer: ArrayBuffer): {
+/** Multi-sheet employee KRA workbooks (logistics / IT format). */
+export function parseEmployeeKraWorkbook(buffer: ArrayBuffer): {
   rows: EmployeeImportRow[];
   errors: string[];
 } {
+  const parsed = parseKraWorkbook(buffer);
   return {
-    rows: [],
-    errors: ["Employee KRA/KPI workbook import is disabled."],
+    rows: parsed.employees,
+    errors: parsed.errors,
   };
 }
 
@@ -215,6 +217,10 @@ export function parseEmployeeXlsx(buffer: ArrayBuffer): {
     };
   }
 
+  if (isKraEmployeeWorkbook(buffer)) {
+    return parseEmployeeKraWorkbook(buffer);
+  }
+
   const headerRow = (matrix[0] ?? []).join(" ").toLowerCase();
 
   if (headerRow.includes("department") && headerRow.includes("designation")) {
@@ -222,10 +228,7 @@ export function parseEmployeeXlsx(buffer: ArrayBuffer): {
     return parseEmployeeCsv(text);
   }
 
-  return {
-    rows: [],
-    errors: ["Employee master import is disabled. Use department master instead."],
-  };
+  return parseEmployeeKraWorkbook(buffer);
 }
 
 export function readUploadBuffer(file: File): Promise<ArrayBuffer> {

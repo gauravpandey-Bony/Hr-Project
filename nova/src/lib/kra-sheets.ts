@@ -6,6 +6,7 @@ export type SheetMeta = {
   department: string;
   category: string;
   showPerspective: boolean;
+  ownerName?: string;
 };
 
 export function kpisForSheet(
@@ -13,7 +14,15 @@ export function kpisForSheet(
   allKpis: Kpi[]
 ): Kpi[] {
   const meta = sheet.meta;
+  if (meta.kpiLevel === "INDIVIDUAL" && meta.ownerName) {
+    return allKpis.filter(
+      (k) =>
+        k.kpiLevel === "INDIVIDUAL" &&
+        k.ownerName?.toLowerCase() === meta.ownerName?.toLowerCase()
+    );
+  }
   return allKpis.filter((k) => {
+    if (k.kpiLevel === "INDIVIDUAL") return false;
     if (k.department === meta.department) return true;
     return k.kpiLevel === meta.kpiLevel && k.department === meta.department;
   });

@@ -67,9 +67,9 @@ export function UploadKraWorkbookModal({
             Upload KRA / KPI Excel
           </DialogTitle>
           <DialogDescription>
-            Upload the plant KRA workbook (<strong>.xlsx</strong> or{" "}
-            <strong>.xls</strong>). Department sheets (Production, QA, Store, Billing,
-            IT, etc.) are imported automatically.
+            Upload employee KRA workbook (<strong>.xlsx</strong> / <strong>.xls</strong>).
+            Employee details and individual KPIs are imported; missing fields (e.g. plant/location)
+            stay blank.
           </DialogDescription>
         </DialogHeader>
 
