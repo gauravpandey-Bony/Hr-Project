@@ -8,6 +8,7 @@ import {
   OFF_TARGET_THRESHOLD,
   type KpiStatus,
 } from "@/lib/kpi";
+import { weightagePercent } from "@/lib/kra/weightage";
 import { parseQuarterNumber } from "@/lib/kpi-quarters";
 
 export type QuarterFilter = "all" | "annual" | "q1" | "q2" | "q3" | "q4";
@@ -99,7 +100,7 @@ export function kpiMetricsForFilter(
     status,
     currentFormatted:
       row.weightageNum != null && row.weightageNum > 0
-        ? `${achieved.toFixed(achieved % 1 ? 2 : 0)} / ${(row.weightageNum * 100).toFixed(0)}`
+        ? `${achieved.toFixed(achieved % 1 ? 2 : 0)} / ${weightagePercent(row.weightageNum)?.toFixed(0) ?? "—"}`
         : formatKpiValue(achieved, row.unit),
     targetFormatted:
       cell.target !== "—" ? cell.target : row.annualTarget,

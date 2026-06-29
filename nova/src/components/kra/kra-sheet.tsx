@@ -4,7 +4,7 @@ import type { Kpi, KpiEntry } from "@prisma/client";
 import { formatKpiValue } from "@/lib/kpi";
 import { evaluateKpiCurrent } from "@/lib/kpi-quarters";
 import { normalizeQuarterTargets } from "@/lib/kra/target-format";
-import { formatWeightage } from "@/lib/kra/weightage";
+import { formatWeightage, weightageFraction } from "@/lib/kra/weightage";
 import { COMPANY, RATING_SCALE } from "@/lib/company";
 
 type KpiWithEntries = Kpi & { entries: KpiEntry[] };
@@ -36,7 +36,10 @@ export function KraSheetTable({
   kpis: KpiWithEntries[];
   showPerspective?: boolean;
 }) {
-  const totalWeight = kpis.reduce((s, k) => s + (k.weightage ?? 0), 0);
+  const totalWeight = kpis.reduce(
+    (s, k) => s + (weightageFraction(k.weightage) ?? 0),
+    0
+  );
 
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -56,7 +59,6 @@ export function KraSheetTable({
               {showPerspective && <th className="px-3 py-2.5 font-semibold">Perspective</th>}
               <th className="px-3 py-2.5 font-semibold">KRA</th>
               <th className="px-3 py-2.5 font-semibold">KPI — Measure</th>
-              <th className="px-3 py-2.5 font-semibold">UOM</th>
               <th className="px-3 py-2.5 font-semibold text-right">Wt %</th>
               <th className="border-l px-2 py-2.5 text-center font-semibold">Annual</th>
               <th className="border-l px-2 py-2.5 text-center font-semibold" colSpan={2}>
@@ -74,7 +76,7 @@ export function KraSheetTable({
               <th className="border-l px-3 py-2.5 font-semibold">Status</th>
             </tr>
             <tr className="border-b bg-slate-50/80 text-[10px] text-slate-400">
-              <th colSpan={showPerspective ? 6 : 5} />
+              <th colSpan={showPerspective ? 5 : 4} />
               <th className="border-l px-2 py-1 text-center">Target</th>
               <th className="border-l px-2 py-1">Target</th>
               <th className="px-2 py-1">Achieved</th>
@@ -112,7 +114,6 @@ export function KraSheetTable({
                     {kpi.kraName ?? "—"}
                   </td>
                   <td className="max-w-[180px] px-3 py-2.5 text-slate-900">{kpi.name}</td>
-                  <td className="px-3 py-2.5 text-slate-500">{kpi.unit}</td>
                   <td className="px-3 py-2.5 text-right font-semibold text-slate-700">
                     {formatWeightage(kpi.weightage)}
                   </td>
@@ -148,7 +149,7 @@ export function KraSheetTable({
           {totalWeight > 0 && (
             <tfoot>
               <tr className="border-t bg-slate-50 font-semibold">
-                <td colSpan={showPerspective ? 5 : 4} className="px-3 py-2.5 text-right text-slate-600">
+                <td colSpan={showPerspective ? 4 : 3} className="px-3 py-2.5 text-right text-slate-600">
                   Total weightage
                 </td>
                 <td className="px-3 py-2.5 text-right text-slate-900">

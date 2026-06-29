@@ -6,6 +6,7 @@ import {
   kpiStatusForKra,
   type KpiStatus,
 } from "@/lib/kpi";
+import { weightagePercent } from "@/lib/kra/weightage";
 import {
   evaluateKpiCurrent,
   isPlaceholderAchieved,
@@ -135,7 +136,7 @@ export function evaluateKpiForFilter(
     currentLabel: fromEntryFallback
       ? formatKpiValue(achieved, kpi.unit)
       : kpi.weightage != null && kpi.weightage > 0
-        ? `${achieved.toFixed(achieved % 1 ? 2 : 0)} / ${(kpi.weightage * 100).toFixed(0)}`
+        ? `${achieved.toFixed(achieved % 1 ? 2 : 0)} / ${weightagePercent(kpi.weightage)?.toFixed(0) ?? "—"}`
         : formatKpiValue(achieved, kpi.unit),
     targetLabel:
       cell.target?.trim() || formatKpiValue(quarterTarget, kpi.unit) || "—",

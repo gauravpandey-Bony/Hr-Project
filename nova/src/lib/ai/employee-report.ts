@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import type { User, UserRole } from "@prisma/client";
 import { formatKpiValue, OFF_TARGET_THRESHOLD } from "@/lib/kpi";
+import { formatWeightage, weightageFraction } from "@/lib/kra/weightage";
 import {
   evaluateKpiCurrent,
   formatAnnualTargetLabel,
@@ -484,7 +485,10 @@ export async function buildEmployeeDashboard(
     }));
 
   const sorted = [...rows].sort((a, b) => a.progressNum - b.progressNum);
-  const totalWeight = rows.reduce((s, k) => s + (k.weightage ?? 0), 0);
+  const totalWeight = rows.reduce(
+    (s, k) => s + (weightageFraction(k.weightage) ?? 0),
+    0
+  );
 
   const quarterlyReport: EmployeeQuarterlyKpiRow[] = kpis.map((k) => {
     const { current, progressNum, status } = evaluateKpiCurrent(k);
@@ -507,9 +511,8 @@ export async function buildEmployeeDashboard(
       category: k.category || "Other",
       kraName: k.kraName,
       unit: k.unit,
-      weightage:
-        k.weightage != null ? `${Math.round(k.weightage * 100)}%` : "—",
-      weightageNum: k.weightage,
+      weightage: formatWeightage(k.weightage),
+      weightageNum: weightageFraction(k.weightage),
       annualTarget: formatAnnualTargetLabel(
         rawQuarters,
         parseAnnualTargetText(k.quarterTargets),

@@ -10,7 +10,7 @@ import { evaluateKpiCurrent } from "@/lib/kpi-quarters";
 import { emptyQuarterTargets, type SheetMeta } from "@/lib/kra-sheets";
 import { normalizeQuarterTargets } from "@/lib/kra/target-format";
 import { KraSheetTable } from "@/components/kra/kra-sheet";
-import { formatWeightage, weightagePercent } from "@/lib/kra/weightage";
+import { formatWeightage, weightageFraction, weightageFromPercentInput, weightagePercent } from "@/lib/kra/weightage";
 import { COMPANY } from "@/lib/company";
 
 type KpiWithEntries = Kpi & { entries: KpiEntry[] };
@@ -155,7 +155,7 @@ export function KraSheetEditable({
     if (!d) return;
     setSavingId(kpi.id);
     setError(null);
-    const weight = d.weightage.trim() ? parseFloat(d.weightage) / 100 : undefined;
+    const weight = weightageFromPercentInput(d.weightage);
     const res = await fetch(`/api/kpis/${kpi.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -231,9 +231,10 @@ export function KraSheetEditable({
 
   const totalWeight = kpis.reduce((s, k) => {
     const w = drafts[k.id]?.weightage;
-    if (w) return s + parseFloat(w) / 100;
-    const pct = weightagePercent(k.weightage);
-    return s + (pct != null ? pct / 100 : 0);
+    if (w?.trim()) {
+      return s + (weightageFromPercentInput(w) ?? 0);
+    }
+    return s + (weightageFraction(k.weightage) ?? 0);
   }, 0);
 
   if (!editable) {
@@ -370,21 +371,13 @@ export function KraSheetEditable({
                     onChange={(e) => updateDraft(kpi.id, { name: e.target.value })}
                   />
                 </div>
-                <div className="lg:col-span-1">
-                  <FieldLabel>UOM</FieldLabel>
-                  <input
-                    className={cn(inputBase, "text-center")}
-                    value={d.unit}
-                    onChange={(e) => updateDraft(kpi.id, { unit: e.target.value })}
-                  />
-                </div>
-                <div className="lg:col-span-1">
+                <div className="lg:col-span-2">
                   <FieldLabel>Wt %</FieldLabel>
                   <input
                     className={cn(inputBase, "text-center font-semibold")}
                     value={d.weightage}
                     onChange={(e) => updateDraft(kpi.id, { weightage: e.target.value })}
-                    placeholder="10"
+                    placeholder="15"
                   />
                 </div>
                 <div className="lg:col-span-2">

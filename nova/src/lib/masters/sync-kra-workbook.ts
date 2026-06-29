@@ -8,6 +8,7 @@ import {
   type KraWorkbookEmployee,
   type KraWorkbookKpi,
 } from "./kra-workbook";
+import { weightageFraction } from "@/lib/kra/weightage";
 import { ROSTER_DEPARTMENTS } from "./37p-roster";
 
 export type SyncKraWorkbookResult = {
@@ -216,7 +217,7 @@ async function upsertIndividualKpis(
       department: k.department,
       perspective: k.perspective?.replace(/\s*\([^)]*\)/g, "").trim() || null,
       kraName: k.kraName,
-      weightage: k.weightage,
+      weightage: weightageFraction(k.weightage) ?? undefined,
       plantUnit: null,
       kpiLevel: "INDIVIDUAL",
       ownerName: k.ownerName,

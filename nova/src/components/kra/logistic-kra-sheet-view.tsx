@@ -72,7 +72,7 @@ export function LogisticKraSheetView({
         <table className="w-full min-w-[1100px] border-collapse text-left">
           <thead>
             <tr>
-              <th colSpan={16} className="border border-slate-300 bg-white px-3 py-2 text-center text-sm font-bold text-slate-900">
+              <th colSpan={15} className="border border-slate-300 bg-white px-3 py-2 text-center text-sm font-bold text-slate-900">
                 KRA/ KPI-{fiscalLabel} -{departmentLabel}
               </th>
             </tr>
@@ -98,7 +98,6 @@ export function LogisticKraSheetView({
               <th className={th}>Sno</th>
               <th className={th}>Primary: KRA</th>
               <th className={cn(th, "min-w-[180px]")}>KPI / Measurement</th>
-              <th className={th}>UOI</th>
               <th className={th}>Weightage (%)</th>
               <th className={cn(th, "min-w-[100px]")}>Last Year Achieved 2025-2026</th>
               <th className={cn(th, "min-w-[100px]")}>Current Year Target {fiscalLabel}</th>
@@ -117,7 +116,7 @@ export function LogisticKraSheetView({
               <th className={th}>SCORE</th>
             </tr>
             <tr>
-              <th className={th} colSpan={7} />
+              <th className={th} colSpan={6} />
               <th className={cn(th, "text-center")}>Target</th>
               <th className={cn(th, "text-center")}>Achieved</th>
               <th className={cn(th, "text-center")}>Target</th>
@@ -149,7 +148,6 @@ export function LogisticKraSheetView({
                       </td>
                     )}
                     <td className={td}>{kpi.name}</td>
-                    <td className={cn(td, "text-center")}>{kpi.unit || "—"}</td>
                     <td className={cn(td, "text-center font-medium")}>
                       {formatWeightage(kpi.weightage)}
                     </td>
@@ -168,7 +166,7 @@ export function LogisticKraSheetView({
             )}
             {kpis.length === 0 && (
               <tr>
-                <td colSpan={16} className="px-4 py-10 text-center text-sm text-slate-500">
+                <td colSpan={15} className="px-4 py-10 text-center text-sm text-slate-500">
                   No KPI rows — upload Excel or add data.
                 </td>
               </tr>
