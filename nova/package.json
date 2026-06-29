@@ -10,6 +10,7 @@
     "lint": "next lint",
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
+    "db:purge-junk": "tsx scripts/purge-logistics-junk.ts",
     "import:37p": "tsx scripts/import-37p-roster.ts",
     "import:plant-kra": "tsx scripts/import-plant-kra-workbook.ts",
     "db:push": "prisma db push",

@@ -36,6 +36,9 @@ npx prisma db push --accept-data-loss
 echo "==> Seed database (idempotent)"
 npm run db:seed || true
 
+echo "==> Purge logistics KPI junk from database"
+npm run db:purge-junk || true
+
 echo "==> Building application"
 npm run build
 

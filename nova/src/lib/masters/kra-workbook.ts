@@ -1,6 +1,7 @@
 import * as XLSX from "xlsx";
 import type { EmployeeImportRow } from "./import";
 import { normalizeRosterDepartment } from "./37p-roster";
+import { isLogisticsJunkName } from "./logistics-kra-junk";
 import { normalizeKraCellValue } from "@/lib/kra/target-format";
 import { readNumericWeightage, readSheetCell } from "./excel-cell-read";
 import { parseNumericTarget, resolveImportTargetValue } from "./parse-numeric-target";
@@ -919,6 +920,7 @@ export function parseKraWorkbook(
     });
 
   wb.SheetNames.forEach((sheetName, idx) => {
+    if (isLogisticsJunkName(sheetName)) return;
     if (!sf1Mode && /^sheet\d*$/i.test(sheetName.trim())) return;
     if (!sf1Mode && logisticMode && !isMainKraSheetName(sheetName)) return;
 
@@ -991,8 +993,19 @@ export function parseKraWorkbook(
     );
   });
 
-  if (!employees.length) errors.push("No employee sheets found in workbook");
-  return { employees, kpis, errors };
+  const cleanEmployees = employees.filter(
+    (e) => !isLogisticsJunkName(e.name) && !isLogisticsJunkName(e.sheetName)
+  );
+  const cleanSheetNames = new Set(cleanEmployees.map((e) => e.sheetName));
+  const cleanKpis = kpis.filter(
+    (k) =>
+      cleanSheetNames.has(k.sheetName) &&
+      !isLogisticsJunkName(k.ownerName) &&
+      !isLogisticsJunkName(k.name)
+  );
+
+  if (!cleanEmployees.length) errors.push("No employee sheets found in workbook");
+  return { employees: cleanEmployees, kpis: cleanKpis, errors };
 }
 
 export function kpiStableId(

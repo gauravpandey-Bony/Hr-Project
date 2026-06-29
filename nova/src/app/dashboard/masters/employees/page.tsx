@@ -10,6 +10,7 @@ import {
   requireAdminWorkspace,
 } from "@/lib/unit-workspace.server";
 import { EmployeeMasterClient } from "@/components/masters/employee-master-client";
+import { filterRealKraEmployees } from "@/lib/masters/logistics-kra-junk";
 
 export default async function EmployeeMasterPage({
   searchParams,
@@ -43,7 +44,7 @@ export default async function EmployeeMasterPage({
 
   return (
     <EmployeeMasterClient
-      initialRows={employees}
+      initialRows={filterRealKraEmployees(employees)}
       departments={departments}
       isAdmin={user.role === "ADMIN"}
       unitId={workspace.unitId}

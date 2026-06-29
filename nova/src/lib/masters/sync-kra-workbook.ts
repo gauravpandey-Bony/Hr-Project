@@ -16,6 +16,7 @@ import {
   plantDataScope,
 } from "@/lib/unit-workspace";
 import { ROSTER_DEPARTMENTS, reconcilePlantHeadEmployeesAsProduction } from "./37p-roster";
+import { purgeLogisticsJunkData } from "./logistics-kra-junk";
 import {
   dedupeDepartmentMasters,
   findMatchingDepartmentInList,
@@ -399,6 +400,7 @@ export async function syncKraWorkbook(
   await dedupeKraEmployees(db, organizationId, employees);
 
   await reconcilePlantHeadEmployeesAsProduction(db, organizationId);
+  await purgeLogisticsJunkData(db, organizationId);
 
   const {
     created: kpisCreated,

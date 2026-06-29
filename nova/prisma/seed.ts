@@ -11,12 +11,7 @@ import {
   upsertDepartmentMaster,
 } from "../src/lib/masters/department-master-sync";
 import { syncKraWorkbook } from "../src/lib/masters/sync-kra-workbook";
-
-const LOGISTICS_KRA_FILES = [
-  "Deepak KRA 2026-2027 April-June-2026.xlsx",
-  "LOKRANJAN KRA APRIL 26 TO JUNE 26 (2).xlsx",
-  "Logistic Ravi KRA 2026-2027 April-June-2026.xlsx",
-] as const;
+import { purgeLogisticsJunkData } from "../src/lib/masters/logistics-kra-junk";
 
 const BONY_37P_PLANT = "Bony Polymers";
 const BONY_37P_LOCATION = "Bony Polymers 37-P";
@@ -539,31 +534,6 @@ async function main() {
   await db.kpi.deleteMany({ where: { organizationId: org.id } });
   await db.employeeMaster.deleteMany({ where: { organizationId: org.id } });
 
-  await upsertDepartmentMaster(db, org.id, {
-    name: "Logistics",
-    plantUnitKey: "Bony 37P",
-    kraSheetId: "logistics",
-    sortOrder: 15,
-    isActive: true,
-  });
-  await dedupeDepartmentMasters(db, org.id, "Bony 37P");
-
-  const kraImports: Record<string, unknown>[] = [];
-  for (const file of LOGISTICS_KRA_FILES) {
-    const filePath = path.join(process.cwd(), "data/logistics-kra", file);
-    if (!existsSync(filePath)) {
-      kraImports.push({ file, error: `File not found: ${filePath}` });
-      continue;
-    }
-    const buffer = readFileSync(filePath);
-    const arrayBuffer = buffer.buffer.slice(
-      buffer.byteOffset,
-      buffer.byteOffset + buffer.byteLength
-    );
-    const result = await syncKraWorkbook(db, org.id, arrayBuffer, admin.id);
-    kraImports.push({ file, unit: "Bony", ...result });
-  }
-
   const bony37pImports: Record<string, unknown>[] = [];
   for (const file of BONY_37P_KRA_FILES) {
     const filePath = path.join(process.cwd(), "data/bony-37p-kra", file);
@@ -627,7 +597,8 @@ async function main() {
   const employeeCount = await db.employeeMaster.count({
     where: { organizationId: org.id, isActive: true },
   });
-  const kpiCount = await db.kpi.count({ where: { organizationId: org.id } });
+  const kpiCount = await db.kpi.count({ where: { organizationId: org.id, isActive: true } });
+  const junkPurged = await purgeLogisticsJunkData(db, org.id);
 
   console.log("Seed complete:", {
     org: ORG_NAME,
@@ -635,7 +606,7 @@ async function main() {
     departments: deptCount,
     employees: employeeCount,
     kpis: kpiCount,
-    logisticsKra: kraImports,
+    junkPurged,
     bony37pKra: bony37pImports,
     saketUnit1Kra: saketImports,
     bonyFluid58Kra: fluid58Imports,

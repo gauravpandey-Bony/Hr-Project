@@ -6,6 +6,7 @@ import { assignDepartmentKpisToEmployee } from "@/lib/kpi/assign-department-kpis
 import { employeeMasterWhereForUserAsync } from "@/lib/access-control";
 import { getOrgUnitBySlug } from "@/lib/org-units.server";
 import { getLocationVariantsForPlant } from "@/lib/org-units";
+import { filterRealKraEmployees } from "@/lib/masters/logistics-kra-junk";
 
 const createSchema = z.object({
   name: z.string().min(1),
@@ -60,7 +61,7 @@ export async function GET(request: Request) {
     include: { dept: { select: { name: true } } },
   });
 
-  return NextResponse.json(employees);
+  return NextResponse.json(filterRealKraEmployees(employees));
 }
 
 export async function POST(request: Request) {

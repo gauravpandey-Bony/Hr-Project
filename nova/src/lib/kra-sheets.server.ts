@@ -12,6 +12,11 @@ import {
 } from "@/lib/masters/37p-roster";
 import { formatDepartmentDisplayName } from "@/lib/masters/department-master-sync";
 import {
+  filterRealKraEmployees,
+  isHiddenKraDepartment,
+  isLogisticsJunkName,
+} from "@/lib/masters/logistics-kra-junk";
+import {
   departmentMasterWhereForPlant,
   employeeMasterWhereForPlant,
   type PlantDataScope,
@@ -84,6 +89,7 @@ export async function fetchKraSheets(
 
   for (const name of deptNamesFromStaff) {
     if (isPlantHeadRoleDepartment(name)) continue;
+    if (isHiddenKraDepartment(name)) continue;
     if (!deptByName.has(name)) {
       source = [
         ...source,
@@ -111,6 +117,7 @@ export async function fetchKraSheets(
 
   for (const d of source) {
     if (isPlantHeadRoleDepartment(d.name)) continue;
+    if (isHiddenKraDepartment(d.name)) continue;
     const displayName = formatDepartmentDisplayName(d.name);
     const id = slugDept(displayName);
     if (seen.has(id)) continue;
@@ -131,6 +138,7 @@ export async function fetchKraSheets(
   if (sheets.length === 0 && deptNamesFromStaff.size > 0) {
     for (const name of [...deptNamesFromStaff].sort()) {
       if (isPlantHeadRoleDepartment(name)) continue;
+      if (isHiddenKraDepartment(name)) continue;
       const displayName = formatDepartmentDisplayName(name);
       const id = slugDept(displayName);
       if (seen.has(id)) continue;
@@ -211,8 +219,10 @@ export async function fetchKraEmployeesByDepartment(
   });
 
   const byDept: Record<string, KraEmployeeRow[]> = {};
-  for (const emp of employees) {
+  for (const emp of filterRealKraEmployees(employees)) {
+    if (isHiddenKraDepartment(emp.department)) continue;
     const dept = formatDepartmentDisplayName(emp.department?.trim() || "General");
+    if (isHiddenKraDepartment(dept)) continue;
     (byDept[dept] ??= []).push(emp);
   }
   return byDept;

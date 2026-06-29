@@ -6,6 +6,7 @@ import {
   type PlantKraWorkbookKpi,
 } from "./plant-kra-workbook";
 import { reconcilePlantHeadEmployeesAsProduction } from "./37p-roster";
+import { purgeLogisticsJunkData } from "./logistics-kra-junk";
 import { PLANT_UNIT } from "@/lib/plant-37p";
 
 export type SyncPlantKraResult = {
@@ -164,6 +165,7 @@ export async function syncPlantKraWorkbook(
 
   const employeeEnsured = await ensureRajKumarEmployee(db, organizationId);
   await reconcilePlantHeadEmployeesAsProduction(db, organizationId);
+  await purgeLogisticsJunkData(db, organizationId);
 
   const rajUser =
     rajKumarUserId ??
