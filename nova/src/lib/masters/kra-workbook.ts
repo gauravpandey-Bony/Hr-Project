@@ -148,6 +148,9 @@ export function normalizeKraDepartment(raw: string): {
   if (/^quality$/i.test(d)) {
     return { masterName: "Quality", kraSheetId: "quality" };
   }
+  if (/costing\s*&?\s*mis/i.test(d)) {
+    return { masterName: "Costing & MIS", kraSheetId: "costing-mis" };
+  }
   const mapped = normalizeRosterDepartment(d);
   return {
     masterName: mapped.masterName,
@@ -275,6 +278,7 @@ function inferDepartmentFromTitle(title: string, sheetName = ""): string {
   if (/human resource|\bhr\b/i.test(t)) return "HR";
   if (/plant head|operations|sf-1 prithla/i.test(t)) return "Plant Head";
   if (/production/i.test(t)) return "Production";
+  if (/costing\s*&?\s*mis/i.test(t)) return "Costing & MIS";
   return "General";
 }
 

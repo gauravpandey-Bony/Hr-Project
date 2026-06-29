@@ -14,6 +14,11 @@ const LOGISTICS_KRA_FILES = [
   "Logistic Ravi KRA 2026-2027 April-June-2026.xlsx",
 ] as const;
 
+const BONY_37P_PLANT = "Bony Polymers";
+const BONY_37P_LOCATION = "Bony Polymers 37-P";
+
+const BONY_37P_KRA_FILES = ["Costing & MIS KRA KPI 26-27.xlsx"] as const;
+
 const SAKET_UNIT1_PLANT = "Saket Fabs Sheet Metal";
 
 const SAKET_UNIT1_KRA_FILES = [
@@ -555,6 +560,26 @@ async function main() {
     kraImports.push({ file, unit: "Bony", ...result });
   }
 
+  const bony37pImports: Record<string, unknown>[] = [];
+  for (const file of BONY_37P_KRA_FILES) {
+    const filePath = path.join(process.cwd(), "data/bony-37p-kra", file);
+    if (!existsSync(filePath)) {
+      bony37pImports.push({ file, error: `File not found: ${filePath}` });
+      continue;
+    }
+    const buffer = readFileSync(filePath);
+    const arrayBuffer = buffer.buffer.slice(
+      buffer.byteOffset,
+      buffer.byteOffset + buffer.byteLength
+    );
+    const result = await syncKraWorkbook(db, org.id, arrayBuffer, admin.id, {
+      plantUnitKey: BONY_37P_PLANT,
+      location: BONY_37P_LOCATION,
+      sourceFileName: file,
+    });
+    bony37pImports.push({ file, unit: BONY_37P_PLANT, ...result });
+  }
+
   const saketImports: Record<string, unknown>[] = [];
   for (const file of SAKET_UNIT1_KRA_FILES) {
     const filePath = path.join(process.cwd(), "data/saket-unit1-kra", file);
@@ -587,6 +612,7 @@ async function main() {
     employees: employeeCount,
     kpis: kpiCount,
     logisticsKra: kraImports,
+    bony37pKra: bony37pImports,
     saketUnit1Kra: saketImports,
   });
 }
