@@ -10,6 +10,7 @@ import {
   PLANT_HEAD_KPI_DEPARTMENT,
   PLANT_HEAD_KRA_SHEET_ID,
 } from "@/lib/masters/37p-roster";
+import { formatDepartmentDisplayName } from "@/lib/masters/department-master-sync";
 import {
   departmentMasterWhereForPlant,
   employeeMasterWhereForPlant,
@@ -110,17 +111,18 @@ export async function fetchKraSheets(
 
   for (const d of source) {
     if (isPlantHeadRoleDepartment(d.name)) continue;
-    const id = slugDept(d.name);
+    const displayName = formatDepartmentDisplayName(d.name);
+    const id = slugDept(displayName);
     if (seen.has(id)) continue;
     seen.add(id);
     sheets.push({
       id,
-      label: d.name,
-      department: d.name,
+      label: displayName,
+      department: displayName,
       meta: {
         kpiLevel: d.kpiLevel ?? "DEPARTMENT",
-        department: d.name,
-        category: d.category ?? d.name,
+        department: displayName,
+        category: d.category ?? displayName,
         showPerspective: d.showPerspective,
       },
     });
@@ -129,17 +131,18 @@ export async function fetchKraSheets(
   if (sheets.length === 0 && deptNamesFromStaff.size > 0) {
     for (const name of [...deptNamesFromStaff].sort()) {
       if (isPlantHeadRoleDepartment(name)) continue;
-      const id = slugDept(name);
+      const displayName = formatDepartmentDisplayName(name);
+      const id = slugDept(displayName);
       if (seen.has(id)) continue;
       seen.add(id);
       sheets.push({
         id,
-        label: name,
-        department: name,
+        label: displayName,
+        department: displayName,
         meta: {
           kpiLevel: "INDIVIDUAL",
-          department: name,
-          category: name,
+          department: displayName,
+          category: displayName,
           showPerspective: true,
         },
       });
@@ -185,6 +188,7 @@ export type KraEmployeeRow = {
   ecn: string | null;
   doj: string | null;
   location: string | null;
+  managerName: string | null;
 };
 
 export async function fetchKraEmployeesByDepartment(
@@ -202,12 +206,13 @@ export async function fetchKraEmployeesByDepartment(
       ecn: true,
       doj: true,
       location: true,
+      managerName: true,
     },
   });
 
   const byDept: Record<string, KraEmployeeRow[]> = {};
   for (const emp of employees) {
-    const dept = emp.department?.trim() || "General";
+    const dept = formatDepartmentDisplayName(emp.department?.trim() || "General");
     (byDept[dept] ??= []).push(emp);
   }
   return byDept;

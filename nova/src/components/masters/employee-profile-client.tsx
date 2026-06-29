@@ -21,6 +21,7 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { appendUnitQuery } from "@/lib/unit-workspace";
+import { confirmReportingManagerChange } from "@/lib/employee-master-grouping";
 
 type KpiBrief = Pick<Kpi, "id" | "name" | "department" | "kraName" | "plantUnit">;
 
@@ -117,6 +118,7 @@ export function EmployeeProfileClient({
   incrementLabel,
   ctcLabel,
   promotionLabel,
+  allEmployees = [],
 }: {
   employee: ProfilePayload;
   departments: DepartmentMaster[];
@@ -128,6 +130,7 @@ export function EmployeeProfileClient({
   incrementLabel: string;
   ctcLabel: string;
   promotionLabel: string;
+  allEmployees?: Pick<EmployeeMaster, "id" | "name" | "designation">[];
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
@@ -147,6 +150,11 @@ export function EmployeeProfileClient({
   async function save() {
     if (!draft.name.trim()) {
       toast.error("Name is required");
+      return;
+    }
+    if (
+      !confirmReportingManagerChange(initial.managerName, draft.managerName || null)
+    ) {
       return;
     }
     setSaving(true);
@@ -300,7 +308,34 @@ export function EmployeeProfileClient({
               </div>
               <Field label="Designation" value={draft.designation} editing={editing} onChange={(v) => setDraft((d) => ({ ...d, designation: v }))} />
               <Field label="Plant / location" value={draft.location} editing={editing} onChange={(v) => setDraft((d) => ({ ...d, location: v }))} />
-              <Field label="Reporting manager" value={draft.managerName} editing={editing} onChange={(v) => setDraft((d) => ({ ...d, managerName: v }))} />
+              <div className="space-y-1">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Reporting manager
+                </p>
+                {editing ? (
+                  <select
+                    value={draft.managerName}
+                    onChange={(e) =>
+                      setDraft((d) => ({ ...d, managerName: e.target.value }))
+                    }
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                  >
+                    <option value="">— Select from Employee Master —</option>
+                    {allEmployees
+                      .filter((e) => e.id !== initial.id)
+                      .map((e) => (
+                        <option key={e.id} value={e.name}>
+                          {e.name}
+                          {e.designation ? ` · ${e.designation}` : ""}
+                        </option>
+                      ))}
+                  </select>
+                ) : (
+                  <p className="text-sm font-medium text-foreground">
+                    {draft.managerName || "—"}
+                  </p>
+                )}
+              </div>
             </div>
           </section>
 

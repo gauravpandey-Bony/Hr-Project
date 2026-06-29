@@ -1,13 +1,31 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Fragment, useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2, Save, Loader2, Users, Upload, BarChart3, Download, UserCircle } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  Save,
+  Loader2,
+  Users,
+  Upload,
+  BarChart3,
+  Download,
+  UserCircle,
+  ChevronDown,
+  ChevronRight,
+  FileSpreadsheet,
+} from "lucide-react";
 import Link from "next/link";
 import { UploadMasterModal } from "./upload-master-modal";
 import { toast } from "sonner";
 import { COMPANY } from "@/lib/company";
 import { downloadFromApi } from "@/lib/download-from-api";
+import { appendUnitQuery } from "@/lib/unit-workspace";
+import {
+  confirmReportingManagerChange,
+  groupEmployeesByDepartment,
+} from "@/lib/employee-master-grouping";
 import { StickyTableShell } from "@/components/ui/sticky-table-shell";
 import {
   TableBody,
@@ -49,6 +67,10 @@ function toDraft(e: EmployeeMaster): Draft {
   };
 }
 
+function managerTeamKey(departmentId: string, managerName: string) {
+  return `${departmentId}::${managerName}`;
+}
+
 export function EmployeeMasterClient({
   initialRows,
   departments,
@@ -72,6 +94,19 @@ export function EmployeeMasterClient({
   const [syncingKra, setSyncingKra] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [expandedTeams, setExpandedTeams] = useState<Set<string>>(() => new Set());
+
+  const grouped = useMemo(
+    () => groupEmployeesByDepartment(rows, departments),
+    [rows, departments]
+  );
+
+  const employeeNameOptions = useMemo(
+    () => [...rows].sort((a, b) => a.name.localeCompare(b.name)),
+    [rows]
+  );
+
+  const kraBaseHref = unitId ? appendUnitQuery("/dashboard/kra", unitId) : "/dashboard/kra";
 
   async function downloadSheet() {
     setDownloading(true);
@@ -122,8 +157,29 @@ export function EmployeeMasterClient({
     setDrafts(Object.fromEntries(initialRows.map((r) => [r.id, toDraft(r)])));
   }, [initialRows]);
 
+  useEffect(() => {
+    const keys = new Set<string>();
+    for (const g of grouped) {
+      for (const s of g.sections) {
+        if (s.type === "manager-team" && s.reports.length) {
+          keys.add(managerTeamKey(g.departmentId, s.managerName));
+        }
+      }
+    }
+    setExpandedTeams(keys);
+  }, [grouped]);
+
   function patch(id: string, p: Partial<Draft>) {
     setDrafts((prev) => ({ ...prev, [id]: { ...prev[id], ...p } }));
+  }
+
+  function toggleTeam(key: string) {
+    setExpandedTeams((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
   }
 
   async function saveActive(id: string, isActive: boolean, displayName: string) {
@@ -139,8 +195,8 @@ export function EmployeeMasterClient({
       if (!res.ok) throw new Error(data.error ?? "Save failed");
       toast.success(
         isActive
-          ? `${displayName} — Active (saved permanently)`
-          : `${displayName} — Inactive (saved permanently)`
+          ? `${displayName} — active, shown under reporting manager`
+          : `${displayName} — inactive, hidden from manager team`
       );
       router.refresh();
     } catch (e) {
@@ -156,8 +212,14 @@ export function EmployeeMasterClient({
 
   async function save(id: string) {
     const d = drafts[id];
+    const original = rows.find((r) => r.id === id);
     if (!d?.name.trim()) {
       setError("Employee name is required");
+      return;
+    }
+    if (
+      !confirmReportingManagerChange(original?.managerName, d.managerName || null)
+    ) {
       return;
     }
     setSavingId(id);
@@ -184,6 +246,8 @@ export function EmployeeMasterClient({
         toast.success(
           `${data.kpisAssigned} KPI assigned — ${data.name} (${data.department ?? "department"})`
         );
+      } else {
+        toast.success("Employee saved");
       }
       router.refresh();
     } catch (e) {
@@ -230,6 +294,210 @@ export function EmployeeMasterClient({
     }
   }
 
+  function profileHref(id: string) {
+    return unitId
+      ? `/dashboard/masters/employees/${id}?unit=${encodeURIComponent(unitId)}`
+      : `/dashboard/masters/employees/${id}`;
+  }
+
+  function renderEmployeeRow(
+    row: EmployeeMaster,
+    rowIndex: number,
+    opts?: { indent?: boolean; underManager?: string }
+  ) {
+    const d = drafts[row.id] ?? toDraft(row);
+    return (
+      <TableRow
+        key={row.id}
+        className={opts?.indent ? "bg-muted/20" : undefined}
+      >
+        <TableCell className={`${MASTER_CELL} text-muted-foreground`}>
+          {rowIndex}
+        </TableCell>
+        {isAdmin && (
+          <TableCell className={MASTER_CELL}>
+            <div className="flex gap-1">
+              <Link
+                href={profileHref(row.id)}
+                title="Profile — KRA / KPI view & update"
+                className="rounded-md p-1.5 text-sky-600 hover:bg-sky-500/10"
+              >
+                <UserCircle className="h-4 w-4" />
+              </Link>
+              <Link
+                href={kraBaseHref}
+                title="KRA / KPI master sheet"
+                className="rounded-md p-1.5 text-emerald-600 hover:bg-emerald-500/10"
+              >
+                <FileSpreadsheet className="h-4 w-4" />
+              </Link>
+              <Link
+                href={`/dashboard/reports/quarterly${unitId ? `?unit=${encodeURIComponent(unitId)}` : ""}`}
+                title="Quarterly KPI report"
+                className="rounded-md p-1.5 text-violet-600 hover:bg-violet-500/10"
+              >
+                <BarChart3 className="h-4 w-4" />
+              </Link>
+              <button
+                type="button"
+                onClick={() => save(row.id)}
+                disabled={savingId === row.id}
+                className="rounded-md p-1.5 text-emerald-600 hover:bg-emerald-500/10"
+              >
+                {savingId === row.id ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => remove(row.id, d.name)}
+                className="rounded-md p-1.5 text-rose-600 hover:bg-rose-500/10"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+          </TableCell>
+        )}
+        <TableCell className={MASTER_CELL}>
+          <div className={opts?.indent ? "pl-6" : undefined}>
+            {opts?.underManager && (
+              <p className="mb-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                Reports to {opts.underManager}
+              </p>
+            )}
+            {isAdmin ? (
+              <input
+                className={masterCellInput("min-w-[200px]")}
+                value={d.name}
+                onChange={(e) => patch(row.id, { name: e.target.value })}
+              />
+            ) : (
+              <span className="block max-w-none font-medium leading-snug">{row.name}</span>
+            )}
+          </div>
+        </TableCell>
+        <TableCell className={MASTER_CELL}>
+          {isAdmin ? (
+            <input
+              className={masterCellInput("min-w-[180px]")}
+              value={d.designation}
+              onChange={(e) => patch(row.id, { designation: e.target.value })}
+            />
+          ) : (
+            <span className="block leading-snug">{row.designation ?? "—"}</span>
+          )}
+        </TableCell>
+        <TableCell className={MASTER_CELL}>
+          {isAdmin ? (
+            <select
+              className={masterCellInput("min-w-[220px] max-w-none")}
+              value={d.departmentId}
+              onChange={(e) => patch(row.id, { departmentId: e.target.value })}
+            >
+              <option value="">—</option>
+              {departments.map((dep) => (
+                <option key={dep.id} value={dep.id}>
+                  {dep.name}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <span className="block leading-snug">{row.department ?? "—"}</span>
+          )}
+        </TableCell>
+        <TableCell className={MASTER_CELL}>
+          {isAdmin ? (
+            <input
+              className={masterCellInput("min-w-[140px]")}
+              value={d.location}
+              onChange={(e) => patch(row.id, { location: e.target.value })}
+            />
+          ) : (
+            <span className="block leading-snug">{row.location ?? "—"}</span>
+          )}
+        </TableCell>
+        <TableCell className={MASTER_CELL}>
+          {isAdmin ? (
+            <input
+              className={masterCellInput("min-w-[100px]")}
+              value={d.doj}
+              onChange={(e) => patch(row.id, { doj: e.target.value })}
+            />
+          ) : (
+            <span className="block leading-snug">{row.doj ?? "—"}</span>
+          )}
+        </TableCell>
+        <TableCell className={MASTER_CELL}>
+          {isAdmin ? (
+            <input
+              className={masterCellInput("min-w-[110px]")}
+              value={d.ecn}
+              onChange={(e) => patch(row.id, { ecn: e.target.value })}
+            />
+          ) : (
+            <span className="block font-mono text-xs leading-snug">{row.ecn ?? "—"}</span>
+          )}
+        </TableCell>
+        <TableCell className={MASTER_CELL}>
+          {isAdmin ? (
+            <select
+              className={masterCellInput("min-w-[180px] max-w-none")}
+              value={d.managerName}
+              onChange={(e) => patch(row.id, { managerName: e.target.value })}
+            >
+              <option value="">— Select reporting manager —</option>
+              {employeeNameOptions
+                .filter((e) => e.id !== row.id)
+                .map((e) => (
+                  <option key={e.id} value={e.name}>
+                    {e.name}
+                    {e.designation ? ` · ${e.designation}` : ""}
+                  </option>
+                ))}
+            </select>
+          ) : (
+            <span className="block leading-snug">{row.managerName ?? "—"}</span>
+          )}
+        </TableCell>
+        <TableCell className={MASTER_CELL}>
+          {isAdmin ? (
+            <input
+              className={masterCellInput("min-w-[56px]")}
+              value={d.sortOrder}
+              onChange={(e) => patch(row.id, { sortOrder: e.target.value })}
+            />
+          ) : (
+            row.sortOrder
+          )}
+        </TableCell>
+        <TableCell className={MASTER_CELL}>
+          {isAdmin ? (
+            <input
+              type="checkbox"
+              checked={d.isActive}
+              disabled={savingId === row.id}
+              title="Active — shows under reporting manager team"
+              onChange={(e) => {
+                const isActive = e.target.checked;
+                patch(row.id, { isActive });
+                void saveActive(row.id, isActive, d.name.trim() || row.name);
+              }}
+              className="h-4 w-4 rounded"
+            />
+          ) : row.isActive ? (
+            "Yes"
+          ) : (
+            "No"
+          )}
+        </TableCell>
+      </TableRow>
+    );
+  }
+
+  let rowCounter = 0;
+
   return (
     <div className="space-y-6 library-grid-bg pb-8">
       <div className="relative overflow-hidden rounded-3xl border border-border/50 bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 px-6 py-8 text-white shadow-xl sm:px-8">
@@ -241,7 +509,7 @@ export function EmployeeMasterClient({
             </div>
             <h1 className="text-3xl font-bold">Employee Master</h1>
             <p className="mt-1 text-sm text-slate-300">
-              Staff linked to departments — {rows.length} records
+              Grouped by department & reporting manager — {rows.length} records
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -260,49 +528,49 @@ export function EmployeeMasterClient({
             </button>
             {isAdmin && (
               <>
-              <button
-                type="button"
-                onClick={syncKraWorkbook}
-                disabled={syncingKra}
-                className="inline-flex items-center gap-2 rounded-xl border border-violet-400/40 bg-violet-500/20 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-500/30 disabled:opacity-50"
-              >
-                {syncingKra ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
+                <button
+                  type="button"
+                  onClick={syncKraWorkbook}
+                  disabled={syncingKra}
+                  className="inline-flex items-center gap-2 rounded-xl border border-violet-400/40 bg-violet-500/20 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-500/30 disabled:opacity-50"
+                >
+                  {syncingKra ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Upload className="h-4 w-4" />
+                  )}
+                  Sync IT KRA sheets
+                </button>
+                <button
+                  type="button"
+                  onClick={sync37pRoster}
+                  disabled={syncing37p}
+                  className="inline-flex items-center gap-2 rounded-xl border border-emerald-400/40 bg-emerald-500/20 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500/30 disabled:opacity-50"
+                >
+                  {syncing37p ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Users className="h-4 w-4" />
+                  )}
+                  Sync 37P roster
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setUploadOpen(true)}
+                  className="inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-4 py-2 text-sm font-semibold text-white hover:bg-white/20"
+                >
                   <Upload className="h-4 w-4" />
-                )}
-                Sync IT KRA sheets
-              </button>
-              <button
-                type="button"
-                onClick={sync37pRoster}
-                disabled={syncing37p}
-                className="inline-flex items-center gap-2 rounded-xl border border-emerald-400/40 bg-emerald-500/20 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500/30 disabled:opacity-50"
-              >
-                {syncing37p ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Users className="h-4 w-4" />
-                )}
-                Sync 37P roster
-              </button>
-              <button
-                type="button"
-                onClick={() => setUploadOpen(true)}
-                className="inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-4 py-2 text-sm font-semibold text-white hover:bg-white/20"
-              >
-                <Upload className="h-4 w-4" />
-                Upload Excel
-              </button>
-              <button
-                type="button"
-                onClick={addRow}
-                disabled={adding || departments.length === 0}
-                className="inline-flex items-center gap-2 rounded-xl bg-indigo-500 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-400 disabled:opacity-50"
-              >
-                {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                Add employee
-              </button>
+                  Upload Excel
+                </button>
+                <button
+                  type="button"
+                  onClick={addRow}
+                  disabled={adding || departments.length === 0}
+                  className="inline-flex items-center gap-2 rounded-xl bg-indigo-500 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-400 disabled:opacity-50"
+                >
+                  {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                  Add employee
+                </button>
               </>
             )}
           </div>
@@ -322,194 +590,109 @@ export function EmployeeMasterClient({
       )}
 
       <p className="text-xs text-muted-foreground">
-        <strong>Active</strong> checkbox auto-saves immediately and stays until you untick and save
-        again. Other fields (name, department, ECN, etc.) — click the green{" "}
-        <Save className="inline h-3 w-3" /> Save icon in Actions. Scroll horizontally for all columns.
+        Employees are grouped by <strong>department</strong>. Tick <strong>Active</strong> to show an
+        employee under their <strong>reporting manager</strong> team. Pick reporting manager from
+        Employee Master names. Changing reporting manager asks twice for confirmation. Use profile
+        icon for KRA / KPI view & update.
       </p>
+
       <StickyTableShell maxHeight="min(75vh, 900px)">
         <table className={MASTER_TABLE_CLASS}>
           <TableHeader className="sticky top-0 z-10 bg-card/95 backdrop-blur-md">
             <TableRow className="hover:bg-transparent">
               <TableHead className="w-10 shrink-0">#</TableHead>
-              {isAdmin && <TableHead className="w-[72px] shrink-0">Actions</TableHead>}
+              {isAdmin && <TableHead className="w-[120px] shrink-0">Actions</TableHead>}
               <TableHead className="min-w-[220px]">Name</TableHead>
               <TableHead className="min-w-[200px]">Designation</TableHead>
               <TableHead className="min-w-[240px]">Department</TableHead>
               <TableHead className="min-w-[160px]">Location</TableHead>
               <TableHead className="min-w-[110px]">DOJ</TableHead>
               <TableHead className="min-w-[120px]">ECN</TableHead>
-              <TableHead className="min-w-[180px]">Manager</TableHead>
+              <TableHead className="min-w-[200px]">Reporting Manager</TableHead>
               <TableHead className="min-w-[64px]">Order</TableHead>
               <TableHead className="min-w-[56px]">Active</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {rows.map((row, idx) => {
-              const d = drafts[row.id] ?? toDraft(row);
-              return (
-                <TableRow key={row.id}>
-                  <TableCell className={`${MASTER_CELL} text-muted-foreground`}>{idx + 1}</TableCell>
-                  {isAdmin && (
-                    <TableCell className={MASTER_CELL}>
-                      <div className="flex gap-1">
-                        <Link
-                          href={
-                            unitId
-                              ? `/dashboard/masters/employees/${row.id}?unit=${encodeURIComponent(unitId)}`
-                              : `/dashboard/masters/employees/${row.id}`
-                          }
-                          title="Employee profile"
-                          className="rounded-md p-1.5 text-sky-600 hover:bg-sky-500/10"
-                        >
-                          <UserCircle className="h-4 w-4" />
-                        </Link>
-                        <Link
-                          href={`/dashboard/reports/quarterly${unitId ? `?unit=${encodeURIComponent(unitId)}` : ""}`}
-                          title="Quarterly KPI report"
-                          className="rounded-md p-1.5 text-violet-600 hover:bg-violet-500/10"
-                        >
-                          <BarChart3 className="h-4 w-4" />
-                        </Link>
-                        <button
-                          type="button"
-                          onClick={() => save(row.id)}
-                          disabled={savingId === row.id}
-                          className="rounded-md p-1.5 text-emerald-600 hover:bg-emerald-500/10"
-                        >
-                          {savingId === row.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Save className="h-4 w-4" />
-                          )}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => remove(row.id, d.name)}
-                          className="rounded-md p-1.5 text-rose-600 hover:bg-rose-500/10"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </TableCell>
-                  )}
-                  <TableCell className={MASTER_CELL}>
-                    {isAdmin ? (
-                      <input
-                        className={masterCellInput("min-w-[200px]")}
-                        value={d.name}
-                        onChange={(e) => patch(row.id, { name: e.target.value })}
-                      />
-                    ) : (
-                      <span className="block max-w-none font-medium leading-snug">{row.name}</span>
-                    )}
-                  </TableCell>
-                  <TableCell className={MASTER_CELL}>
-                    {isAdmin ? (
-                      <input
-                        className={masterCellInput("min-w-[180px]")}
-                        value={d.designation}
-                        onChange={(e) => patch(row.id, { designation: e.target.value })}
-                      />
-                    ) : (
-                      <span className="block leading-snug">{row.designation ?? "—"}</span>
-                    )}
-                  </TableCell>
-                  <TableCell className={MASTER_CELL}>
-                    {isAdmin ? (
-                      <select
-                        className={masterCellInput("min-w-[220px] max-w-none")}
-                        value={d.departmentId}
-                        onChange={(e) => patch(row.id, { departmentId: e.target.value })}
-                      >
-                        <option value="">—</option>
-                        {departments.map((dep) => (
-                          <option key={dep.id} value={dep.id}>
-                            {dep.name}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <span className="block leading-snug">{row.department ?? "—"}</span>
-                    )}
-                  </TableCell>
-                  <TableCell className={MASTER_CELL}>
-                    {isAdmin ? (
-                      <input
-                        className={masterCellInput("min-w-[140px]")}
-                        value={d.location}
-                        onChange={(e) => patch(row.id, { location: e.target.value })}
-                      />
-                    ) : (
-                      <span className="block leading-snug">{row.location ?? "—"}</span>
-                    )}
-                  </TableCell>
-                  <TableCell className={MASTER_CELL}>
-                    {isAdmin ? (
-                      <input
-                        className={masterCellInput("min-w-[100px]")}
-                        value={d.doj}
-                        onChange={(e) => patch(row.id, { doj: e.target.value })}
-                      />
-                    ) : (
-                      <span className="block leading-snug">{row.doj ?? "—"}</span>
-                    )}
-                  </TableCell>
-                  <TableCell className={MASTER_CELL}>
-                    {isAdmin ? (
-                      <input
-                        className={masterCellInput("min-w-[110px]")}
-                        value={d.ecn}
-                        onChange={(e) => patch(row.id, { ecn: e.target.value })}
-                      />
-                    ) : (
-                      <span className="block font-mono text-xs leading-snug">{row.ecn ?? "—"}</span>
-                    )}
-                  </TableCell>
-                  <TableCell className={MASTER_CELL}>
-                    {isAdmin ? (
-                      <input
-                        className={masterCellInput("min-w-[160px]")}
-                        value={d.managerName}
-                        onChange={(e) => patch(row.id, { managerName: e.target.value })}
-                      />
-                    ) : (
-                      <span className="block leading-snug">{row.managerName ?? "—"}</span>
-                    )}
-                  </TableCell>
-                  <TableCell className={MASTER_CELL}>
-                    {isAdmin ? (
-                      <input
-                        className={masterCellInput("min-w-[56px]")}
-                        value={d.sortOrder}
-                        onChange={(e) => patch(row.id, { sortOrder: e.target.value })}
-                      />
-                    ) : (
-                      row.sortOrder
-                    )}
-                  </TableCell>
-                  <TableCell className={MASTER_CELL}>
-                    {isAdmin ? (
-                      <input
-                        type="checkbox"
-                        checked={d.isActive}
-                        disabled={savingId === row.id}
-                        title="Auto-saves when toggled"
-                        onChange={(e) => {
-                          const isActive = e.target.checked;
-                          patch(row.id, { isActive });
-                          void saveActive(row.id, isActive, d.name.trim() || row.name);
-                        }}
-                        className="h-4 w-4 rounded"
-                      />
-                    ) : row.isActive ? (
-                      "Yes"
-                    ) : (
-                      "No"
-                    )}
+            {grouped.map((deptGroup) => (
+              <Fragment key={`dept-${deptGroup.departmentId}`}>
+                <TableRow
+                  className="bg-indigo-500/10 hover:bg-indigo-500/10"
+                >
+                  <TableCell
+                    colSpan={isAdmin ? 11 : 10}
+                    className="py-2 text-sm font-semibold text-indigo-900 dark:text-indigo-100"
+                  >
+                    {deptGroup.departmentName}
+                    <span className="ml-2 font-normal text-muted-foreground">
+                      ({deptGroup.totalCount} employee{deptGroup.totalCount === 1 ? "" : "s"})
+                    </span>
                   </TableCell>
                 </TableRow>
-              );
-            })}
+
+                {deptGroup.sections.map((section) => {
+                  if (section.type === "manager-team") {
+                    const teamKey = managerTeamKey(
+                      deptGroup.departmentId,
+                      section.managerName
+                    );
+                    const expanded = expandedTeams.has(teamKey);
+                    const reportCount = section.reports.length;
+
+                    return (
+                      <Fragment key={`team-${teamKey}`}>
+                        {section.managerRow &&
+                          renderEmployeeRow(section.managerRow, ++rowCounter, {
+                            underManager: undefined,
+                          })}
+                        <TableRow
+                          key={`team-${teamKey}`}
+                          className="bg-muted/30 hover:bg-muted/40"
+                        >
+                          <TableCell className={MASTER_CELL} />
+                          {isAdmin && <TableCell className={MASTER_CELL} />}
+                          <TableCell
+                            colSpan={isAdmin ? 9 : 8}
+                            className={`${MASTER_CELL} py-2`}
+                          >
+                            <button
+                              type="button"
+                              onClick={() => toggleTeam(teamKey)}
+                              className="inline-flex items-center gap-2 text-sm font-medium text-foreground"
+                            >
+                              {expanded ? (
+                                <ChevronDown className="h-4 w-4" />
+                              ) : (
+                                <ChevronRight className="h-4 w-4" />
+                              )}
+                              Team under {section.managerName}
+                              <span className="text-muted-foreground">
+                                ({reportCount} active report{reportCount === 1 ? "" : "s"})
+                              </span>
+                            </button>
+                          </TableCell>
+                        </TableRow>
+                        {expanded &&
+                          section.reports.map((report) =>
+                            renderEmployeeRow(report, ++rowCounter, {
+                              indent: true,
+                              underManager: section.managerName,
+                            })
+                          )}
+                      </Fragment>
+                    );
+                  }
+
+                  return (
+                    <Fragment key={`standalone-${deptGroup.departmentId}-${section.employees[0]?.id ?? "empty"}`}>
+                      {section.employees.map((emp) =>
+                        renderEmployeeRow(emp, ++rowCounter)
+                      )}
+                    </Fragment>
+                  );
+                })}
+              </Fragment>
+            ))}
           </TableBody>
         </table>
       </StickyTableShell>

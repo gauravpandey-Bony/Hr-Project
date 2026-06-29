@@ -45,6 +45,12 @@ export default async function EmployeeProfilePage({
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
   });
 
+  const allEmployees = await db.employeeMaster.findMany({
+    where: { organizationId: user.organizationId, isActive: true },
+    select: { id: true, name: true, designation: true },
+    orderBy: [{ name: "asc" }],
+  });
+
   return (
     <EmployeeProfileClient
       employee={profile.employee}
@@ -57,6 +63,7 @@ export default async function EmployeeProfilePage({
       incrementLabel={formatIncrementPercent(profile.employee.lastIncrementPercent)}
       ctcLabel={formatCtc(profile.employee.lastCtc)}
       promotionLabel={formatProfileDoj(profile.employee.lastPromotionDate)}
+      allEmployees={allEmployees}
     />
   );
 }

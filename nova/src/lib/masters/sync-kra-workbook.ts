@@ -11,9 +11,14 @@ import {
 } from "./kra-workbook";
 import { weightageFraction } from "@/lib/kra/weightage";
 import { isLegacyBony37pPlant } from "@/lib/unit-workspace";
+import {
+  departmentMasterWhereForPlant,
+  plantDataScope,
+} from "@/lib/unit-workspace";
 import { ROSTER_DEPARTMENTS, reconcilePlantHeadEmployeesAsProduction } from "./37p-roster";
 import {
   dedupeDepartmentMasters,
+  findMatchingDepartmentInList,
   upsertDepartmentMaster,
 } from "./department-master-sync";
 
@@ -310,6 +315,38 @@ function applyDepartmentOverrides(
   }
 }
 
+async function alignEmployeesToMasterDepartments(
+  db: PrismaClient,
+  organizationId: string,
+  employees: KraWorkbookEmployee[],
+  kpis: KraWorkbookKpi[],
+  plantUnitKey?: string | null
+): Promise<void> {
+  const where = plantUnitKey?.trim()
+    ? departmentMasterWhereForPlant(organizationId, plantDataScope(plantUnitKey))
+    : { organizationId };
+
+  const departments = await db.departmentMaster.findMany({
+    where: { ...where, isActive: true },
+    select: { id: true, name: true },
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+  });
+
+  for (const emp of employees) {
+    const match =
+      findMatchingDepartmentInList(emp.departmentRaw, departments) ??
+      findMatchingDepartmentInList(emp.department, departments);
+    if (match) {
+      emp.department = match.name;
+    }
+  }
+
+  for (const kpi of kpis) {
+    const emp = employees.find((e) => e.sheetName === kpi.sheetName);
+    if (emp?.department) kpi.department = emp.department;
+  }
+}
+
 export async function syncKraWorkbook(
   db: PrismaClient,
   organizationId: string,
@@ -323,6 +360,13 @@ export async function syncKraWorkbook(
     options?.preParsed ??
     parseKraWorkbook(buffer, options?.sourceFileName ?? undefined);
   applyDepartmentOverrides(employees, kpis, options?.departmentOverrides ?? {});
+  await alignEmployeesToMasterDepartments(
+    db,
+    organizationId,
+    employees,
+    kpis,
+    plantUnitKey
+  );
   if (!employees.length) {
     return {
       departmentsCreated: 0,

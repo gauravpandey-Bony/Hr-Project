@@ -1,7 +1,7 @@
 import type { PrismaClient } from "@prisma/client";
 import { departmentMasterWhereForPlant, plantDataScope } from "@/lib/unit-workspace";
 import {
-  departmentNameKey,
+  findMatchingDepartmentInList,
   normalizeDepartmentMasterName,
 } from "./department-master-sync";
 import { parseKraWorkbook } from "./kra-workbook";
@@ -49,20 +49,30 @@ async function listDepartmentsForPlant(
 
 async function matchToMasterDepartment(
   departmentName: string | null | undefined,
+  departmentRaw: string | null | undefined,
   departments: { id: string; name: string }[]
 ): Promise<{ id: string | null; name: string | null; matched: boolean }> {
-  if (!departmentName?.trim()) {
+  const candidates = [departmentRaw, departmentName].filter(
+    (v): v is string => Boolean(v?.trim())
+  );
+
+  for (const candidate of candidates) {
+    const fuzzy = findMatchingDepartmentInList(candidate, departments);
+    if (fuzzy) {
+      return { id: fuzzy.id, name: fuzzy.name, matched: true };
+    }
+  }
+
+  const fallback = departmentName?.trim() || departmentRaw?.trim();
+  if (!fallback) {
     return { id: null, name: null, matched: false };
   }
 
-  const normalized = normalizeDepartmentMasterName(departmentName);
-  const key = departmentNameKey(normalized);
-  const fuzzy = departments.find((d) => departmentNameKey(d.name) === key);
-  if (fuzzy) {
-    return { id: fuzzy.id, name: fuzzy.name, matched: true };
-  }
-
-  return { id: null, name: normalized, matched: false };
+  return {
+    id: null,
+    name: normalizeDepartmentMasterName(fallback),
+    matched: false,
+  };
 }
 
 export async function previewKraUpload(
@@ -99,7 +109,8 @@ export async function previewKraUpload(
   const employeePreviews: KraUploadEmployeePreview[] = [];
   for (const emp of employees) {
     const match = await matchToMasterDepartment(
-      emp.department ?? emp.departmentRaw,
+      emp.department,
+      emp.departmentRaw,
       departments
     );
     employeePreviews.push({

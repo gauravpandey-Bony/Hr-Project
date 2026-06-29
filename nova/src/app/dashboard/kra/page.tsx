@@ -63,6 +63,7 @@ export default async function KraPage({
 
   const isAdmin = user.role === "ADMIN";
   const isEmployee = user.role === "EMPLOYEE";
+  const isManager = user.role === "MANAGER";
 
   return (
     <KraPageClient
@@ -72,8 +73,10 @@ export default async function KraPage({
       company={company}
       isAdmin={isAdmin}
       userRole={user.role as UserRole}
-      canEditTargets={isAdmin || user.role === "MANAGER"}
+      viewerName={user.name}
+      canEditTargets={isAdmin || isManager}
       canEditAchieved={isEmployee}
+      canFillKra={isAdmin || isManager}
       plantUnit={workspace.plantUnitKey ?? "Bony Polymers"}
       unitName={workspace.unit?.name}
     />

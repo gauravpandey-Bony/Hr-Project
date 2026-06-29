@@ -1,5 +1,6 @@
 import type { Kpi } from "@prisma/client";
 import type { KraSheetFromDb } from "@/lib/kra-sheets.server";
+import { departmentsAreEquivalent } from "@/lib/masters/department-master-sync";
 
 export type SheetMeta = {
   kpiLevel: string;
@@ -23,8 +24,8 @@ export function kpisForSheet(
   }
   return allKpis.filter((k) => {
     if (k.kpiLevel === "INDIVIDUAL") return false;
-    if (k.department === meta.department) return true;
-    return k.kpiLevel === meta.kpiLevel && k.department === meta.department;
+    if (departmentsAreEquivalent(k.department ?? "", meta.department)) return true;
+    return k.kpiLevel === meta.kpiLevel && departmentsAreEquivalent(k.department ?? "", meta.department);
   });
 }
 

@@ -119,13 +119,13 @@ export function normalizeKraDepartment(raw: string): {
 } {
   const d = raw.trim().replace(/\.$/, "");
   if (/^edp$/i.test(d)) {
-    return { masterName: "IT", kraSheetId: "it" };
+    return { masterName: "IT & Systems", kraSheetId: "it" };
   }
   if (/logistic/i.test(d)) {
     return { masterName: "Logistics", kraSheetId: "logistics" };
   }
   if (/it\s*&?\s*systems?/i.test(d)) {
-    return { masterName: "IT", kraSheetId: "it" };
+    return { masterName: "IT & Systems", kraSheetId: "it" };
   }
   if (/human resource|^hr$/i.test(d)) {
     return { masterName: "HR", kraSheetId: "hr" };

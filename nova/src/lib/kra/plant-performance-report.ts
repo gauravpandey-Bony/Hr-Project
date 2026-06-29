@@ -273,7 +273,7 @@ function scoreFromKpiRows(label: string, rows: LevelKpiRow[]) {
   return weightedAverageFormula(label, items);
 }
 
-function buildEmployeeRows(
+export function buildEmployeeRows(
   kpis: KpiPick[],
   quarter: FiscalQuarter
 ): EmployeePerformanceRow[] {

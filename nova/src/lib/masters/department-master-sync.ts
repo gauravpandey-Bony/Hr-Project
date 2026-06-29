@@ -2,6 +2,7 @@ import type { DepartmentMaster, PrismaClient } from "@prisma/client";
 import { getLocationVariantsForPlant } from "@/lib/org-units";
 import { isLegacyBony37pPlant } from "@/lib/unit-workspace";
 import { normalizeRosterDepartment } from "./37p-roster";
+import { normalizeKraDepartment } from "./kra-workbook";
 
 export type DepartmentUpsertInput = {
   name: string;
@@ -18,12 +19,29 @@ export type DepartmentUpsertResult = {
   created: boolean;
 };
 
+const DEPT_ACRONYMS = new Set(["it", "hr", "mis", "ppc", "edp", "qa"]);
+
 function titleCaseName(name: string): string {
   return name
     .trim()
     .split(/\s+/)
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .map((w) => {
+      if (w === "&") return "&";
+      const lower = w.toLowerCase();
+      if (DEPT_ACRONYMS.has(lower)) return lower.toUpperCase();
+      return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+    })
     .join(" ");
+}
+
+/** UI label for department tabs and headers */
+export function formatDepartmentDisplayName(name: string): string {
+  const normalized = normalizeDepartmentMasterName(name);
+  const key = departmentNameKey(normalized);
+  if (key === "it" || key === "it & systems" || key === "it & system") {
+    return "IT & Systems";
+  }
+  return normalized;
 }
 
 /** One canonical display name per department (roster aliases → master name). */
@@ -42,6 +60,91 @@ export function normalizeDepartmentMasterName(raw: string): string {
 
 export function departmentNameKey(name: string): string {
   return normalizeDepartmentMasterName(name).toLowerCase();
+}
+
+/** Collect normalized keys for fuzzy department matching (IT ↔ IT & Systems, HR ↔ Human Resources, etc.). */
+export function departmentMatchKeys(name: string): Set<string> {
+  const keys = new Set<string>();
+  const add = (raw?: string | null) => {
+    if (!raw?.trim()) return;
+    keys.add(departmentNameKey(raw));
+  };
+
+  add(name);
+  add(normalizeDepartmentMasterName(name));
+  add(normalizeKraDepartment(name).masterName);
+
+  const compact = name
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (/^(it|edp)\b|it and system|information technology/.test(compact)) {
+    add("IT");
+    add("IT & Systems");
+    add("IT & System");
+  }
+  if (/^hr\b|human resource/.test(compact)) {
+    add("HR");
+    add("Human Resources");
+  }
+  if (/^quality\b|quality assurance/.test(compact)) {
+    add("Quality");
+    add("Quality Assurance");
+  }
+  if (/costing.*mis|mis.*costing/.test(compact)) {
+    add("Costing & MIS");
+    add("MIS");
+  }
+  if (/dispatch.*bill|bill.*dispatch/.test(compact)) {
+    add("Dispatch & Billing");
+    add("Billing");
+    add("Dispatch");
+  }
+  if (/plant head|^operations$/.test(compact)) {
+    add("Production");
+    add("Plant Head");
+    add("Operations");
+  }
+  if (/logistic/.test(compact)) {
+    add("Logistics");
+  }
+  if (/tool room/.test(compact)) {
+    add("Tool Room");
+  }
+  if (/maintenance/.test(compact)) {
+    add("Maintenance");
+  }
+  if (/^store\b|bop store|compound store|green hollow/.test(compact)) {
+    add("Store");
+  }
+  if (/dispatch.*assembly|production.*dispatch/.test(compact)) {
+    add("Dispatch & Assembly");
+  }
+  if (/^production$/.test(compact)) {
+    add("Production");
+  }
+
+  return keys;
+}
+
+export function departmentsAreEquivalent(a: string, b: string): boolean {
+  const keysB = departmentMatchKeys(b);
+  for (const key of departmentMatchKeys(a)) {
+    if (keysB.has(key)) return true;
+  }
+  return false;
+}
+
+export function findMatchingDepartmentInList<T extends { id: string; name: string }>(
+  detectedName: string | null | undefined,
+  departments: T[]
+): T | null {
+  if (!detectedName?.trim()) return null;
+  return (
+    departments.find((d) => departmentsAreEquivalent(detectedName, d.name)) ?? null
+  );
 }
 
 /** Collapse plant location aliases to one stored value per plant family. */
@@ -95,7 +198,7 @@ export async function findExistingDepartmentMaster(
   });
 
   const matches = candidates.filter((d) => {
-    if (departmentNameKey(d.name) !== nameKey) return false;
+    if (!departmentsAreEquivalent(d.name, canonicalName)) return false;
     const loc = (d.location ?? "").trim().toLowerCase();
     if (!loc) return legacy;
     return variants.includes(loc) || locationsSharePlant(location, d.location, plantUnitKey);
