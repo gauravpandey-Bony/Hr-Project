@@ -4,14 +4,25 @@ import type { UserRole } from "@prisma/client";
 import {
   canAccessDashboardPath,
   canAccessUnitPicker,
-  departmentMasterRedirect,
   employeeDashboardRedirect,
-  isRemovedKpiPath,
+  KPI_DASHBOARD_PATH,
   managerDashboardRedirect,
   roleHomeRedirect,
+  UNIT_PICKER_PATH,
 } from "@/lib/access-control";
 import { ROLE_COOKIE, SESSION_COOKIE } from "@/lib/constants";
-import { ADMIN_UNIT_STORAGE_KEY } from "@/lib/admin-unit";
+
+const REMOVED_PATH_PREFIXES = [
+  "/dashboard/masters/employees",
+  "/dashboard/reports/employee",
+  "/dashboard/team",
+] as const;
+
+function isRemovedPath(pathname: string): boolean {
+  return REMOVED_PATH_PREFIXES.some(
+    (p) => pathname === p || pathname.startsWith(`${p}/`)
+  );
+}
 
 export function middleware(request: NextRequest) {
   if (!request.nextUrl.pathname.startsWith("/dashboard")) {
@@ -34,12 +45,8 @@ export function middleware(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
 
-  if (role && isRemovedKpiPath(pathname)) {
-    const unitId = request.cookies.get(ADMIN_UNIT_STORAGE_KEY)?.value;
-    const target =
-      role === "ADMIN"
-        ? departmentMasterRedirect(unitId)
-        : roleHomeRedirect(role);
+  if (role && isRemovedPath(pathname)) {
+    const target = role === "ADMIN" ? UNIT_PICKER_PATH : KPI_DASHBOARD_PATH;
     return NextResponse.redirect(new URL(target, request.url));
   }
 

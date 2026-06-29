@@ -1,4 +1,4 @@
-import { mainNav, DEPARTMENT_MASTER_PATH, type NavItem } from "@/lib/navigation";
+import { mainNav, type NavItem } from "@/lib/navigation";
 import type { OrgUnit } from "@/lib/org-units";
 import { getOrgUnitFromCatalog } from "@/lib/org-units";
 import { OBSOLETE_UNIT_REDIRECTS } from "@/lib/org-units-defaults";
@@ -7,7 +7,15 @@ export const ADMIN_UNIT_PICKER_PATH = "/dashboard";
 
 export const ADMIN_UNIT_STORAGE_KEY = "nova_admin_unit";
 
-const UNIT_SCOPED_ADMIN_PATHS = new Set([DEPARTMENT_MASTER_PATH]);
+const UNIT_SCOPED_ADMIN_PATHS = new Set([
+  "/dashboard/kpis",
+  "/dashboard/kpis/create",
+  "/dashboard/track",
+  "/dashboard/kra",
+  "/dashboard/masters/departments",
+  "/dashboard/reports",
+  "/dashboard/ai",
+]);
 
 function isValidUnitId(unitId: string, catalog?: OrgUnit[]): boolean {
   if (catalog) return catalog.some((u) => u.id === unitId);
@@ -24,6 +32,9 @@ export function parseUnitIdFromPath(
 }
 
 function appendUnitQuery(path: string, unitId: string): string {
+  if (path.startsWith("/dashboard/units/")) {
+    return `/dashboard/units/${unitId}`;
+  }
   const url = new URL(path, "http://local");
   url.searchParams.set("unit", unitId);
   return `${url.pathname}${url.search}`;
@@ -80,6 +91,9 @@ export function getAdminMainNav(
         label: unit?.name ?? item.label,
         keywords: [...(item.keywords ?? []), "switch unit", "change unit"],
       };
+    }
+    if (item.href.startsWith("/dashboard/units/")) {
+      return { ...item, href: `/dashboard/units/${selectedUnitId}` };
     }
     if (UNIT_SCOPED_ADMIN_PATHS.has(item.href)) {
       return { ...item, href: appendUnitQuery(item.href, selectedUnitId) };
