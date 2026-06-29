@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { Kpi } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import type { SheetMeta } from "@/lib/kra-sheets";
 
@@ -72,10 +73,11 @@ export type KraEmployeeRow = {
 };
 
 export async function fetchKraEmployeesByDepartment(
-  organizationId: string
+  organizationId: string,
+  extraWhere?: Prisma.EmployeeMasterWhereInput
 ): Promise<Record<string, KraEmployeeRow[]>> {
   const employees = await db.employeeMaster.findMany({
-    where: { organizationId, isActive: true },
+    where: { organizationId, isActive: true, ...extraWhere },
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     select: {
       id: true,

@@ -20,6 +20,8 @@ const EMPLOYEE_ALLOWED = [
   "/dashboard/kpis",
   "/dashboard/track",
   "/dashboard/reviews",
+  "/dashboard/kra",
+  "/dashboard/reports/quarterly",
 ] as const;
 
 /** Managers cannot edit department master */
@@ -28,7 +30,6 @@ const MANAGER_BLOCKED_PREFIXES = ["/dashboard/masters/departments"] as const;
 /** Blocked for employees (checked before allow-list) */
 const EMPLOYEE_BLOCKED_PREFIXES = [
   "/dashboard/masters",
-  "/dashboard/kra",
   "/dashboard/reports",
   "/dashboard/ai",
   "/dashboard/feedback",
@@ -78,6 +79,13 @@ export function canAccessDashboardPath(role: UserRole, pathname: string): boolea
   if (role !== "EMPLOYEE") return true;
 
   if (pathname.startsWith("/dashboard/units/")) return true;
+
+  if (
+    pathname === "/dashboard/reports/quarterly" ||
+    pathname.startsWith("/dashboard/reports/quarterly/")
+  ) {
+    return true;
+  }
 
   for (const blocked of EMPLOYEE_BLOCKED_PREFIXES) {
     if (pathname === blocked || pathname.startsWith(`${blocked}/`)) {
@@ -220,14 +228,29 @@ export function getMainNavForRole(role: UserRole): NavItem[] {
   if (role === "EMPLOYEE") {
     return mainNav
       .filter((item) =>
-        [KPI_DASHBOARD_PATH, "/dashboard/kpis", "/dashboard/track"].includes(item.href)
+        [
+          KPI_DASHBOARD_PATH,
+          "/dashboard/kpis",
+          "/dashboard/track",
+          "/dashboard/kra",
+        ].includes(item.href)
       )
+      .concat([
+        {
+          href: "/dashboard/reports/quarterly",
+          label: "Quarterly Report",
+          icon: mainNav.find((i) => i.href === "/dashboard/reports")?.icon,
+          keywords: ["quarter", "q1", "q2", "achievement", "report"],
+        },
+      ])
       .map((item) =>
         item.href === KPI_DASHBOARD_PATH
           ? { ...item, label: "My Dashboard" }
           : item.href === "/dashboard/kpis"
             ? { ...item, label: "My KPIs" }
-            : item
+            : item.href === "/dashboard/kra"
+              ? { ...item, label: "My KRA Sheet" }
+              : item
       );
   }
 

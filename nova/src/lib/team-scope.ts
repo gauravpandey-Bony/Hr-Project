@@ -2,6 +2,30 @@ import type { EmployeeMaster, Kpi, Prisma, User } from "@prisma/client";
 import { db } from "@/lib/db";
 import { normalizePersonName, personNameVariants, personNamesMatch } from "@/lib/person-name";
 
+export function canEmployeeEditKpiAchieved(
+  user: User,
+  kpi: Pick<Kpi, "ownerName" | "kpiLevel">
+): boolean {
+  if (user.role !== "EMPLOYEE") return false;
+  if (kpi.kpiLevel !== "INDIVIDUAL") return false;
+  if (!kpi.ownerName?.trim() || !user.name?.trim()) return false;
+  return personNamesMatch(kpi.ownerName, user.name);
+}
+
+export function canEditKpiTargets(user: User): boolean {
+  return user.role === "ADMIN" || user.role === "MANAGER";
+}
+
+export async function canUpdateKpi(
+  user: User,
+  kpi: Pick<Kpi, "ownerId" | "ownerName" | "department" | "kpiLevel">
+): Promise<"targets" | "achieved" | null> {
+  if (user.role === "ADMIN") return "targets";
+  if (canEmployeeEditKpiAchieved(user, kpi)) return "achieved";
+  if (user.role === "MANAGER" && (await canManageKpi(user, kpi))) return "targets";
+  return null;
+}
+
 export const IT_TEAM_META = {
   kpiLevel: "INDIVIDUAL",
   department: "IT",

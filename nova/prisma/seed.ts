@@ -14,6 +14,19 @@ const LOGISTICS_KRA_FILES = [
   "Logistic Ravi KRA 2026-2027 April-June-2026.xlsx",
 ] as const;
 
+const SAKET_UNIT1_PLANT = "Saket Fabs Sheet Metal";
+
+const SAKET_UNIT1_KRA_FILES = [
+  "HR sf1.xlsx",
+  "Store.xlsx",
+  "Quality KRA.xlsx",
+  "Plant Head KRA.xlsx",
+  "Production Team SF1.xlsx",
+  "KRA Maint team Sf-01 26-27.XLSX",
+  "Tool Room.xlsx",
+  "IT & System.xlsx",
+] as const;
+
 const db = new PrismaClient();
 
 const ORG_SLUG = "bony-polymers";
@@ -539,7 +552,27 @@ async function main() {
       buffer.byteOffset + buffer.byteLength
     );
     const result = await syncKraWorkbook(db, org.id, arrayBuffer, admin.id);
-    kraImports.push({ file, ...result });
+    kraImports.push({ file, unit: "Bony", ...result });
+  }
+
+  const saketImports: Record<string, unknown>[] = [];
+  for (const file of SAKET_UNIT1_KRA_FILES) {
+    const filePath = path.join(process.cwd(), "data/saket-unit1-kra", file);
+    if (!existsSync(filePath)) {
+      saketImports.push({ file, error: `File not found: ${filePath}` });
+      continue;
+    }
+    const buffer = readFileSync(filePath);
+    const arrayBuffer = buffer.buffer.slice(
+      buffer.byteOffset,
+      buffer.byteOffset + buffer.byteLength
+    );
+    const result = await syncKraWorkbook(db, org.id, arrayBuffer, admin.id, {
+      plantUnitKey: SAKET_UNIT1_PLANT,
+      location: SAKET_UNIT1_PLANT,
+      sourceFileName: file,
+    });
+    saketImports.push({ file, unit: SAKET_UNIT1_PLANT, ...result });
   }
 
   const employeeCount = await db.employeeMaster.count({
@@ -554,6 +587,7 @@ async function main() {
     employees: employeeCount,
     kpis: kpiCount,
     logisticsKra: kraImports,
+    saketUnit1Kra: saketImports,
   });
 }
 

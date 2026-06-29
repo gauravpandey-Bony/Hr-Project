@@ -11,6 +11,12 @@ import {
 import { weightageFraction } from "@/lib/kra/weightage";
 import { ROSTER_DEPARTMENTS } from "./37p-roster";
 
+export type SyncKraWorkbookOptions = {
+  plantUnitKey?: string | null;
+  location?: string | null;
+  sourceFileName?: string | null;
+};
+
 export type SyncKraWorkbookResult = {
   departmentsCreated: number;
   departmentsUpdated: number;
@@ -26,7 +32,8 @@ export type SyncKraWorkbookResult = {
 async function ensureDepartments(
   db: PrismaClient,
   organizationId: string,
-  employees: KraWorkbookEmployee[]
+  employees: KraWorkbookEmployee[],
+  defaultLocation = "Bony Polymers"
 ): Promise<{ deptByName: Map<string, string>; created: number; updated: number }> {
   const deptByName = new Map<string, string>();
   let created = 0;
@@ -45,7 +52,7 @@ async function ensureDepartments(
     ...[...extraDepts.entries()].map(([name, meta], i) => ({
       name,
       kraSheetId: meta.kraSheetId,
-      location: "Bony Polymers",
+      location: defaultLocation,
       sortOrder: 20 + i,
     })),
   ];
@@ -91,7 +98,8 @@ async function upsertEmployees(
   db: PrismaClient,
   organizationId: string,
   employees: KraWorkbookEmployee[],
-  deptByName: Map<string, string>
+  deptByName: Map<string, string>,
+  defaultLocation?: string | null
 ): Promise<{ created: number; updated: number }> {
   let created = 0;
   let updated = 0;
@@ -112,7 +120,7 @@ async function upsertEmployees(
       designation: row.designation ?? null,
       departmentId,
       department: row.department,
-      location: row.location?.trim() || null,
+      location: row.location?.trim() || defaultLocation?.trim() || null,
       doj: row.doj ?? null,
       ecn: ecnKey,
       managerName: row.managerName ?? null,
@@ -186,7 +194,8 @@ async function upsertIndividualKpis(
   db: PrismaClient,
   organizationId: string,
   kpis: KraWorkbookKpi[],
-  adminUserId: string | null
+  adminUserId: string | null,
+  plantUnitKey?: string | null
 ): Promise<{ created: number; updated: number; entriesCreated: number }> {
   let created = 0;
   let updated = 0;
@@ -200,7 +209,7 @@ async function upsertIndividualKpis(
   ];
 
   for (const k of kpis) {
-    const id = kpiStableId(k.ownerName, k.srNo, k.name);
+    const id = kpiStableId(k.ownerName, k.srNo, k.name, plantUnitKey);
     const category = perspectiveToCategory(k.perspective);
 
     const existing = await db.kpi.findUnique({ where: { id } });
@@ -218,7 +227,7 @@ async function upsertIndividualKpis(
       perspective: k.perspective?.replace(/\s*\([^)]*\)/g, "").trim() || null,
       kraName: k.kraName,
       weightage: weightageFraction(k.weightage) ?? undefined,
-      plantUnit: null,
+      plantUnit: plantUnitKey?.trim() || null,
       kpiLevel: "INDIVIDUAL",
       ownerName: k.ownerName,
       quarterTargets: JSON.stringify({
@@ -260,9 +269,15 @@ export async function syncKraWorkbook(
   db: PrismaClient,
   organizationId: string,
   buffer: ArrayBuffer,
-  adminUserId?: string | null
+  adminUserId?: string | null,
+  options?: SyncKraWorkbookOptions
 ): Promise<SyncKraWorkbookResult & { parseErrors: string[] }> {
-  const { employees, kpis, errors } = parseKraWorkbook(buffer);
+  const plantUnitKey = options?.plantUnitKey ?? null;
+  const defaultLocation = options?.location ?? (plantUnitKey || "Bony Polymers");
+  const { employees, kpis, errors } = parseKraWorkbook(
+    buffer,
+    options?.sourceFileName ?? undefined
+  );
   if (!employees.length) {
     return {
       departmentsCreated: 0,
@@ -279,10 +294,10 @@ export async function syncKraWorkbook(
   }
 
   const { deptByName, created: departmentsCreated, updated: departmentsUpdated } =
-    await ensureDepartments(db, organizationId, employees);
+    await ensureDepartments(db, organizationId, employees, defaultLocation);
 
   const { created: employeesCreated, updated: employeesUpdated } =
-    await upsertEmployees(db, organizationId, employees, deptByName);
+    await upsertEmployees(db, organizationId, employees, deptByName, defaultLocation);
 
   await dedupeKraEmployees(db, organizationId, employees);
 
@@ -290,7 +305,13 @@ export async function syncKraWorkbook(
     created: kpisCreated,
     updated: kpisUpdated,
     entriesCreated,
-  } = await upsertIndividualKpis(db, organizationId, kpis, adminUserId ?? null);
+  } = await upsertIndividualKpis(
+    db,
+    organizationId,
+    kpis,
+    adminUserId ?? null,
+    plantUnitKey
+  );
 
   const employeeCount = await db.employeeMaster.count({
     where: { organizationId, isActive: true },

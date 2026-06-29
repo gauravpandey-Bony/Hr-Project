@@ -80,6 +80,26 @@ export const SEED_USERS: SeedUserDef[] = [
     department: "IT",
     defaultPassword: "sikandar123",
   },
+  {
+    id: "demo-ravi-bhati",
+    email: "ravi.bhati@bonypolymers.com",
+    name: "Ravi Bhati",
+    role: "EMPLOYEE",
+    title: "Senior Executive",
+    department: "Logistics",
+    defaultPassword: "ravi123",
+    ecn: "100649",
+  },
+  {
+    id: "demo-lokranjan-dixit",
+    email: "lokranjan.dixit@bonypolymers.com",
+    name: "Lokranjan Dixit",
+    role: "EMPLOYEE",
+    title: "Executive",
+    department: "Logistics",
+    defaultPassword: "lok123",
+    ecn: "101591",
+  },
 ];
 
 export function seedPasswordForUser(userId: string, defaultPassword: string): string {

@@ -3,13 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { RatingScaleCard } from "@/components/kra/kra-sheet";
 import { KraSheetEditable } from "@/components/kra/kra-sheet-editable";
-import { LogisticKraSheetView } from "@/components/kra/logistic-kra-sheet-view";
+import { LogisticKraSheetEditable } from "@/components/kra/logistic-kra-sheet-editable";
 import type { CompanyContext } from "@/lib/company.server";
 import type { KraEmployeeRow, KraSheetFromDb } from "@/lib/kra-sheets.server";
 import { kpisForSheet } from "@/lib/kra-sheets";
 import { cn } from "@/lib/utils";
 import { Building2, FileSpreadsheet, Pencil, Users } from "lucide-react";
-import type { Kpi, KpiEntry } from "@prisma/client";
+import type { Kpi, KpiEntry, UserRole } from "@prisma/client";
 import { UploadKraWorkbookButton } from "@/components/kra/upload-kra-workbook-button";
 
 type KpiWithEntries = Kpi & { entries: KpiEntry[] };
@@ -22,6 +22,9 @@ export function KraPageClient({
   employeesByDepartment,
   company,
   isAdmin,
+  userRole,
+  canEditTargets = false,
+  canEditAchieved = false,
   plantUnit = "Bony Polymers",
   unitName,
 }: {
@@ -30,6 +33,9 @@ export function KraPageClient({
   employeesByDepartment: Record<string, KraEmployeeRow[]>;
   company: CompanyContext;
   isAdmin: boolean;
+  userRole?: UserRole;
+  canEditTargets?: boolean;
+  canEditAchieved?: boolean;
   plantUnit?: string;
   unitName?: string;
 }) {
@@ -40,6 +46,17 @@ export function KraPageClient({
   const deptEmployees = sheet
     ? (employeesByDepartment[sheet.department] ?? EMPTY_EMPLOYEES)
     : EMPTY_EMPLOYEES;
+
+  const isEmployeeRole = userRole === "EMPLOYEE";
+
+  useEffect(() => {
+    if (isEmployeeRole && sheets.length > 0) {
+      const deptWithEmployee = sheets.find(
+        (s) => (employeesByDepartment[s.department] ?? []).length > 0
+      );
+      if (deptWithEmployee) setActiveSheet(deptWithEmployee.id);
+    }
+  }, [isEmployeeRole, sheets, employeesByDepartment]);
 
   useEffect(() => {
     if (deptEmployees.length > 0) {
@@ -69,7 +86,7 @@ export function KraPageClient({
             </p>
             {isAdmin && (
               <div className="mt-6">
-                <UploadKraWorkbookButton variant="hero" label="Upload Excel Sheet" />
+                <UploadKraWorkbookButton variant="hero" label="Upload Excel Sheet" plantUnitKey={plantUnit} />
               </div>
             )}
           </div>
@@ -122,7 +139,9 @@ export function KraPageClient({
           </h1>
           <p className="mt-2 max-w-2xl text-slate-300">
             {unitName ? `${unitName} — ` : ""}
-            {company.name} — select department, then employee under Logistics
+            {isEmployeeRole
+              ? "View your KRA sheet — enter achieved values for each quarter"
+              : `${company.name} — select department, then employee`}
           </p>
           {isAdmin && (
             <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -130,7 +149,7 @@ export function KraPageClient({
                 <Pencil className="h-4 w-4" />
                 Upload Excel to import employee KRA sheets
               </p>
-              <UploadKraWorkbookButton variant="hero-outline" label="Upload Excel" />
+              <UploadKraWorkbookButton variant="hero-outline" label="Upload Excel" plantUnitKey={plantUnit} />
             </div>
           )}
         </div>
@@ -141,7 +160,12 @@ export function KraPageClient({
           Department
         </p>
         <div className="flex flex-wrap gap-2">
-          {sheets.map((s) => (
+          {(isEmployeeRole
+            ? sheets.filter(
+                (s) => (employeesByDepartment[s.department] ?? []).length > 0
+              )
+            : sheets
+          ).map((s) => (
             <button
               key={s.id}
               type="button"
@@ -159,7 +183,7 @@ export function KraPageClient({
         </div>
       </div>
 
-      {deptEmployees.length > 0 && (
+      {deptEmployees.length > 0 && !isEmployeeRole && (
         <div>
           <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             <Users className="h-3.5 w-3.5" />
@@ -200,10 +224,12 @@ export function KraPageClient({
       </div>
 
       {isEmployeeSheet && activeEmployee ? (
-        <LogisticKraSheetView
+        <LogisticKraSheetEditable
           employee={activeEmployee}
           kpis={kpis}
           departmentLabel={sheet.label}
+          editTargets={canEditTargets && !isEmployeeRole}
+          editAchieved={canEditAchieved}
         />
       ) : (
         <KraSheetEditable

@@ -129,7 +129,11 @@ export default async function UnitDashboardPage({
             )}
             {user.role === "ADMIN" && (
               <>
-                <UploadKraWorkbookButton variant="hero-outline" label="Upload Excel" />
+                <UploadKraWorkbookButton
+                  variant="hero-outline"
+                  label="Upload Excel"
+                  plantUnitKey={unit.plantUnitKey}
+                />
                 <GenerateKpiPromptButton isAdmin />
                 <Link
                   href={createHref}
@@ -164,7 +168,11 @@ export default async function UnitDashboardPage({
           </p>
           {user.role === "ADMIN" && (
             <div className="mt-6 flex flex-wrap justify-center gap-3">
-              <UploadKraWorkbookButton variant="hero" label="Upload Excel Sheet" />
+              <UploadKraWorkbookButton
+                variant="hero"
+                label="Upload Excel Sheet"
+                plantUnitKey={unit.plantUnitKey}
+              />
               <GenerateKpiPromptButton isAdmin />
               <Link
                 href={createHref}

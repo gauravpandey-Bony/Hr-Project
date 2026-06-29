@@ -80,6 +80,13 @@ export default async function ReportsPage({
           </div>
           <div className="flex flex-wrap gap-3">
             <Link
+              href={`/dashboard/reports/quarterly${unitQuery}`}
+              className="inline-flex items-center gap-2 rounded-xl border border-emerald-400/40 bg-emerald-600/20 px-5 py-3 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-600/30"
+            >
+              <BarChart3 className="h-4 w-4" />
+              Quarterly KRA report
+            </Link>
+            <Link
               href={`/dashboard/ai${unitQuery}`}
               className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-5 py-3 text-sm font-semibold shadow-lg shadow-violet-900/40 transition hover:from-violet-500 hover:to-indigo-500"
             >

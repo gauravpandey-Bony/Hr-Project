@@ -46,3 +46,4 @@ next-env.d.ts
 /prisma/shadow.db
 /prisma/prisma/
 data/logistics-kra/*.xlsx
+data/saket-unit1-kra/*.xlsx

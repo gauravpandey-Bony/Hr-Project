@@ -2,8 +2,12 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
-import { canManageKpi } from "@/lib/team-scope";
+import { canManageKpi, canUpdateKpi } from "@/lib/team-scope";
 import { syncKpiEntryFromQuarters } from "@/lib/kpi-quarters";
+import {
+  mergeAchievedQuarterJson,
+  mergeTargetsQuarterJson,
+} from "@/lib/kra/quarter-merge";
 
 const updateSchema = z.object({
   name: z.string().min(1).optional(),
@@ -38,17 +42,46 @@ export async function PATCH(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  if (!(await canManageKpi(user, existing))) {
+  const updateScope = await canUpdateKpi(user, existing);
+  if (!updateScope) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const body = updateSchema.parse(await request.json());
+
+  if (updateScope === "achieved") {
+    if (body.quarterTargets === undefined) {
+      return NextResponse.json(
+        { error: "Employees may only update achieved values" },
+        { status: 400 }
+      );
+    }
+    const quarterTargets = mergeAchievedQuarterJson(
+      existing.quarterTargets,
+      body.quarterTargets
+    );
+    const kpi = await db.kpi.update({
+      where: { id: params.id },
+      data: { quarterTargets },
+    });
+    await syncKpiEntryFromQuarters(kpi.id, kpi.quarterTargets, user.id);
+    return NextResponse.json(kpi);
+  }
+
+  const data: z.infer<typeof updateSchema> = { ...body };
+  if (body.quarterTargets !== undefined) {
+    data.quarterTargets = mergeTargetsQuarterJson(
+      existing.quarterTargets,
+      body.quarterTargets
+    );
+  }
+
   const kpi = await db.kpi.update({
     where: { id: params.id },
-    data: body,
+    data,
   });
 
-  if (body.quarterTargets !== undefined) {
+  if (data.quarterTargets !== undefined) {
     await syncKpiEntryFromQuarters(kpi.id, kpi.quarterTargets, user.id);
   }
 

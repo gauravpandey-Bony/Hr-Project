@@ -17,9 +17,11 @@ import { Button } from "@/components/ui/button";
 export function UploadKraWorkbookModal({
   open,
   onClose,
+  plantUnitKey,
 }: {
   open: boolean;
   onClose: () => void;
+  plantUnitKey?: string | null;
 }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -36,6 +38,9 @@ export function UploadKraWorkbookModal({
 
     const formData = new FormData();
     formData.append("file", file);
+    if (plantUnitKey?.trim()) {
+      formData.append("plantUnitKey", plantUnitKey.trim());
+    }
 
     const res = await fetch("/api/masters/import-plant-kra", {
       method: "POST",

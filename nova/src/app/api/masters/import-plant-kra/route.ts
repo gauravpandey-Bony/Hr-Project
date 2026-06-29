@@ -27,9 +27,20 @@ export async function POST(request: Request) {
 
   const buffer = await file.arrayBuffer();
   const employeeKra = isKraEmployeeWorkbook(buffer);
+  const plantUnitKey = String(formData.get("plantUnitKey") ?? "").trim() || null;
+  const syncOptions =
+    employeeKra && plantUnitKey
+      ? {
+          plantUnitKey,
+          location: plantUnitKey,
+          sourceFileName: file.name,
+        }
+      : employeeKra
+        ? { sourceFileName: file.name }
+        : undefined;
 
   const result = employeeKra
-    ? await syncKraWorkbook(db, user.organizationId, buffer, user.id)
+    ? await syncKraWorkbook(db, user.organizationId, buffer, user.id, syncOptions)
     : await syncPlantKraWorkbook(db, user.organizationId, buffer, user.id);
 
   const failed = employeeKra
