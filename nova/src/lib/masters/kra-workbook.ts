@@ -219,13 +219,29 @@ export function isKraEmployeeWorkbook(buffer: ArrayBuffer): boolean {
   const wb = XLSX.read(buffer, { type: "array" });
   if (isSf1Workbook(wb)) return true;
   for (const sheetName of wb.SheetNames) {
-    if (!isMainKraSheetName(sheetName)) continue;
+    if (/^sheet\d*$/i.test(sheetName.trim())) continue;
     const matrix = XLSX.utils.sheet_to_json<string[]>(wb.Sheets[sheetName], {
       header: 1,
       defval: "",
     }) as string[][];
     if (isLogisticKraSheet(matrix)) return true;
-    const headerCell = String(matrix[0]?.[1] ?? matrix[0]?.[0] ?? "");
+    if (hasEmployeeKraHeader(matrix)) return true;
+    if (isMainKraSheetName(sheetName)) {
+      const headerCell = String(matrix[0]?.[1] ?? matrix[0]?.[0] ?? "");
+      if (/Name:\s*.+/i.test(headerCell) && /Department:/i.test(headerCell)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function hasEmployeeKraHeader(matrix: string[][]): boolean {
+  for (let i = 0; i < Math.min(matrix.length, 6); i++) {
+    const headerCell = (matrix[i] ?? [])
+      .map((c) => String(c ?? ""))
+      .filter(Boolean)
+      .join("\n");
     if (/Name:\s*.+/i.test(headerCell) && /Department:/i.test(headerCell)) {
       return true;
     }

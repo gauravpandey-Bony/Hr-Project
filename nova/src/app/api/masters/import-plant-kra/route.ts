@@ -1,10 +1,16 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
-import { isKraEmployeeWorkbook } from "@/lib/masters/kra-workbook";
+import { isKraEmployeeWorkbook, parseKraWorkbook } from "@/lib/masters/kra-workbook";
+import { previewKraUpload, parseDepartmentOverrides } from "@/lib/masters/preview-kra-upload";
 import { previewKraWorkbookUpload } from "@/lib/masters/preview-employee-upload";
 import { syncKraWorkbook } from "@/lib/masters/sync-kra-workbook";
 import { syncPlantKraWorkbook } from "@/lib/masters/sync-plant-kra-workbook";
+
+function isEmployeeKraBuffer(buffer: ArrayBuffer, sourceFileName?: string): boolean {
+  if (isKraEmployeeWorkbook(buffer)) return true;
+  return parseKraWorkbook(buffer, sourceFileName).employees.length > 0;
+}
 
 export async function POST(request: Request) {
   const user = await getCurrentUser();
@@ -27,19 +33,36 @@ export async function POST(request: Request) {
   }
 
   const buffer = await file.arrayBuffer();
-  const employeeKra = isKraEmployeeWorkbook(buffer);
   const confirmOverwrite = formData.get("confirmOverwrite") === "true";
+  const skipDepartmentCheck = formData.get("skipDepartmentCheck") === "true";
+  const departmentOverrides = parseDepartmentOverrides(formData.get("departmentOverrides"));
   const plantUnitKey = String(formData.get("plantUnitKey") ?? "").trim() || null;
-  const syncOptions =
-    employeeKra && plantUnitKey
-      ? {
-          plantUnitKey,
-          location: plantUnitKey,
-          sourceFileName: file.name,
-        }
-      : employeeKra
-        ? { sourceFileName: file.name }
-        : undefined;
+  const employeeKra = isEmployeeKraBuffer(buffer, file.name);
+  const syncOptions = employeeKra
+    ? {
+        ...(plantUnitKey
+          ? { plantUnitKey, location: plantUnitKey, sourceFileName: file.name }
+          : { sourceFileName: file.name }),
+        departmentOverrides,
+      }
+    : undefined;
+
+  if (employeeKra && !skipDepartmentCheck && !Object.keys(departmentOverrides).length) {
+    const deptPreview = await previewKraUpload(db, user.organizationId, buffer, {
+      plantUnitKey,
+      sourceFileName: file.name,
+    });
+    if (deptPreview.needsDepartmentPick) {
+      return NextResponse.json(
+        {
+          ...deptPreview,
+          error: "Choose department for employees without a matching Department Master row.",
+          needsDepartmentPick: true,
+        },
+        { status: 422 }
+      );
+    }
+  }
 
   if (employeeKra && !confirmOverwrite) {
     const preview = await previewKraWorkbookUpload(

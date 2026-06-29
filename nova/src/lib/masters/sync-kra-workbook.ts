@@ -20,6 +20,7 @@ export type SyncKraWorkbookOptions = {
   plantUnitKey?: string | null;
   location?: string | null;
   sourceFileName?: string | null;
+  departmentOverrides?: Record<string, string>;
 };
 
 export type SyncKraWorkbookResult = {
@@ -270,6 +271,30 @@ async function upsertIndividualKpis(
   return { created, updated, entriesCreated };
 }
 
+function applyDepartmentOverrides(
+  employees: KraWorkbookEmployee[],
+  kpis: KraWorkbookKpi[],
+  overrides: Record<string, string>
+): void {
+  if (!Object.keys(overrides).length) return;
+
+  for (const emp of employees) {
+    const picked =
+      overrides[emp.sheetName] ??
+      overrides[emp.name] ??
+      overrides.__default__;
+    if (!picked?.trim()) continue;
+    const { masterName } = normalizeKraDepartment(picked);
+    emp.department = masterName;
+    emp.departmentRaw = picked.trim();
+  }
+
+  for (const kpi of kpis) {
+    const emp = employees.find((e) => e.sheetName === kpi.sheetName);
+    if (emp?.department) kpi.department = emp.department;
+  }
+}
+
 export async function syncKraWorkbook(
   db: PrismaClient,
   organizationId: string,
@@ -283,6 +308,7 @@ export async function syncKraWorkbook(
     buffer,
     options?.sourceFileName ?? undefined
   );
+  applyDepartmentOverrides(employees, kpis, options?.departmentOverrides ?? {});
   if (!employees.length) {
     return {
       departmentsCreated: 0,
