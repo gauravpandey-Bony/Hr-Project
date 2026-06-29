@@ -2,30 +2,33 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { motion } from "framer-motion";
 import {
-  AlertTriangle,
   ArrowRight,
   BarChart3,
   Building2,
   CalendarRange,
   FileSpreadsheet,
-  IndianRupee,
   Sparkles,
-  Target,
-  TrendingDown,
   TrendingUp,
   Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card3D } from "@/components/ui/card-3d";
-import { quarterStatusClass } from "@/lib/kra/quarter-status";
 import type { PlantPerformanceReport } from "@/lib/kra/plant-performance-report";
 import type { FiscalQuarter } from "@/lib/kpi-quarters";
 import {
   EMPLOYEE_QUARTER_FILTER_OPTIONS,
   quarterFilterLabel,
 } from "@/lib/ai/employee-quarter-filter";
+import {
+  getPlantDashboardProfile,
+  resolveSpotlightMetrics,
+  type PlantDashboardProfile,
+} from "@/lib/plant/plant-dashboard-config";
+import { buildPlantAlerts } from "@/lib/plant/plant-alerts";
+import { PlantSpotlightMetrics } from "@/components/dashboard/plant-spotlight-metrics";
+import { PlantAlertsPanel } from "@/components/dashboard/plant-alerts-panel";
+import { motion } from "framer-motion";
 
 const QUARTER_MAP: Record<string, FiscalQuarter> = {
   annual: "q1",
@@ -33,15 +36,6 @@ const QUARTER_MAP: Record<string, FiscalQuarter> = {
   q2: "q2",
   q3: "q3",
   q4: "q4",
-};
-
-const CATEGORY_GRADIENT: Record<string, string> = {
-  Sales: "from-violet-500 to-fuchsia-600",
-  Quality: "from-blue-500 to-indigo-600",
-  Finance: "from-amber-500 to-orange-600",
-  Process: "from-emerald-500 to-teal-600",
-  Production: "from-cyan-500 to-emerald-600",
-  Maintenance: "from-orange-500 to-rose-500",
 };
 
 function scoreTone(score: number | null) {
@@ -84,70 +78,6 @@ function HealthRing({ score }: { score: number | null }) {
         {score != null && <span className="text-xs font-medium text-white/50">%</span>}
       </div>
     </div>
-  );
-}
-
-function PlantMetricCard({
-  kraName,
-  kpiName,
-  achieved,
-  target,
-  status,
-  statusLabel,
-  category,
-  index,
-}: {
-  kraName: string;
-  kpiName: string;
-  achieved: string;
-  target: string;
-  status: string;
-  statusLabel: string;
-  category: string;
-  index: number;
-}) {
-  const gradient = CATEGORY_GRADIENT[category] ?? "from-slate-500 to-slate-700";
-  const onTrack = status === "met";
-
-  return (
-    <Card3D floatIndex={index} className="border-white/10 bg-gradient-to-br from-slate-900/90 via-slate-900/80 to-slate-950/90 p-5 text-white">
-      <div className="mb-3 flex items-start justify-between gap-2">
-        <div
-          className={cn(
-            "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br shadow-lg",
-            gradient
-          )}
-          style={{ transform: "translateZ(28px)" }}
-        >
-          {category === "Sales" || category === "Finance" ? (
-            <IndianRupee className="h-5 w-5 text-white" />
-          ) : (
-            <Target className="h-5 w-5 text-white" />
-          )}
-        </div>
-        <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-bold uppercase", quarterStatusClass(status as "met"))}>
-          {statusLabel}
-        </span>
-      </div>
-      <p className="text-[11px] font-medium uppercase tracking-wider text-white/45">{kraName}</p>
-      <p className="mt-0.5 line-clamp-2 text-sm font-semibold leading-snug">{kpiName}</p>
-      <div className="mt-4 grid grid-cols-2 gap-2" style={{ transform: "translateZ(16px)" }}>
-        <div className="rounded-lg bg-white/5 px-2.5 py-2 ring-1 ring-white/10">
-          <p className="text-[10px] text-white/40">Achieved</p>
-          <p className="font-mono text-sm font-bold">{achieved}</p>
-        </div>
-        <div className="rounded-lg bg-white/5 px-2.5 py-2 ring-1 ring-white/10">
-          <p className="text-[10px] text-white/40">Target</p>
-          <p className="font-mono text-sm font-bold">{target}</p>
-        </div>
-      </div>
-      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10">
-        <div
-          className={cn("h-full rounded-full transition-all duration-700", onTrack ? "bg-emerald-400" : "bg-rose-400")}
-          style={{ width: onTrack ? "100%" : "35%" }}
-        />
-      </div>
-    </Card3D>
   );
 }
 
@@ -196,15 +126,33 @@ function DepartmentCard({
 export function PlantCommandCenter({
   unitName,
   unitId,
+  plantUnitKey,
+  employeeIdByName,
   reportsByQuarter,
 }: {
   unitName: string;
   unitId: string;
+  plantUnitKey: string;
+  employeeIdByName: Record<string, string>;
   reportsByQuarter: Record<FiscalQuarter, PlantPerformanceReport>;
 }) {
   const [filter, setFilter] = useState<string>("q1");
   const quarter = QUARTER_MAP[filter] ?? "q1";
   const report = reportsByQuarter[quarter];
+  const profile: PlantDashboardProfile = getPlantDashboardProfile(unitId, plantUnitKey);
+
+  const spotlight = useMemo(
+    () => (report ? resolveSpotlightMetrics(profile, report) : []),
+    [profile, report]
+  );
+
+  const alerts = useMemo(
+    () =>
+      report
+        ? buildPlantAlerts(report, spotlight, employeeIdByName, unitId, quarter)
+        : [],
+    [report, spotlight, employeeIdByName, unitId, quarter]
+  );
 
   const healthScore = useMemo(() => {
     if (!report) return null;
@@ -217,25 +165,20 @@ export function PlantCommandCenter({
     return Math.round((parts.reduce((a, b) => a + b, 0) / parts.length) * 10) / 10;
   }, [report]);
 
-  const offTrackEmployees = useMemo(
-    () =>
-      report?.employees.rows.filter((e) => e.weightedScore != null && e.weightedScore < 70) ?? [],
-    [report]
-  );
-
-  const plantKpis = report?.plantKpis.rows ?? [];
   const departments = report?.departments.cards ?? [];
-  const unitQs = `?unit=${encodeURIComponent(unitId)}&quarter=${quarter}`;
+  const unitQs = `?unit=${encodeURIComponent(unitId)}`;
+  const qQs = `${unitQs}&quarter=${quarter}`;
 
   return (
     <div className="space-y-8">
-      {/* Quarter filter */}
       <Card3D tilt={false} className="border-border/70 bg-card/90 p-4 backdrop-blur-sm">
         <div className="mb-3 flex items-center gap-2">
           <CalendarRange className="h-4 w-4 text-primary" />
           <div>
             <p className="text-sm font-semibold">Report period</p>
-            <p className="text-xs text-muted-foreground">{quarterFilterLabel(filter as "q1")} · {unitName}</p>
+            <p className="text-xs text-muted-foreground">
+              {quarterFilterLabel(filter as "q1")} · {unitName}
+            </p>
           </div>
         </div>
         <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
@@ -257,7 +200,6 @@ export function PlantCommandCenter({
         </div>
       </Card3D>
 
-      {/* Hero health score */}
       <div className="relative overflow-hidden rounded-[1.75rem] border border-white/10 bg-gradient-to-br from-slate-950 via-[#0c1222] to-indigo-950 px-6 py-8 text-white shadow-2xl sm:px-8">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(99,102,241,0.2),transparent_55%)]" />
         <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-violet-500/10 blur-3xl" />
@@ -266,9 +208,7 @@ export function PlantCommandCenter({
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-indigo-300">Plant command center</p>
             <h2 className="mt-1 text-3xl font-bold tracking-tight sm:text-4xl">{unitName}</h2>
-            <p className="mt-2 max-w-lg text-sm text-slate-400">
-              Composite health from plant KPIs, departments & employees. Business metrics on top — people performance below.
-            </p>
+            <p className="mt-2 max-w-lg text-sm text-slate-400">{profile.tagline}</p>
             <div className="mt-5 grid grid-cols-3 gap-3 sm:max-w-md">
               <ScorePill label="Plant" value={report?.plantKpis.overallScore} />
               <ScorePill label="Departments" value={report?.departments.overallScore} />
@@ -278,42 +218,22 @@ export function PlantCommandCenter({
         </div>
       </div>
 
-      {/* Plant KPIs */}
-      <section className="space-y-4">
-        <SectionHeader
-          icon={TrendingUp}
-          title="Plant business KPIs"
-          subtitle="Sales, delivery, quality & profitability"
-          href={`/dashboard/reports/plant${unitQs}`}
+      {report && (
+        <PlantSpotlightMetrics
+          title={profile.metricsSectionTitle}
+          subtitle={profile.metricsSectionSubtitle}
+          metrics={spotlight}
         />
-        {plantKpis.length > 0 ? (
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {plantKpis.slice(0, 6).map((kpi, i) => (
-              <PlantMetricCard
-                key={kpi.kpiId}
-                kraName={kpi.kraName}
-                kpiName={kpi.kpiName}
-                achieved={kpi.achieved}
-                target={kpi.target}
-                status={kpi.status}
-                statusLabel={kpi.statusLabel}
-                category={kpi.category}
-                index={i}
-              />
-            ))}
-          </div>
-        ) : (
-          <EmptyPanel message="Import Plant Head KRA sheet for sales, OTD & plant metrics." />
-        )}
-      </section>
+      )}
 
-      {/* Departments */}
+      <PlantAlertsPanel alerts={alerts} />
+
       <section className="space-y-4">
         <SectionHeader
           icon={Building2}
           title="Department performance"
           subtitle="Weighted KRA scores by department"
-          href={`/dashboard/reports/plant${unitQs}`}
+          href={`/dashboard/reports/plant${qQs}`}
         />
         {departments.length > 0 ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -332,64 +252,17 @@ export function PlantCommandCenter({
         )}
       </section>
 
-      {/* Alerts + quick links */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card3D className="border-amber-200/60 bg-gradient-to-br from-amber-50/80 via-card to-card p-5">
-          <div className="flex items-center gap-2 text-amber-800">
-            <AlertTriangle className="h-5 w-5" />
-            <h3 className="font-bold">Needs attention</h3>
-          </div>
-          <ul className="mt-4 space-y-3 text-sm">
-            <AlertRow
-              icon={TrendingDown}
-              label="Employees below 70%"
-              value={offTrackEmployees.length}
-              tone="rose"
-            />
-            <AlertRow
-              icon={Target}
-              label="KRAs pending entry"
-              value={report?.employees.summary.pending ?? 0}
-              tone="amber"
-            />
-            <AlertRow
-              icon={TrendingUp}
-              label="KRAs achieved"
-              value={report?.employees.summary.met ?? 0}
-              tone="emerald"
-            />
-          </ul>
-          {offTrackEmployees.length > 0 && (
-            <div className="mt-4 border-t border-amber-200/50 pt-3">
-              <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">Low performers</p>
-              <div className="flex flex-wrap gap-1.5">
-                {offTrackEmployees.slice(0, 5).map((e) => (
-                  <span
-                    key={e.employeeName}
-                    className="rounded-full bg-rose-100 px-2.5 py-1 text-xs font-medium text-rose-800"
-                  >
-                    {e.employeeName} ({e.weightedScore}%)
-                  </span>
-                ))}
-                {offTrackEmployees.length > 5 && (
-                  <span className="text-xs text-muted-foreground">+{offTrackEmployees.length - 5} more</span>
-                )}
-              </div>
-            </div>
-          )}
-        </Card3D>
-
-        <Card3D className="bg-card p-5">
-          <h3 className="font-bold">Quick actions</h3>
-          <div className="mt-4 grid gap-2">
-            <QuickLink href={`/dashboard/reports/plant${unitQs}`} icon={BarChart3} label="Full plant scorecard" />
-            <QuickLink href={`/dashboard/reports/quarterly${unitQs.replace(`&quarter=${quarter}`, "")}`} icon={BarChart3} label="Quarterly KRA report" />
-            <QuickLink href={`/dashboard/kra${unitQs.replace(`&quarter=${quarter}`, "")}`} icon={FileSpreadsheet} label="KRA master sheet" />
-            <QuickLink href={`/dashboard/masters/employees${unitQs.replace(`&quarter=${quarter}`, "")}`} icon={Users} label="Employee master" />
-            <QuickLink href={`/dashboard/ai${unitQs.replace(`&quarter=${quarter}`, "")}`} icon={Sparkles} label="Maya AI insights" />
-          </div>
-        </Card3D>
-      </div>
+      <Card3D className="bg-card p-5">
+        <h3 className="font-bold">Quick actions</h3>
+        <div className="mt-4 grid gap-2 sm:grid-cols-2">
+          <QuickLink href={`/dashboard/reports/plant${qQs}`} icon={BarChart3} label="Full plant scorecard" />
+          <QuickLink href={`/dashboard/reports/quarterly${unitQs}`} icon={BarChart3} label="Quarterly KRA report" />
+          <QuickLink href={`/dashboard/kra${unitQs}`} icon={FileSpreadsheet} label="KRA master sheet" />
+          <QuickLink href={`/dashboard/masters/employees${unitQs}`} icon={Users} label="Employee master" />
+          <QuickLink href={`/dashboard/ai${unitQs}`} icon={Sparkles} label="Maya AI insights" />
+          <QuickLink href={`/dashboard/reports/plant${qQs}`} icon={TrendingUp} label="Calculation breakdown" />
+        </div>
+      </Card3D>
     </div>
   );
 }
@@ -425,37 +298,10 @@ function SectionHeader({
           <p className="text-sm text-muted-foreground">{subtitle}</p>
         </div>
       </div>
-      <Link
-        href={href}
-        className="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline"
-      >
+      <Link href={href} className="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline">
         View all <ArrowRight className="h-4 w-4" />
       </Link>
     </div>
-  );
-}
-
-function AlertRow({
-  icon: Icon,
-  label,
-  value,
-  tone,
-}: {
-  icon: typeof AlertTriangle;
-  label: string;
-  value: number;
-  tone: "rose" | "amber" | "emerald";
-}) {
-  const cls =
-    tone === "rose" ? "text-rose-700" : tone === "amber" ? "text-amber-700" : "text-emerald-700";
-  return (
-    <li className="flex items-center justify-between gap-3">
-      <span className="flex items-center gap-2 text-muted-foreground">
-        <Icon className={cn("h-4 w-4", cls)} />
-        {label}
-      </span>
-      <span className={cn("text-lg font-bold", cls)}>{value}</span>
-    </li>
   );
 }
 

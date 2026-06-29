@@ -90,6 +90,30 @@ export default async function UnitDashboardPage({
     QUARTERS.map((q) => [q, buildPlantPerformanceReport(scorecardKpis, q, unit.name)])
   ) as Record<FiscalQuarter, ReturnType<typeof buildPlantPerformanceReport>>;
 
+  const employeesInPlant =
+    scorecardKpis.length > 0 && !isEmployeeRole(user.role)
+      ? await db.employeeMaster.findMany({
+          where: {
+            organizationId: user.organizationId,
+            isActive: true,
+            name: {
+              in: [
+                ...new Set(
+                  scorecardKpis
+                    .filter((k) => k.kpiLevel === "INDIVIDUAL" && k.ownerName?.trim())
+                    .map((k) => k.ownerName!.trim())
+                ),
+              ],
+            },
+          },
+          select: { id: true, name: true },
+        })
+      : [];
+
+  const employeeIdByName = Object.fromEntries(
+    employeesInPlant.map((e) => [e.name, e.id])
+  );
+
   const categories = KPI_CATEGORIES.filter((cat) => kpis.some((k) => k.category === cat));
   const createHref = `/dashboard/kpis/create?unit=${encodeURIComponent(params.unitId)}`;
   const trackHref = `/dashboard/track?unit=${encodeURIComponent(params.unitId)}`;
@@ -189,6 +213,8 @@ export default async function UnitDashboardPage({
         <PlantCommandCenter
           unitName={unit.name}
           unitId={params.unitId}
+          plantUnitKey={unit.plantUnitKey}
+          employeeIdByName={employeeIdByName}
           reportsByQuarter={reportsByQuarter}
         />
       )}
