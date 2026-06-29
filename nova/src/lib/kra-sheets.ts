@@ -1,5 +1,5 @@
 import type { Kpi } from "@prisma/client";
-import { KRA_SHEETS } from "@/lib/plant-37p";
+import type { KraSheetFromDb } from "@/lib/kra-sheets.server";
 
 export type SheetMeta = {
   kpiLevel: string;
@@ -8,24 +8,13 @@ export type SheetMeta = {
   showPerspective: boolean;
 };
 
-export const SHEET_META: Record<string, SheetMeta> = {
-  plant: { kpiLevel: "PLANT", department: "Plant Head", category: "Sales", showPerspective: false },
-  production: { kpiLevel: "DEPARTMENT", department: "Production", category: "Production", showPerspective: false },
-  qa: { kpiLevel: "DEPARTMENT", department: "Quality Assurance", category: "Quality", showPerspective: false },
-  maintenance: { kpiLevel: "DEPARTMENT", department: "Maintenance", category: "Maintenance", showPerspective: false },
-  store: { kpiLevel: "INDIVIDUAL", department: "Store", category: "Process", showPerspective: true },
-  billing: { kpiLevel: "INDIVIDUAL", department: "Billing", category: "Process", showPerspective: true },
-  it: { kpiLevel: "DEPARTMENT", department: "IT", category: "IT", showPerspective: true },
-};
-
-export function kpisForSheet(sheetId: string, allKpis: Kpi[]): Kpi[] {
-  const sheet = KRA_SHEETS.find((s) => s.id === sheetId);
-  const seedIds = new Set(sheet?.kpis.map((k) => k.id) ?? []);
-  const meta = SHEET_META[sheetId];
-
+export function kpisForSheet(
+  sheet: KraSheetFromDb,
+  allKpis: Kpi[]
+): Kpi[] {
+  const meta = sheet.meta;
   return allKpis.filter((k) => {
-    if (seedIds.has(k.id)) return true;
-    if (!meta) return false;
+    if (k.department === meta.department) return true;
     return k.kpiLevel === meta.kpiLevel && k.department === meta.department;
   });
 }
@@ -38,12 +27,20 @@ export const emptyQuarterTargets = () =>
     q4: { target: "", achieved: "" },
   });
 
-export function sheetMetaForDepartment(department: string | null | undefined): SheetMeta {
+export function sheetMetaForDepartment(
+  department: string | null | undefined,
+  sheets: KraSheetFromDb[]
+): SheetMeta {
   if (!department) {
-    return { kpiLevel: "INDIVIDUAL", department: "General", category: "Process", showPerspective: true };
+    return {
+      kpiLevel: "INDIVIDUAL",
+      department: "General",
+      category: "Process",
+      showPerspective: true,
+    };
   }
-  const match = Object.values(SHEET_META).find((m) => m.department === department);
-  if (match) return match;
+  const match = sheets.find((s) => s.department === department);
+  if (match) return match.meta;
   return {
     kpiLevel: "INDIVIDUAL",
     department,

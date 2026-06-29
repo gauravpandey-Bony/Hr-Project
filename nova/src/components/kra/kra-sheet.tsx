@@ -5,7 +5,7 @@ import { formatKpiValue } from "@/lib/kpi";
 import { evaluateKpiCurrent } from "@/lib/kpi-quarters";
 import { normalizeQuarterTargets } from "@/lib/kra/target-format";
 import { COMPANY } from "@/lib/company";
-import { RATING_SCALE } from "@/lib/plant-37p";
+import { RATING_SCALE } from "@/lib/company";
 
 type KpiWithEntries = Kpi & { entries: KpiEntry[] };
 

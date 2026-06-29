@@ -13,9 +13,7 @@ const UNIT_SCOPED_ADMIN_PATHS = new Set([
   "/dashboard/track",
   "/dashboard/kra",
   "/dashboard/masters/departments",
-  "/dashboard/masters/employees",
   "/dashboard/reports",
-  "/dashboard/reports/employee",
   "/dashboard/ai",
 ]);
 

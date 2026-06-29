@@ -32,3 +32,12 @@ export const KPI_CATEGORIES = [
 ] as const;
 
 export const KRA_PERSPECTIVES = ["Finance", "Quality", "Process"] as const;
+
+export const RATING_SCALE = [
+  { rating: "A+", category: "Outstanding", meaning: "Exceptional performance; far exceeds all KPIs; role model" },
+  { rating: "A", category: "Excellent", meaning: "Exceeds targets consistently; strong contributor" },
+  { rating: "B+", category: "Good", meaning: "Meets targets with some above-average contributions" },
+  { rating: "B", category: "Average", meaning: "Meets basic expectations; scope for improvement" },
+  { rating: "C", category: "Below Average", meaning: "Misses key targets; needs improvement plan" },
+  { rating: "D", category: "Poor", meaning: "Consistently underperforms; immediate action required" },
+] as const;

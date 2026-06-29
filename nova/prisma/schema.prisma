@@ -91,6 +91,12 @@ model Organization {
   id        String   @id @default(cuid())
   name      String
   slug      String   @unique
+  tagline   String?
+  emailDomain String?
+  productName String?
+  brandName   String?
+  aiAssistantName String?
+  kraMasterSheetLabel String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -123,6 +129,7 @@ model User {
   teamsUserId     String?
   hrisExternalId  String?
   avatarUrl       String?
+  passwordHash    String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -464,6 +471,9 @@ model DepartmentMaster {
   headName       String?
   location       String?  @default("Bony Polymers")
   kraSheetId     String?
+  kpiLevel       String?
+  category       String?
+  showPerspective Boolean @default(false)
   sortOrder      Int      @default(0)
   isActive       Boolean  @default(true)
   createdAt      DateTime @default(now())

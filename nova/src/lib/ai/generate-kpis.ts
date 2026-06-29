@@ -1,5 +1,5 @@
 import { COMPANY } from "@/lib/company";
-import { ALL_PLANT_KPIS } from "@/lib/plant-37p";
+import { db } from "@/lib/db";
 import type { KpiDirection, KpiFrequency } from "@prisma/client";
 
 export interface GeneratedKpiSuggestion {
@@ -13,16 +13,25 @@ export interface GeneratedKpiSuggestion {
   department?: string;
 }
 
-const BONY_MANUFACTURING_KPIS: GeneratedKpiSuggestion[] = ALL_PLANT_KPIS.map((k) => ({
-  name: k.name,
-  description: k.kraName,
-  category: k.category,
-  unit: k.unit,
-  targetValue: k.targetValue,
-  direction: k.direction,
-  frequency: "MONTHLY" as KpiFrequency,
-  department: k.department,
-}));
+async function loadDbKpiPool(
+  organizationId: string
+): Promise<GeneratedKpiSuggestion[]> {
+  const kpis = await db.kpi.findMany({
+    where: { organizationId, isActive: true },
+    take: 150,
+    orderBy: { name: "asc" },
+  });
+  return kpis.map((k) => ({
+    name: k.name,
+    description: k.description ?? k.kraName ?? k.name,
+    category: k.category,
+    unit: k.unit,
+    targetValue: k.targetValue,
+    direction: k.direction,
+    frequency: k.frequency,
+    department: k.department ?? undefined,
+  }));
+}
 
 const IT_KPIS: GeneratedKpiSuggestion[] = [
   {
@@ -173,23 +182,38 @@ const MARKETING_KPIS: GeneratedKpiSuggestion[] = [
   },
 ];
 
-const FOCUS_KEYWORDS: { keys: string[]; pool: GeneratedKpiSuggestion[] }[] = [
+const STATIC_FOCUS_KEYWORDS: { keys: string[]; pool: GeneratedKpiSuggestion[] }[] = [
   { keys: ["it", "tech", "software", "erp", "system", "cyber", "helpdesk", "information technology"], pool: IT_KPIS },
   { keys: ["hr", "human resource", "hiring", "recruit", "employee", "training", "attendance"], pool: HR_KPIS },
   { keys: ["marketing", "market", "brand", "campaign", "lead", "digital"], pool: MARKETING_KPIS },
-  { keys: ["quality", "defect", "scrap", "yield", "qa"], pool: BONY_MANUFACTURING_KPIS.filter((k) => k.category === "Quality") },
-  { keys: ["production", "oee", "output", "throughput", "manufacturing", "plant"], pool: BONY_MANUFACTURING_KPIS.filter((k) => k.category === "Production") },
-  { keys: ["sales", "delivery", "dispatch", "customer"], pool: BONY_MANUFACTURING_KPIS.filter((k) => k.category === "Sales") },
-  { keys: ["maintenance", "downtime", "pm"], pool: BONY_MANUFACTURING_KPIS.filter((k) => k.category === "Maintenance") },
-  { keys: ["safety", "incident", "ltifr"], pool: BONY_MANUFACTURING_KPIS.filter((k) => k.category === "Safety") },
-  { keys: ["store", "inventory", "fifo", "grn", "procurement"], pool: BONY_MANUFACTURING_KPIS.filter((k) => k.department === "Store") },
-  { keys: ["billing", "sap", "invoicing", "portal"], pool: BONY_MANUFACTURING_KPIS.filter((k) => k.department === "Billing") },
 ];
 
-function poolForFocus(focus: string): GeneratedKpiSuggestion[] | null {
+const DB_FOCUS_RULES: {
+  keys: string[];
+  match: (k: GeneratedKpiSuggestion) => boolean;
+}[] = [
+  { keys: ["quality", "defect", "scrap", "yield", "qa"], match: (k) => k.category === "Quality" },
+  { keys: ["production", "oee", "output", "throughput", "manufacturing", "plant"], match: (k) => k.category === "Production" },
+  { keys: ["sales", "delivery", "dispatch", "customer"], match: (k) => k.category === "Sales" },
+  { keys: ["maintenance", "downtime", "pm"], match: (k) => k.category === "Maintenance" },
+  { keys: ["safety", "incident", "ltifr"], match: (k) => k.category === "Safety" },
+  { keys: ["store", "inventory", "fifo", "grn", "procurement"], match: (k) => k.department === "Store" },
+  { keys: ["billing", "sap", "invoicing", "portal"], match: (k) => k.department === "Billing" },
+];
+
+function poolForFocus(
+  focus: string,
+  dbPool: GeneratedKpiSuggestion[]
+): GeneratedKpiSuggestion[] | null {
   const q = focus.toLowerCase().trim();
-  for (const { keys, pool } of FOCUS_KEYWORDS) {
+  for (const { keys, pool } of STATIC_FOCUS_KEYWORDS) {
     if (keys.some((k) => q.includes(k) || k.includes(q))) return pool;
+  }
+  for (const { keys, match } of DB_FOCUS_RULES) {
+    if (keys.some((k) => q.includes(k) || k.includes(q))) {
+      const matched = dbPool.filter(match);
+      if (matched.length) return matched;
+    }
   }
   return null;
 }
@@ -207,21 +231,18 @@ function dedupeSuggestions(
   });
 }
 
-function ruleBasedSuggestions(
+async function ruleBasedSuggestions(
+  organizationId: string,
   existingNames: string[],
   focus?: string
-): GeneratedKpiSuggestion[] {
+): Promise<GeneratedKpiSuggestion[]> {
   const existing = new Set(existingNames.map((n) => n.toLowerCase()));
-  const allPools = [
-    ...BONY_MANUFACTURING_KPIS,
-    ...IT_KPIS,
-    ...HR_KPIS,
-    ...MARKETING_KPIS,
-  ];
+  const dbPool = await loadDbKpiPool(organizationId);
+  const allPools = [...dbPool, ...IT_KPIS, ...HR_KPIS, ...MARKETING_KPIS];
 
   if (focus?.trim()) {
     const q = focus.toLowerCase().trim();
-    const topicPool = poolForFocus(q);
+    const topicPool = poolForFocus(q, dbPool);
     if (topicPool?.length) {
       const matched = dedupeSuggestions(topicPool, existing);
       if (matched.length) return matched.slice(0, 8);
@@ -289,11 +310,12 @@ function ruleBasedSuggestions(
 }
 
 async function llmSuggestions(
+  organizationId: string,
   existingNames: string[],
   focus?: string
 ): Promise<GeneratedKpiSuggestion[]> {
   const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) return ruleBasedSuggestions(existingNames, focus);
+  if (!apiKey) return ruleBasedSuggestions(organizationId, existingNames, focus);
 
   const prompt = `You are a KPI consultant for ${COMPANY.name}, a polymer manufacturing company in India.
 Suggest 6-8 operational KPIs as JSON: { "kpis": [{ "name", "description", "category", "unit", "targetValue", "direction": "HIGHER_IS_BETTER"|"LOWER_IS_BETTER", "frequency": "DAILY"|"WEEKLY"|"MONTHLY", "department" }] }.
@@ -321,12 +343,12 @@ Use realistic targets for a mid-size polymer plant.`;
 
   if (!res.ok) {
     console.error("OpenAI error:", await res.text());
-    return ruleBasedSuggestions(existingNames, focus);
+    return ruleBasedSuggestions(organizationId, existingNames, focus);
   }
 
   const data = await res.json();
   const content = data.choices?.[0]?.message?.content;
-  if (!content) return ruleBasedSuggestions(existingNames, focus);
+  if (!content) return ruleBasedSuggestions(organizationId, existingNames, focus);
 
   const parsed = JSON.parse(content) as { kpis: GeneratedKpiSuggestion[] };
   return (parsed.kpis ?? []).slice(0, 10).map((k) => ({
@@ -339,13 +361,14 @@ Use realistic targets for a mid-size polymer plant.`;
 }
 
 export async function generateKpiSuggestions(
+  organizationId: string,
   existingNames: string[],
   focus?: string
 ): Promise<{ suggestions: GeneratedKpiSuggestion[]; source: "ai" | "template" }> {
   const hasKey = Boolean(process.env.OPENAI_API_KEY);
   const suggestions = hasKey
-    ? await llmSuggestions(existingNames, focus)
-    : ruleBasedSuggestions(existingNames, focus);
+    ? await llmSuggestions(organizationId, existingNames, focus)
+    : await ruleBasedSuggestions(organizationId, existingNames, focus);
 
   return {
     suggestions,

@@ -312,7 +312,11 @@ export async function processChatMessage(
     const focus = query
       .replace(/generate|create|suggest|kpi|kpis|for|me|please/gi, "")
       .trim();
-    const { suggestions, source } = await generateKpiSuggestions(existingKpiNames, focus);
+    const { suggestions, source } = await generateKpiSuggestions(
+      organizationId,
+      existingKpiNames,
+      focus
+    );
 
     return {
       role: "assistant",

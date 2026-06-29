@@ -8,7 +8,10 @@ import {
   ensureAllKpisHaveQuarterTargets,
   syncAllQuarterTargetsToEntries,
 } from "../src/lib/kpi-quarters";
-import { DEMO_ACCOUNTS } from "../src/lib/demo-accounts";
+import { ensureAllKpisHaveQuarterTargets, syncAllQuarterTargetsToEntries } from "../src/lib/kpi-quarters";
+import { hashPassword } from "../src/lib/auth/password";
+import { SEED_USERS, seedPasswordForUser } from "./seed-users";
+import { COMPANY } from "../src/lib/company";
 import { ROSTER_DEPARTMENTS } from "../src/lib/masters/37p-roster";
 
 const db = new PrismaClient();
@@ -88,206 +91,124 @@ const defaultRatingScale = JSON.stringify({
   labels: ["Needs improvement", "Developing", "Meets expectations", "Exceeds", "Exceptional"],
 });
 
+const DEPT_KRA_META: Record<
+  string,
+  { kpiLevel: string; category: string; showPerspective: boolean }
+> = {
+  plant: { kpiLevel: "PLANT", category: "Sales", showPerspective: false },
+  production: { kpiLevel: "DEPARTMENT", category: "Production", showPerspective: false },
+  qa: { kpiLevel: "DEPARTMENT", category: "Quality", showPerspective: false },
+  maintenance: { kpiLevel: "DEPARTMENT", category: "Maintenance", showPerspective: false },
+  store: { kpiLevel: "INDIVIDUAL", category: "Process", showPerspective: true },
+  billing: { kpiLevel: "INDIVIDUAL", category: "Process", showPerspective: true },
+  it: { kpiLevel: "DEPARTMENT", category: "IT", showPerspective: true },
+};
+
 async function main() {
   const org = await db.organization.upsert({
     where: { slug: ORG_SLUG },
-    create: { name: ORG_NAME, slug: ORG_SLUG },
-    update: { name: ORG_NAME },
+    create: {
+      name: ORG_NAME,
+      slug: ORG_SLUG,
+      tagline: COMPANY.tagline,
+      emailDomain: COMPANY.emailDomain,
+      productName: COMPANY.productName,
+      brandName: COMPANY.brandName,
+      aiAssistantName: COMPANY.aiAssistantName,
+      kraMasterSheetLabel: COMPANY.kraMasterSheetLabel,
+    },
+    update: {
+      name: ORG_NAME,
+      tagline: COMPANY.tagline,
+      emailDomain: COMPANY.emailDomain,
+      productName: COMPANY.productName,
+      brandName: COMPANY.brandName,
+      aiAssistantName: COMPANY.aiAssistantName,
+      kraMasterSheetLabel: COMPANY.kraMasterSheetLabel,
+    },
   });
 
-  const adminDef = DEMO_ACCOUNTS.admin;
-  const managerDef = DEMO_ACCOUNTS.manager;
-  const itManagerDef = DEMO_ACCOUNTS.itManager;
-  const rajKumarDef = DEMO_ACCOUNTS.rajKumar;
-  const employeeDef = DEMO_ACCOUNTS.employee;
-  const sikandarKhanDef = DEMO_ACCOUNTS.sikandarKhan;
-  const sudhaDef = DEMO_ACCOUNTS.sudhaJetli;
+  const passwordByUserId = new Map<string, string>();
+  for (const u of SEED_USERS) {
+    passwordByUserId.set(
+      u.id,
+      await hashPassword(seedPasswordForUser(u.id, u.defaultPassword))
+    );
+  }
+  const pwd = (id: string) => passwordByUserId.get(id)!;
+  const userDef = (id: string) => SEED_USERS.find((u) => u.id === id)!;
 
-  for (const def of [
-    adminDef,
-    managerDef,
-    itManagerDef,
-    rajKumarDef,
-    employeeDef,
-    sikandarKhanDef,
-    sudhaDef,
-  ]) {
+  for (const def of SEED_USERS) {
     await db.user.deleteMany({
       where: {
         organizationId: org.id,
         email: def.email,
-        id: { not: def.userId },
+        id: { not: def.id },
       },
     });
   }
 
-  const admin = await db.user.upsert({
-    where: { id: adminDef.userId },
-    create: {
-      id: adminDef.userId,
-      organizationId: org.id,
-      email: adminDef.email,
-      name: adminDef.name,
-      role: adminDef.role,
-      title: adminDef.title,
-      department: adminDef.department,
-      hrisExternalId: adminDef.ecn,
-    },
-    update: {
-      email: adminDef.email,
-      name: adminDef.name,
-      role: adminDef.role,
-      title: adminDef.title,
-      department: adminDef.department,
-      hrisExternalId: adminDef.ecn,
-    },
-  });
+  async function upsertUser(
+    def: (typeof SEED_USERS)[number],
+    extra?: { managerId?: string; teamsUserId?: string }
+  ) {
+    return db.user.upsert({
+      where: { id: def.id },
+      create: {
+        id: def.id,
+        organizationId: org.id,
+        email: def.email,
+        name: def.name,
+        role: def.role,
+        title: def.title,
+        department: def.department,
+        passwordHash: pwd(def.id),
+        hrisExternalId: def.ecn ?? undefined,
+        managerId: extra?.managerId,
+        teamsUserId: extra?.teamsUserId,
+      },
+      update: {
+        email: def.email,
+        name: def.name,
+        role: def.role,
+        title: def.title,
+        department: def.department,
+        passwordHash: pwd(def.id),
+        hrisExternalId: def.ecn ?? undefined,
+        managerId: extra?.managerId,
+      },
+    });
+  }
 
-  const manager = await db.user.upsert({
-    where: { id: managerDef.userId },
-    create: {
-      id: managerDef.userId,
-      organizationId: org.id,
-      email: managerDef.email,
-      name: managerDef.name,
-      role: managerDef.role,
-      title: managerDef.title,
-      department: managerDef.department,
-      managerId: admin.id,
-      hrisExternalId: managerDef.ecn,
-      teamsUserId: "teams-praveen-kumar",
-    },
-    update: {
-      email: managerDef.email,
-      name: managerDef.name,
-      role: managerDef.role,
-      title: managerDef.title,
-      department: managerDef.department,
-      managerId: admin.id,
-      hrisExternalId: managerDef.ecn,
-    },
+  const admin = await upsertUser(userDef("demo-admin"));
+  const manager = await upsertUser(userDef("demo-manager"), {
+    managerId: admin.id,
+    teamsUserId: "teams-praveen-kumar",
   });
-
-  const itManager = await db.user.upsert({
-    where: { id: itManagerDef.userId },
-    create: {
-      id: itManagerDef.userId,
-      organizationId: org.id,
-      email: itManagerDef.email,
-      name: itManagerDef.name,
-      role: itManagerDef.role,
-      title: itManagerDef.title,
-      department: itManagerDef.department,
-      managerId: admin.id,
-      hrisExternalId: itManagerDef.ecn,
-      teamsUserId: "teams-bhupesh-sharma",
-    },
-    update: {
-      email: itManagerDef.email,
-      name: itManagerDef.name,
-      role: itManagerDef.role,
-      title: itManagerDef.title,
-      department: itManagerDef.department,
-      managerId: admin.id,
-      hrisExternalId: itManagerDef.ecn,
-    },
+  const itManager = await upsertUser(userDef("demo-it-manager"), {
+    managerId: admin.id,
+    teamsUserId: "teams-bhupesh-sharma",
   });
-
-  const rajKumar = await db.user.upsert({
-    where: { id: rajKumarDef.userId },
-    create: {
-      id: rajKumarDef.userId,
-      organizationId: org.id,
-      email: rajKumarDef.email,
-      name: rajKumarDef.name,
-      role: rajKumarDef.role,
-      title: rajKumarDef.title,
-      department: rajKumarDef.department,
-      managerId: admin.id,
-      hrisExternalId: rajKumarDef.ecn,
-      teamsUserId: "teams-raj-kumar",
-    },
-    update: {
-      email: rajKumarDef.email,
-      name: rajKumarDef.name,
-      role: rajKumarDef.role,
-      title: rajKumarDef.title,
-      department: rajKumarDef.department,
-      managerId: admin.id,
-    },
+  const rajKumar = await upsertUser(userDef("demo-raj-kumar"), {
+    managerId: admin.id,
+    teamsUserId: "teams-raj-kumar",
   });
 
   await db.user.deleteMany({
     where: { id: "demo-plant-head", organizationId: org.id },
   });
 
-  const employee = await db.user.upsert({
-    where: { id: employeeDef.userId },
-    create: {
-      id: employeeDef.userId,
-      organizationId: org.id,
-      email: employeeDef.email,
-      name: employeeDef.name,
-      role: employeeDef.role,
-      title: employeeDef.title,
-      department: employeeDef.department,
-      managerId: rajKumar.id,
-      teamsUserId: "teams-mahima",
-    },
-    update: {
-      email: employeeDef.email,
-      name: employeeDef.name,
-      role: employeeDef.role,
-      title: employeeDef.title,
-      department: employeeDef.department,
-      managerId: rajKumar.id,
-    },
+  const employee = await upsertUser(userDef("demo-employee"), {
+    managerId: rajKumar.id,
+    teamsUserId: "teams-mahima",
   });
-
-  const sikandarKhan = await db.user.upsert({
-    where: { id: sikandarKhanDef.userId },
-    create: {
-      id: sikandarKhanDef.userId,
-      organizationId: org.id,
-      email: sikandarKhanDef.email,
-      name: sikandarKhanDef.name,
-      role: sikandarKhanDef.role,
-      title: sikandarKhanDef.title,
-      department: sikandarKhanDef.department,
-      managerId: itManager.id,
-      teamsUserId: "teams-sikandar-khan",
-    },
-    update: {
-      email: sikandarKhanDef.email,
-      name: sikandarKhanDef.name,
-      role: sikandarKhanDef.role,
-      title: sikandarKhanDef.title,
-      department: sikandarKhanDef.department,
-      managerId: itManager.id,
-    },
+  const sikandarKhan = await upsertUser(userDef("demo-sikandar-khan"), {
+    managerId: itManager.id,
+    teamsUserId: "teams-sikandar-khan",
   });
-
-  const sudha = await db.user.upsert({
-    where: { id: sudhaDef.userId },
-    create: {
-      id: sudhaDef.userId,
-      organizationId: org.id,
-      email: sudhaDef.email,
-      name: sudhaDef.name,
-      role: sudhaDef.role,
-      title: sudhaDef.title,
-      department: sudhaDef.department,
-      managerId: rajKumar.id,
-      teamsUserId: "teams-sudha-jetli",
-    },
-    update: {
-      email: sudhaDef.email,
-      name: sudhaDef.name,
-      role: sudhaDef.role,
-      title: sudhaDef.title,
-      department: sudhaDef.department,
-      managerId: rajKumar.id,
-    },
+  const sudha = await upsertUser(userDef("demo-sudha"), {
+    managerId: rajKumar.id,
+    teamsUserId: "teams-sudha-jetli",
   });
 
   const template = await db.reviewTemplate.upsert({
@@ -651,6 +572,7 @@ async function main() {
       where: { organizationId: org.id, name: d.name },
     });
     if (!exists) {
+      const meta = d.kraSheetId ? DEPT_KRA_META[d.kraSheetId] : undefined;
       await db.departmentMaster.create({
         data: {
           organizationId: org.id,
@@ -658,9 +580,24 @@ async function main() {
           headName: "headName" in d ? (d.headName || null) : null,
           location: "location" in d ? (d.location ?? "Bony Polymers 37-P") : "Bony Polymers 37-P",
           kraSheetId: d.kraSheetId,
+          kpiLevel: meta?.kpiLevel ?? null,
+          category: meta?.category ?? null,
+          showPerspective: meta?.showPerspective ?? false,
           sortOrder: d.sortOrder,
         },
       });
+    } else if (d.kraSheetId) {
+      const meta = DEPT_KRA_META[d.kraSheetId];
+      if (meta) {
+        await db.departmentMaster.update({
+          where: { id: exists.id },
+          data: {
+            kpiLevel: meta.kpiLevel,
+            category: meta.category,
+            showPerspective: meta.showPerspective,
+          },
+        });
+      }
     }
   }
   const deptCount = await db.departmentMaster.count({

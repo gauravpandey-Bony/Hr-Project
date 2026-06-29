@@ -1,51 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import {
-  LogIn,
-  Shield,
-  Users,
-  User,
-  Copy,
-  Check,
-  Building2,
-} from "lucide-react";
-import {
-  DEMO_ACCOUNTS,
-  DEMO_CREDENTIALS,
-  type DemoRoleKey,
-} from "@/lib/constants";
+import { LogIn, Shield, Users, User, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-type AccountOption = {
-  key: DemoRoleKey;
-  label: string;
-  subtitle: string;
+type LoginAccount = {
+  id: string;
+  email: string;
+  name: string;
+  role: "ADMIN" | "MANAGER" | "EMPLOYEE";
+  title: string | null;
+  department: string | null;
 };
-
-const ADMIN_ACCOUNT: AccountOption = {
-  key: "admin",
-  label: "Administrator",
-  subtitle: "Full access · Employee & department masters",
-};
-
-const MANAGER_ACCOUNTS: AccountOption[] = [
-  { key: "itManager", label: "Bhupesh Sharma", subtitle: "IT Sr. Manager" },
-  { key: "manager", label: "Praveen Kumar", subtitle: "Store Manager" },
-];
-
-const EMPLOYEE_ACCOUNTS: AccountOption[] = [
-  { key: "sikandarKhan", label: "Sikandar Khan", subtitle: "Sr. Engr-IT" },
-  { key: "sudhaJetli", label: "Sudha Jetli", subtitle: "Sr. Officer · Billing" },
-  { key: "employee", label: "Ms. Mahima", subtitle: "DEO · Billing" },
-  { key: "rajKumar", label: "Raj Kumar", subtitle: "Plant Head" },
-];
 
 function roleBadgeVariant(role: string) {
   if (role === "ADMIN") return "default";
@@ -54,17 +26,16 @@ function roleBadgeVariant(role: string) {
 }
 
 function AccountCard({
-  option,
+  account,
   active,
   onSelect,
 }: {
-  option: AccountOption;
+  account: LoginAccount;
   active: boolean;
   onSelect: () => void;
 }) {
-  const creds = DEMO_CREDENTIALS[option.key];
   const Icon =
-    creds.role === "ADMIN" ? Shield : creds.role === "MANAGER" ? Users : User;
+    account.role === "ADMIN" ? Shield : account.role === "MANAGER" ? Users : User;
 
   return (
     <button
@@ -87,15 +58,16 @@ function AccountCard({
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
-          <p className="truncate text-sm font-semibold text-foreground">{option.label}</p>
-          <Badge variant={roleBadgeVariant(creds.role)} className="shrink-0 text-[10px]">
-            {creds.role}
+          <p className="truncate text-sm font-semibold text-foreground">{account.name}</p>
+          <Badge variant={roleBadgeVariant(account.role)} className="shrink-0 text-[10px]">
+            {account.role}
           </Badge>
         </div>
-        <p className="mt-0.5 text-xs text-muted-foreground">{option.subtitle}</p>
-        <p className="mt-1 font-mono text-[10px] text-muted-foreground">
-          {creds.userId} · {creds.password}
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          {account.title ?? "—"}
+          {account.department ? ` · ${account.department}` : ""}
         </p>
+        <p className="mt-1 font-mono text-[10px] text-muted-foreground">{account.id}</p>
       </div>
     </button>
   );
@@ -106,16 +78,38 @@ export function DemoLoginForm() {
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") ?? "/dashboard";
 
-  const [role, setRole] = useState<DemoRoleKey>("sikandarKhan");
-  const [userId, setUserId] = useState(DEMO_CREDENTIALS.sikandarKhan.userId);
-  const [password, setPassword] = useState(DEMO_CREDENTIALS.sikandarKhan.password);
+  const [accounts, setAccounts] = useState<LoginAccount[]>([]);
+  const [selectedId, setSelectedId] = useState("");
+  const [userId, setUserId] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [loadingAccounts, setLoadingAccounts] = useState(true);
 
-  function selectRole(next: DemoRoleKey) {
-    setRole(next);
-    setUserId(DEMO_CREDENTIALS[next].userId);
-    setPassword(DEMO_CREDENTIALS[next].password);
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await fetch("/api/auth/accounts");
+        const data = await res.json();
+        const list = (data.accounts ?? []) as LoginAccount[];
+        setAccounts(list);
+        const first = list[0];
+        if (first) {
+          setSelectedId(first.id);
+          setUserId(first.id);
+        }
+      } catch {
+        toast.error("Could not load accounts");
+      } finally {
+        setLoadingAccounts(false);
+      }
+    })();
+  }, []);
+
+  const selected = accounts.find((a) => a.id === selectedId) ?? accounts[0];
+
+  function selectAccount(account: LoginAccount) {
+    setSelectedId(account.id);
+    setUserId(account.id);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -142,91 +136,102 @@ export function DemoLoginForm() {
     }
   }
 
-  function copyCredentials() {
-    const c = DEMO_CREDENTIALS[role];
-    const text = `${c.name} (${c.role})\nID: ${c.userId}\nPassword: ${c.password}`;
-    void navigator.clipboard.writeText(text);
-    setCopied(true);
-    toast.success("Credentials copied");
-    setTimeout(() => setCopied(false), 2000);
+  const admins = accounts.filter((a) => a.role === "ADMIN");
+  const managers = accounts.filter((a) => a.role === "MANAGER");
+  const employees = accounts.filter((a) => a.role === "EMPLOYEE");
+
+  if (loadingAccounts) {
+    return <p className="text-sm text-muted-foreground">Loading accounts…</p>;
   }
 
-  const creds = DEMO_CREDENTIALS[role];
-  const account = DEMO_ACCOUNTS[role];
+  if (accounts.length === 0) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        No users in database. Run <code className="font-mono">npm run db:seed</code> on the server.
+      </p>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-semibold tracking-tight text-foreground">Sign in</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Select an account — credentials auto-fill below
+          Select an account — enter password from your administrator
         </p>
       </div>
 
-      {/* Admin — separate */}
-      <div className="space-y-2">
-        <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-amber-700">
-          <Shield className="h-3.5 w-3.5" />
-          Administrator
-        </p>
-        <AccountCard
-          option={ADMIN_ACCOUNT}
-          active={role === "admin"}
-          onSelect={() => selectRole("admin")}
-        />
-      </div>
-
-      {/* Managers */}
-      <div className="space-y-2">
-        <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-muted-foreground">
-          <Users className="h-3.5 w-3.5" />
-          Managers
-        </p>
-        <div className="grid gap-2 sm:grid-cols-2">
-          {MANAGER_ACCOUNTS.map((opt) => (
+      {admins.length > 0 && (
+        <div className="space-y-2">
+          <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-amber-700">
+            <Shield className="h-3.5 w-3.5" />
+            Administrator
+          </p>
+          {admins.map((a) => (
             <AccountCard
-              key={opt.key}
-              option={opt}
-              active={role === opt.key}
-              onSelect={() => selectRole(opt.key)}
+              key={a.id}
+              account={a}
+              active={selectedId === a.id}
+              onSelect={() => selectAccount(a)}
             />
           ))}
         </div>
-      </div>
+      )}
 
-      {/* Employees */}
-      <div className="space-y-2">
-        <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-muted-foreground">
-          <User className="h-3.5 w-3.5" />
-          Employees
-        </p>
-        <div className="grid gap-2 sm:grid-cols-2">
-          {EMPLOYEE_ACCOUNTS.map((opt) => (
-            <AccountCard
-              key={opt.key}
-              option={opt}
-              active={role === opt.key}
-              onSelect={() => selectRole(opt.key)}
-            />
-          ))}
+      {managers.length > 0 && (
+        <div className="space-y-2">
+          <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-muted-foreground">
+            <Users className="h-3.5 w-3.5" />
+            Managers
+          </p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {managers.map((a) => (
+              <AccountCard
+                key={a.id}
+                account={a}
+                active={selectedId === a.id}
+                onSelect={() => selectAccount(a)}
+              />
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Sign-in form */}
+      {employees.length > 0 && (
+        <div className="space-y-2">
+          <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-muted-foreground">
+            <User className="h-3.5 w-3.5" />
+            Employees
+          </p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {employees.map((a) => (
+              <AccountCard
+                key={a.id}
+                account={a}
+                active={selectedId === a.id}
+                onSelect={() => selectAccount(a)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
       <form
         onSubmit={handleSubmit}
         className="space-y-4 rounded-2xl border bg-card p-5 shadow-sm"
       >
-        <div className="flex items-center gap-3 rounded-xl bg-muted/40 px-3 py-3">
-          <Building2 className="h-5 w-5 shrink-0 text-primary" />
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-foreground">{creds.name}</p>
-            <p className="truncate text-xs text-muted-foreground">
-              {account.title} · {account.department}
-            </p>
+        {selected && (
+          <div className="flex items-center gap-3 rounded-xl bg-muted/40 px-3 py-3">
+            <Building2 className="h-5 w-5 shrink-0 text-primary" />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-foreground">{selected.name}</p>
+              <p className="truncate text-xs text-muted-foreground">
+                {selected.title ?? "—"} · {selected.department ?? "—"}
+              </p>
+            </div>
+            <Badge variant={roleBadgeVariant(selected.role)}>{selected.role}</Badge>
           </div>
-          <Badge variant={roleBadgeVariant(creds.role)}>{creds.role}</Badge>
-        </div>
+        )}
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
@@ -248,31 +253,16 @@ export function DemoLoginForm() {
               onChange={(e) => setPassword(e.target.value)}
               className="font-mono text-sm"
               autoComplete="current-password"
+              required
             />
           </div>
         </div>
 
-        <div className="flex gap-2">
-          <Button type="submit" className="flex-1" size="lg" disabled={loading}>
-            <LogIn className="h-4 w-4" />
-            {loading ? "Signing in…" : "Sign in"}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="lg"
-            onClick={copyCredentials}
-            className="shrink-0"
-          >
-            {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-          </Button>
-        </div>
+        <Button type="submit" className="w-full" size="lg" disabled={loading}>
+          <LogIn className="h-4 w-4" />
+          {loading ? "Signing in…" : "Sign in"}
+        </Button>
       </form>
-
-      <p className="text-center text-xs text-muted-foreground">
-        Demo environment · Admin: <span className="font-mono">demo-admin</span> /{" "}
-        <span className="font-mono">admin123</span>
-      </p>
     </div>
   );
 }

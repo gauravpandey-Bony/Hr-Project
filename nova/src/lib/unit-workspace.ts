@@ -1,5 +1,4 @@
 import type { Prisma } from "@prisma/client";
-import { DEMO_ACCOUNTS, demoRoleForUserId } from "@/lib/demo-accounts";
 import { DATA_UNIT_ID } from "@/lib/org-units";
 
 export type PlantDataScope = {
@@ -52,11 +51,7 @@ export function kpiWhereForPlantScope(
   return { OR: scope.kpiPlantAliases.map((plantUnit) => ({ plantUnit })) };
 }
 
-export function resolveUserPlantUnitKeySync(userId: string): string {
-  const demoKey = demoRoleForUserId(userId);
-  if (demoKey) {
-    return DEMO_ACCOUNTS[demoKey].location;
-  }
+export function resolveUserPlantUnitKeySync(_userId: string): string {
   return "Bony 37P";
 }
 

@@ -39,6 +39,9 @@ next-env.d.ts
 /src/generated/prisma
 
 # local prisma test databases
+/prisma/dev.db
+/prisma/prod.db
+/data/*.xlsx
 /prisma/ci.db
 /prisma/shadow.db
-/prisma/migrate-check.db
+/prisma/prisma/

@@ -10,7 +10,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { COMPANY } from "@/lib/company";
+import { useCompany } from "@/components/providers/company-provider";
 import { BonyLogo } from "@/components/brand/bony-logo";
 import {
   getHrNavForRole,
@@ -47,6 +47,7 @@ export function Sidebar({
   onNavigate?: () => void;
   userRole?: UserRole;
 }) {
+  const company = useCompany();
   const pathname = usePathname();
   const { allUnits } = useOrgUnits();
   const adminUnitId = useAdminSelectedUnit(userRole, allUnits);
@@ -160,12 +161,12 @@ export function Sidebar({
         {!collapsed && (
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-bold leading-tight tracking-tight">
-              {COMPANY.productName}
+              {company.productName}
             </p>
             <p className="truncate text-[11px] text-sidebar-foreground/45">
               {selectedUnit && userRole === "ADMIN"
                 ? selectedUnit.name
-                : `${COMPANY.brandName} · ${COMPANY.shortName}`}
+                : `${company.brandName} · ${company.shortName}`}
             </p>
           </div>
         )}
@@ -249,7 +250,7 @@ export function Sidebar({
             <p className="text-[11px] leading-snug text-sidebar-foreground/50">
               {selectedUnit && userRole === "ADMIN"
                 ? `Workspace · ${selectedUnit.name}`
-                : `KPI workspace for ${COMPANY.shortName}`}
+                : `KPI workspace for ${company.shortName}`}
             </p>
           </div>
         )}

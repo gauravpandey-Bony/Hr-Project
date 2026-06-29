@@ -1,5 +1,4 @@
 import * as XLSX from "xlsx";
-import { ALL_PLANT_KPIS } from "@/lib/plant-37p";
 import { normalizeKraCellValue } from "@/lib/kra/target-format";
 import { readNumericWeightage, readSheetCell } from "./excel-cell-read";
 import { parseNumericTarget, resolveImportTargetValue } from "./parse-numeric-target";
@@ -189,13 +188,8 @@ const SHEET_DEPARTMENTS: Record<string, string> = {
 
 function defsForSheet(sheetId: string) {
   const dept = SHEET_DEPARTMENTS[sheetId];
-  if (!dept) return ALL_PLANT_KPIS;
-  if (sheetId === "plant") {
-    return ALL_PLANT_KPIS.filter((k) => k.kpiLevel === "PLANT");
-  }
-  return ALL_PLANT_KPIS.filter(
-    (k) => k.department === dept && k.kpiLevel !== "PLANT"
-  );
+  if (!dept) return [];
+  return [];
 }
 
 export function resolvePlantKpiId(

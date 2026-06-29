@@ -12,7 +12,7 @@ import {
 } from "@/lib/ai/employee-quarter-filter";
 import { emptyQuarterTargets, type SheetMeta } from "@/lib/kra-sheets";
 import { normalizeQuarterTargets } from "@/lib/kra/target-format";
-import { FISCAL_YEAR, PLANT_UNIT } from "@/lib/plant-37p";
+import { COMPANY } from "@/lib/company";
 import type { Kpi, KpiEntry } from "@prisma/client";
 
 type KpiWithEntries = Kpi & { entries: KpiEntry[] };
@@ -474,8 +474,7 @@ export function EmployeeQuarterlyReport({
         frequency: "MONTHLY",
         department: editContext.sheetMeta.department,
         kpiLevel: editContext.sheetMeta.kpiLevel,
-        plantUnit: editContext.plantUnit ?? PLANT_UNIT,
-        ...(FISCAL_YEAR ? { fiscalYear: FISCAL_YEAR } : {}),
+        plantUnit: editContext.plantUnit ?? COMPANY.shortName,
         weightage: 0.05,
         quarterTargets: emptyQuarterTargets(),
         perspective: editContext.sheetMeta.showPerspective ? "Process" : undefined,

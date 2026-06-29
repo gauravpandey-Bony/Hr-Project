@@ -11,7 +11,6 @@ import { emptyQuarterTargets, type SheetMeta } from "@/lib/kra-sheets";
 import { normalizeQuarterTargets } from "@/lib/kra/target-format";
 import { KraSheetTable } from "@/components/kra/kra-sheet";
 import { COMPANY } from "@/lib/company";
-import { FISCAL_YEAR, PLANT_UNIT } from "@/lib/plant-37p";
 
 type KpiWithEntries = Kpi & { entries: KpiEntry[] };
 
@@ -91,7 +90,7 @@ export function KraSheetEditable({
   canEdit,
   isAdmin,
   ownerName,
-  plantUnit = PLANT_UNIT,
+  plantUnit = COMPANY.shortName,
 }: {
   title: string;
   subtitle?: string;
@@ -212,7 +211,6 @@ export function KraSheetEditable({
         department: sheetMeta.department,
         kpiLevel: sheetMeta.kpiLevel,
         plantUnit,
-        ...(FISCAL_YEAR ? { fiscalYear: FISCAL_YEAR } : {}),
         weightage: 0.05,
         quarterTargets: emptyQuarterTargets(),
         perspective: showPerspective ? "Process" : undefined,

@@ -1,8 +1,8 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronDown, LogOut } from "lucide-react";
-import { DEMO_USERS } from "@/lib/constants";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,11 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-const demos = [
-  { id: DEMO_USERS.admin, label: "Admin" },
-  { id: DEMO_USERS.manager, label: "Manager" },
-  { id: DEMO_USERS.employee, label: "Employee" },
-];
+type SwitchUser = { id: string; label: string; role: string };
 
 export function UserSwitcher({
   currentName,
@@ -30,6 +26,27 @@ export function UserSwitcher({
   compact?: boolean;
 }) {
   const router = useRouter();
+  const [users, setUsers] = useState<SwitchUser[]>([]);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await fetch("/api/auth/accounts");
+        const data = await res.json();
+        setUsers(
+          (data.accounts ?? []).map(
+            (a: { id: string; name: string; role: string }) => ({
+              id: a.id,
+              label: a.name,
+              role: a.role,
+            })
+          )
+        );
+      } catch {
+        setUsers([]);
+      }
+    })();
+  }, []);
 
   async function switchUser(userId: string) {
     const res = await fetch("/api/auth/session", {
@@ -46,6 +63,10 @@ export function UserSwitcher({
     router.push("/login");
     router.refresh();
   }
+
+  const switchable = users.filter(
+    (u) => u.id && (currentRole === "ADMIN" || u.role === currentRole)
+  );
 
   return (
     <DropdownMenu>
@@ -95,13 +116,13 @@ export function UserSwitcher({
           <LogOut className="h-4 w-4" />
           Logout
         </DropdownMenuItem>
-        {currentRole !== "EMPLOYEE" && (
+        {currentRole !== "EMPLOYEE" && switchable.length > 1 && (
           <>
             <DropdownMenuSeparator />
             <DropdownMenuLabel className="text-xs text-muted-foreground">
-              Switch demo user
+              Switch user
             </DropdownMenuLabel>
-            {demos.map((d) => (
+            {switchable.map((d) => (
               <DropdownMenuItem key={d.id} onClick={() => switchUser(d.id)}>
                 {d.label}
               </DropdownMenuItem>

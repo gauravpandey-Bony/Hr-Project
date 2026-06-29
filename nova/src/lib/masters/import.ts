@@ -1,6 +1,5 @@
 import * as XLSX from "xlsx";
 import { is37pRosterMatrix, parse37pRoster } from "./37p-roster";
-import { isKraEmployeeWorkbook, parseKraWorkbook } from "./kra-workbook";
 
 export type DepartmentImportRow = {
   name: string;
@@ -174,15 +173,14 @@ export function parseEmployeeCsv(text: string): {
   return { rows, errors };
 }
 
-/** Multi-sheet KRA Excel (New KRA KPI) → employees with full details */
-export function parseEmployeeKraWorkbook(buffer: ArrayBuffer): {
+/** Multi-sheet employee roster workbooks are no longer imported. */
+export function parseEmployeeKraWorkbook(_buffer: ArrayBuffer): {
   rows: EmployeeImportRow[];
   errors: string[];
 } {
-  const parsed = parseKraWorkbook(buffer);
   return {
-    rows: parsed.employees,
-    errors: parsed.errors,
+    rows: [],
+    errors: ["Employee KRA/KPI workbook import is disabled."],
   };
 }
 
@@ -217,10 +215,6 @@ export function parseEmployeeXlsx(buffer: ArrayBuffer): {
     };
   }
 
-  if (isKraEmployeeWorkbook(buffer)) {
-    return parseEmployeeKraWorkbook(buffer);
-  }
-
   const headerRow = (matrix[0] ?? []).join(" ").toLowerCase();
 
   if (headerRow.includes("department") && headerRow.includes("designation")) {
@@ -228,7 +222,10 @@ export function parseEmployeeXlsx(buffer: ArrayBuffer): {
     return parseEmployeeCsv(text);
   }
 
-  return parseEmployeeKraWorkbook(buffer);
+  return {
+    rows: [],
+    errors: ["Employee master import is disabled. Use department master instead."],
+  };
 }
 
 export function readUploadBuffer(file: File): Promise<ArrayBuffer> {

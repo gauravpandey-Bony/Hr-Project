@@ -67,22 +67,10 @@ export const mainNav: NavItem[] = [
     keywords: ["department", "master", "org"],
   },
   {
-    href: "/dashboard/masters/employees",
-    label: "Employee Master",
-    icon: Users,
-    keywords: ["employee", "master", "staff"],
-  },
-  {
     href: "/dashboard/reports",
     label: "Reports",
     icon: BarChart3,
     keywords: ["analytics", "league", "ranking"],
-  },
-  {
-    href: "/dashboard/reports/employee",
-    label: "Employee Report",
-    icon: Users,
-    keywords: ["employee", "individual", "kpi report", "ecn"],
   },
 ];
 

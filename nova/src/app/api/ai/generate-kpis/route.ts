@@ -65,6 +65,7 @@ export async function POST(request: Request) {
   }
 
   const { suggestions, source } = await generateKpiSuggestions(
+    user.organizationId,
     existingNames,
     body.focus
   );

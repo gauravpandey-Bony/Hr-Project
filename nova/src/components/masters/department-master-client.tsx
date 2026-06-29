@@ -6,7 +6,7 @@ import { Plus, Trash2, Save, Loader2, Building2, Upload, Download } from "lucide
 import { UploadMasterModal } from "./upload-master-modal";
 import { COMPANY } from "@/lib/company";
 import { downloadFromApi } from "@/lib/download-from-api";
-import { KRA_SHEETS } from "@/lib/plant-37p";
+import type { KraSheetFromDb } from "@/lib/kra-sheets.server";
 import { StickyTableShell } from "@/components/ui/sticky-table-shell";
 import {
   TableBody,
@@ -22,7 +22,7 @@ import {
   MASTER_CELL,
 } from "./masters-table-styles";
 
-type DeptRow = DepartmentMaster & { _count?: { employees: number } };
+type DeptRow = DepartmentMaster;
 
 type Draft = {
   name: string;
@@ -46,10 +46,12 @@ function toDraft(d: DeptRow): Draft {
 
 export function DepartmentMasterClient({
   initialRows,
+  kraSheets,
   isAdmin,
   unitId,
 }: {
   initialRows: DeptRow[];
+  kraSheets: KraSheetFromDb[];
   isAdmin: boolean;
   unitId?: string | null;
 }) {
@@ -217,7 +219,6 @@ export function DepartmentMasterClient({
               <TableHead className="min-w-[180px]">Location</TableHead>
               <TableHead className="min-w-[200px]">KRA sheet</TableHead>
               <TableHead className="min-w-[64px]">Order</TableHead>
-              <TableHead className="min-w-[72px]">Staff</TableHead>
               <TableHead className="min-w-[56px]">Active</TableHead>
             </TableRow>
           </TableHeader>
@@ -295,7 +296,7 @@ export function DepartmentMasterClient({
                         onChange={(e) => patch(row.id, { kraSheetId: e.target.value })}
                       >
                         <option value="">—</option>
-                        {KRA_SHEETS.map((s) => (
+                        {kraSheets.map((s) => (
                           <option key={s.id} value={s.id}>
                             {s.label}
                           </option>
@@ -315,9 +316,6 @@ export function DepartmentMasterClient({
                     ) : (
                       row.sortOrder
                     )}
-                  </TableCell>
-                  <TableCell className={`${MASTER_CELL} text-muted-foreground`}>
-                    {row._count?.employees ?? 0}
                   </TableCell>
                   <TableCell className={MASTER_CELL}>
                     {isAdmin ? (
@@ -343,7 +341,6 @@ export function DepartmentMasterClient({
       <UploadMasterModal
         open={uploadOpen}
         onClose={() => setUploadOpen(false)}
-        type="departments"
         unitId={unitId}
       />
     </div>

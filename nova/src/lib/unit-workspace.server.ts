@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import type { User } from "@prisma/client";
 import { db } from "@/lib/db";
-import { DEMO_ACCOUNTS, demoRoleForUserId } from "@/lib/demo-accounts";
 import { ADMIN_UNIT_STORAGE_KEY } from "@/lib/admin-unit";
 import { OBSOLETE_UNIT_REDIRECTS } from "@/lib/org-units-defaults";
 import type { OrgUnit } from "@/lib/org-units";
@@ -42,14 +41,6 @@ export async function getAdminUnitIdFromCookie(
 }
 
 export async function resolveUserPlantUnitKey(user: User): Promise<string> {
-  const fromDemo = demoRoleForUserId(user.id);
-  if (fromDemo) {
-    return locationToPlantUnitKey(
-      user.organizationId,
-      DEMO_ACCOUNTS[fromDemo].location
-    );
-  }
-
   const emp = await db.employeeMaster.findFirst({
     where: {
       organizationId: user.organizationId,

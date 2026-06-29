@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { BarChart3, Sparkles } from "lucide-react";
-import { COMPANY } from "@/lib/company";
 import { BonyLogo } from "@/components/brand/bony-logo";
 import { DemoLoginForm } from "@/components/auth/demo-login-form";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getCurrentUser } from "@/lib/auth";
 import { LoginSessionBanner } from "@/components/auth/login-session-banner";
+import { getDefaultCompanyContext } from "@/lib/company.server";
 
 function LoginFormFallback() {
   return (
@@ -20,7 +20,10 @@ function LoginFormFallback() {
 }
 
 export default async function LoginPage() {
-  const currentUser = await getCurrentUser();
+  const [currentUser, company] = await Promise.all([
+    getCurrentUser(),
+    getDefaultCompanyContext(),
+  ]);
 
   return (
     <div className="mesh-bg flex min-h-screen">
@@ -34,8 +37,8 @@ export default async function LoginPage() {
           <Link href="/" className="flex items-center gap-3">
             <BonyLogo size="lg" variant="full" priority />
             <div>
-              <p className="text-lg font-bold tracking-tight">{COMPANY.productName}</p>
-              <p className="text-sm text-sidebar-foreground/50">{COMPANY.name}</p>
+              <p className="text-lg font-bold tracking-tight">{company.productName}</p>
+              <p className="text-sm text-sidebar-foreground/50">{company.name}</p>
             </div>
           </Link>
 
@@ -45,7 +48,7 @@ export default async function LoginPage() {
             </h1>
             <p className="text-base leading-relaxed text-sidebar-foreground/65">
               KRAs, quarterly targets, team reports — one modern workspace for{" "}
-              {COMPANY.name}.
+              {company.name}.
             </p>
             <ul className="space-y-3 text-sm text-sidebar-foreground/75">
               <li className="flex items-center gap-3">
@@ -60,7 +63,7 @@ export default async function LoginPage() {
           </div>
 
           <p className="text-xs text-sidebar-foreground/40">
-            Demo · Admin: demo-admin / admin123
+            Sign in with your user ID and password
           </p>
         </div>
       </aside>
@@ -70,7 +73,7 @@ export default async function LoginPage() {
         <header className="flex items-center justify-between border-b border-border/50 px-4 py-4 sm:px-8 lg:border-0">
           <Link href="/" className="flex items-center gap-2 lg:hidden">
             <BonyLogo size="sm" />
-            <span className="font-semibold text-foreground">{COMPANY.productName}</span>
+            <span className="font-semibold text-foreground">{company.productName}</span>
           </Link>
           <Link
             href="/"

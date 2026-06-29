@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { db } from "@/lib/db";
-import { DEMO_USERS, SESSION_COOKIE } from "@/lib/constants";
+import { SESSION_COOKIE } from "@/lib/constants";
 import { getCurrentUser } from "@/lib/auth";
 import { roleHomeRedirect } from "@/lib/access-control";
 import { attachSessionCookie } from "@/lib/session";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const userId = searchParams.get("userId") ?? DEMO_USERS.admin;
+  const userIdParam = searchParams.get("userId");
   const requestedRedirect = searchParams.get("redirect");
 
   const cookieStore = await cookies();
@@ -16,6 +16,19 @@ export async function GET(request: Request) {
   const current = currentId
     ? await db.user.findUnique({ where: { id: currentId } })
     : null;
+
+  let userId = userIdParam;
+  if (!userId) {
+    const admin = await db.user.findFirst({
+      where: { role: "ADMIN" },
+      orderBy: { createdAt: "asc" },
+    });
+    userId = admin?.id ?? null;
+  }
+
+  if (!userId) {
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
 
   if (current?.role === "EMPLOYEE" && userId !== current.id) {
     return NextResponse.redirect(new URL(roleHomeRedirect("EMPLOYEE"), request.url));

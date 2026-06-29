@@ -4,7 +4,6 @@ import { adminHasUnitWorkspace, getAdminMainNav } from "@/lib/admin-unit";
 import type { OrgUnit } from "@/lib/org-units";
 import { DATA_UNIT_ID } from "@/lib/org-units";
 import { employeeDashboardPathForUser, kpiWhereForPlantScope, type PlantDataScope } from "@/lib/unit-workspace";
-import { Users, BarChart3 } from "lucide-react";
 import { kpiWhereForManager } from "@/lib/team-scope";
 
 export const ROLE_COOKIE = "nova_user_role";
@@ -23,11 +22,8 @@ const EMPLOYEE_ALLOWED = [
   "/dashboard/reviews",
 ] as const;
 
-/** Managers use Team Reports — not org-wide employee report or department master */
-const MANAGER_BLOCKED_PREFIXES = [
-  "/dashboard/masters/departments",
-  "/dashboard/reports/employee",
-] as const;
+/** Managers cannot edit department master */
+const MANAGER_BLOCKED_PREFIXES = ["/dashboard/masters/departments"] as const;
 
 /** Blocked for employees (checked before allow-list) */
 const EMPLOYEE_BLOCKED_PREFIXES = [
@@ -61,7 +57,7 @@ export function canAccessUnitPicker(role: UserRole): boolean {
 /** Default landing page after login, by role */
 export function roleHomeRedirect(role: UserRole): string {
   if (role === "ADMIN") return UNIT_PICKER_PATH;
-  if (role === "MANAGER") return "/dashboard/team/reports";
+  if (role === "MANAGER") return KPI_DASHBOARD_PATH;
   return KPI_DASHBOARD_PATH;
 }
 
@@ -106,11 +102,8 @@ export function employeeDashboardRedirect(userId?: string): string {
 }
 
 export function managerDashboardRedirect(pathname: string): string {
-  if (pathname.startsWith("/dashboard/reports/employee")) {
-    return "/dashboard/team/reports";
-  }
   if (pathname === UNIT_PICKER_PATH) {
-    return "/dashboard/team/reports";
+    return KPI_DASHBOARD_PATH;
   }
   return roleHomeRedirect("MANAGER");
 }
@@ -239,28 +232,11 @@ export function getMainNavForRole(role: UserRole): NavItem[] {
   }
 
   if (role === "MANAGER") {
-    const teamKraNav: NavItem = {
-      href: "/dashboard/team",
-      label: "My Team KRA",
-      icon: Users,
-      keywords: ["team", "it", "kra", "edit"],
-    };
-    const teamReportsNav: NavItem = {
-      href: "/dashboard/team/reports",
-      label: "Team Reports",
-      icon: BarChart3,
-      keywords: ["team", "reports", "performance"],
-    };
-    const managerMain = mainNav.filter(
+    return mainNav.filter(
       (item) =>
         item.href !== UNIT_PICKER_PATH &&
-        item.href !== "/dashboard/masters/departments" &&
-        item.href !== "/dashboard/reports/employee"
+        item.href !== "/dashboard/masters/departments"
     );
-    const idx = managerMain.findIndex((i) => i.href === "/dashboard/kra");
-    const nav = [...managerMain];
-    nav.splice(idx >= 0 ? idx + 1 : 2, 0, teamKraNav, teamReportsNav);
-    return nav;
   }
 
   return mainNav;
