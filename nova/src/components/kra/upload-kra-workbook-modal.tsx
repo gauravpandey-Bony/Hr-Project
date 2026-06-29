@@ -19,6 +19,7 @@ import {
   type KraDepartmentPickRow,
 } from "@/components/kra/kra-department-pick";
 import type { EmployeeUploadConflict } from "@/lib/masters/preview-employee-upload";
+import { parseApiJsonResponse } from "@/lib/parse-api-response";
 
 type Step = "file" | "department" | "confirm";
 type LoadingPhase = "idle" | "importing";
@@ -100,12 +101,7 @@ export function UploadKraWorkbookModal({
       });
       window.clearTimeout(timeout);
 
-      let data: Record<string, unknown> = {};
-      try {
-        data = await res.json();
-      } catch {
-        throw new Error("Server response invalid — try again.");
-      }
+      const data = await parseApiJsonResponse(res);
 
       if (res.status === 422 && data.needsDepartmentPick) {
         setEmployeeRows((data.employees as KraDepartmentPickRow[]) ?? []);
