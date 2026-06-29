@@ -11,21 +11,29 @@ import {
 import { formatWeightage, weightageFraction } from "@/lib/kra/weightage";
 import { buildQuarterlyReportRows, quarterlyReportSummary } from "@/lib/kra/quarterly-report";
 
-export const PEOPLE_SCORE_METHODOLOGY = [
-  "Section 1 uses only Individual KRA/KPI rows (kpiLevel = INDIVIDUAL) for the selected plant and quarter.",
-  "Each KPI with achieved data is scored: Achieved = 100 pts, Not achieved = 0 pts, Entered (review) = 50 pts. Pending KPIs are excluded.",
-  "Weighted score = Σ (weightage × points) ÷ Σ (weightage) — weightage from the KRA sheet (e.g. 15% = 0.15).",
-  "Employee score = weighted average of that employee's scored KPIs.",
-  "Department score = simple average of employee scores in that department.",
-  "Overall people score = weighted average across all scored individual KPIs at the plant.",
+export const EMPLOYEE_SCORE_METHODOLOGY = [
+  "Employee section uses Individual KRA/KPI rows (kpiLevel = INDIVIDUAL) for the selected plant and quarter.",
+  "Each KPI: Achieved = 100 pts, Not achieved = 0 pts, Entered (review) = 50 pts. Pending KPIs are excluded.",
+  "Employee score = Σ (weightage × points) ÷ Σ (weightage) for that employee's scored KPIs.",
+  "Overall employee score = weighted average across all individual KPIs at the plant.",
+] as const;
+
+export const DEPARTMENT_SCORE_METHODOLOGY = [
+  "Department section uses Department-level KPIs (kpiLevel = DEPARTMENT) — dept targets from KRA master sheets.",
+  "When department KPIs exist, dept score = Σ (weightage × points) ÷ Σ (weightage) for that department's KPIs.",
+  "When no department KPIs exist, dept score = average of employee scores in that department.",
+  "Overall department score = average of all department scores (or weighted dept KPI rollup if present).",
 ] as const;
 
 export const PLANT_KPI_METHODOLOGY = [
-  "Section 2 uses Plant-level KPIs (kpiLevel = PLANT) — sales, OTD, rejection, production, etc.",
+  "Plant section uses Plant-level KPIs (kpiLevel = PLANT) — sales, OTD, rejection, production, etc.",
   "Target vs achieved for the selected quarter (Q1 Apr–Jun, Q2 Jul–Sep, Q3 Oct–Dec, Q4 Jan–Mar).",
   "Status rules: numeric targets use ≤ / ≥ when marked in target text; otherwise ±5% tolerance vs target.",
-  "Plant health score uses the same 100 / 50 / 0 point scale and weightage formula as Section 1.",
+  "Plant score = Σ (weightage × points) ÷ Σ (weightage) for all plant-level KPIs.",
 ] as const;
+
+/** @deprecated use level-specific constants */
+export const PEOPLE_SCORE_METHODOLOGY = EMPLOYEE_SCORE_METHODOLOGY;
 
 export type KpiScoreBreakdown = {
   kpiId: string;
@@ -42,6 +50,13 @@ export type KpiScoreBreakdown = {
   calculationBasis: string;
 };
 
+export type LevelKpiRow = KpiScoreBreakdown & {
+  category?: string;
+  unit?: string;
+  department?: string;
+  ownerName?: string;
+};
+
 export type EmployeePerformanceRow = {
   employeeName: string;
   department: string;
@@ -52,39 +67,38 @@ export type EmployeePerformanceRow = {
   breakdown: KpiScoreBreakdown[];
 };
 
-export type DepartmentPerformanceRow = {
+export type DepartmentScorecard = {
   department: string;
   employeeCount: number;
+  kpiRows: LevelKpiRow[];
+  kpiScore: number | null;
+  kpiCalculation: string;
+  employeeRollupScore: number | null;
+  employeeRollupCalculation: string;
+  /** Primary display score — dept KPIs if present, else employee average */
   weightedScore: number | null;
   calculation: string;
   employees: EmployeePerformanceRow[];
 };
 
-export type PlantBusinessKpiRow = {
-  kpiId: string;
-  kraName: string;
-  kpiName: string;
+export type PlantBusinessKpiRow = LevelKpiRow & {
   category: string;
   unit: string;
-  weightage: string;
-  weightFraction: number | null;
-  target: string;
-  achieved: string;
-  status: QuarterAchievementStatus;
-  statusLabel: string;
-  points: number | null;
-  weightedContribution: number | null;
-  calculationBasis: string;
 };
 
 export type PlantPerformanceReport = {
   quarter: FiscalQuarter;
   plantName: string;
-  people: {
+  employees: {
     overallScore: number | null;
     overallCalculation: string;
     summary: ReturnType<typeof quarterlyReportSummary>;
-    departments: DepartmentPerformanceRow[];
+    rows: EmployeePerformanceRow[];
+  };
+  departments: {
+    overallScore: number | null;
+    overallCalculation: string;
+    cards: DepartmentScorecard[];
   };
   plantKpis: {
     overallScore: number | null;
@@ -179,6 +193,51 @@ function buildKpiBreakdown(
   };
 }
 
+function buildLevelKpiRows(
+  kpis: KpiPick[],
+  quarter: FiscalQuarter,
+  level: "PLANT" | "DEPARTMENT",
+  departmentFilter?: string
+): LevelKpiRow[] {
+  const rows: LevelKpiRow[] = [];
+
+  for (const kpi of kpis) {
+    if (kpi.kpiLevel !== level) continue;
+    if (departmentFilter && (kpi.department ?? "—") !== departmentFilter) continue;
+
+    const q = parseQuarterTargets(kpi.quarterTargets);
+    const cell = q?.[quarter] ?? { target: "", achieved: "" };
+    const target = cell.target?.trim() || "—";
+    const achieved = cell.achieved?.trim() || "—";
+    const status = quarterAchievementStatus(cell.target, cell.achieved);
+    const wf = weightageFraction(kpi.weightage);
+    const points = statusToPoints(status);
+    const weightedContribution =
+      points != null && wf != null ? Math.round(points * wf * 100) / 100 : null;
+
+    rows.push({
+      kpiId: kpi.id,
+      kraName: kpi.kraName?.trim() || "—",
+      kpiName: kpi.name,
+      weightage: formatWeightage(kpi.weightage),
+      weightFraction: wf,
+      target,
+      achieved,
+      status,
+      statusLabel: quarterStatusLabel(status),
+      points,
+      weightedContribution,
+      calculationBasis: describeQuarterComparison(target, achieved, status),
+      category: kpi.category ?? "—",
+      unit: kpi.unit ?? "—",
+      department: kpi.department ?? "—",
+      ownerName: kpi.ownerName ?? undefined,
+    });
+  }
+
+  return rows.sort((a, b) => a.kraName.localeCompare(b.kraName) || a.kpiName.localeCompare(b.kpiName));
+}
+
 function weightedAverageFormula(
   label: string,
   items: { weight: number; points: number; label: string }[]
@@ -201,6 +260,17 @@ function weightedAverageFormula(
     score,
     calculation: `${label} = (${terms}${more}) ÷ ${(weightSum * 100).toFixed(1)}% = ${score ?? "—"}%`,
   };
+}
+
+function scoreFromKpiRows(label: string, rows: LevelKpiRow[]) {
+  const items = rows
+    .filter((r) => r.points != null && r.weightFraction != null)
+    .map((r) => ({
+      weight: r.weightFraction!,
+      points: r.points!,
+      label: r.kpiName.slice(0, 16),
+    }));
+  return weightedAverageFormula(label, items);
 }
 
 function buildEmployeeRows(
@@ -232,10 +302,7 @@ function buildEmployeeRows(
         points: b.points!,
         label: b.kpiName.slice(0, 20),
       }));
-    const { score, calculation } = weightedAverageFormula(
-      employeeName,
-      items
-    );
+    const { score, calculation } = weightedAverageFormula(employeeName, items);
 
     employees.push({
       employeeName,
@@ -251,73 +318,71 @@ function buildEmployeeRows(
   return employees.sort((a, b) => a.employeeName.localeCompare(b.employeeName));
 }
 
-function buildDepartmentRows(employees: EmployeePerformanceRow[]): DepartmentPerformanceRow[] {
-  const byDept = new Map<string, EmployeePerformanceRow[]>();
-  for (const e of employees) {
-    const dept = e.department || "—";
-    const list = byDept.get(dept) ?? [];
-    list.push(e);
-    byDept.set(dept, list);
+function normalizeDept(name: string | null | undefined): string {
+  return name?.trim() || "—";
+}
+
+function buildDepartmentScorecards(
+  kpis: KpiPick[],
+  employees: EmployeePerformanceRow[],
+  quarter: FiscalQuarter
+): DepartmentScorecard[] {
+  const deptNames = new Set<string>();
+  for (const e of employees) deptNames.add(normalizeDept(e.department));
+  for (const k of kpis) {
+    if (k.kpiLevel === "DEPARTMENT") deptNames.add(normalizeDept(k.department));
   }
 
-  return [...byDept.entries()]
-    .map(([department, emps]) => {
-      const scored = emps.filter((e) => e.weightedScore != null);
-      const avg =
-        scored.length > 0
+  return [...deptNames]
+    .sort((a, b) => a.localeCompare(b))
+    .map((department) => {
+      const emps = employees
+        .filter((e) => normalizeDept(e.department) === department)
+        .sort((a, b) => a.employeeName.localeCompare(b.employeeName));
+
+      const kpiRows = buildLevelKpiRows(kpis, quarter, "DEPARTMENT", department);
+      const kpiScoreResult = scoreFromKpiRows(`${department} dept KPIs`, kpiRows);
+
+      const scoredEmps = emps.filter((e) => e.weightedScore != null);
+      const employeeRollupScore =
+        scoredEmps.length > 0
           ? Math.round(
-              (scored.reduce((s, e) => s + (e.weightedScore ?? 0), 0) / scored.length) * 10
+              (scoredEmps.reduce((s, e) => s + (e.weightedScore ?? 0), 0) / scoredEmps.length) * 10
             ) / 10
           : null;
-      const names = scored.map((e) => `${e.employeeName} (${e.weightedScore}%)`).join(", ");
+      const names = scoredEmps.map((e) => `${e.employeeName} (${e.weightedScore}%)`).join(", ");
+      const employeeRollupCalculation =
+        scoredEmps.length > 0
+          ? `Avg of employee scores: (${names}) ÷ ${scoredEmps.length} = ${employeeRollupScore}%`
+          : "No employee scores yet.";
+
+      const hasDeptKpis = kpiRows.some((r) => r.points != null);
+      const weightedScore = hasDeptKpis ? kpiScoreResult.score : employeeRollupScore;
+      const calculation = hasDeptKpis
+        ? kpiScoreResult.calculation
+        : `No department KPIs — using employee rollup. ${employeeRollupCalculation}`;
+
       return {
         department,
         employeeCount: emps.length,
-        weightedScore: avg,
-        calculation:
-          scored.length > 0
-            ? `Avg of employee scores: (${names}) ÷ ${scored.length} = ${avg}%`
-            : "No employee scores yet.",
-        employees: emps.sort((a, b) => a.employeeName.localeCompare(b.employeeName)),
+        kpiRows,
+        kpiScore: kpiScoreResult.score,
+        kpiCalculation: kpiScoreResult.calculation,
+        employeeRollupScore,
+        employeeRollupCalculation,
+        weightedScore,
+        calculation,
+        employees: emps,
       };
-    })
-    .sort((a, b) => a.department.localeCompare(b.department));
+    });
 }
 
 function buildPlantKpiRows(kpis: KpiPick[], quarter: FiscalQuarter): PlantBusinessKpiRow[] {
-  const rows: PlantBusinessKpiRow[] = [];
-
-  for (const kpi of kpis) {
-    if (kpi.kpiLevel !== "PLANT") continue;
-    const q = parseQuarterTargets(kpi.quarterTargets);
-    const cell = q?.[quarter] ?? { target: "", achieved: "" };
-    const target = cell.target?.trim() || "—";
-    const achieved = cell.achieved?.trim() || "—";
-    const status = quarterAchievementStatus(cell.target, cell.achieved);
-    const wf = weightageFraction(kpi.weightage);
-    const points = statusToPoints(status);
-    const weightedContribution =
-      points != null && wf != null ? Math.round(points * wf * 100) / 100 : null;
-
-    rows.push({
-      kpiId: kpi.id,
-      kraName: kpi.kraName?.trim() || "—",
-      kpiName: kpi.name,
-      category: kpi.category ?? "—",
-      unit: kpi.unit ?? "—",
-      weightage: formatWeightage(kpi.weightage),
-      weightFraction: wf,
-      target,
-      achieved,
-      status,
-      statusLabel: quarterStatusLabel(status),
-      points,
-      weightedContribution,
-      calculationBasis: describeQuarterComparison(target, achieved, status),
-    });
-  }
-
-  return rows.sort((a, b) => a.kraName.localeCompare(b.kraName) || a.kpiName.localeCompare(b.kpiName));
+  return buildLevelKpiRows(kpis, quarter, "PLANT").map((r) => ({
+    ...r,
+    category: r.category ?? "—",
+    unit: r.unit ?? "—",
+  }));
 }
 
 export function buildPlantPerformanceReport(
@@ -329,37 +394,49 @@ export function buildPlantPerformanceReport(
     kpis.filter((k) => k.kpiLevel === "INDIVIDUAL"),
     quarter
   );
-  const employees = buildEmployeeRows(kpis, quarter);
-  const departments = buildDepartmentRows(employees);
+  const employeeRows = buildEmployeeRows(kpis, quarter);
+  const departmentCards = buildDepartmentScorecards(kpis, employeeRows, quarter);
 
-  const allBreakdowns = employees.flatMap((e) =>
+  const allBreakdowns = employeeRows.flatMap((e) =>
     e.breakdown.filter((b) => b.points != null && b.weightFraction != null)
   );
-  const overallItems = allBreakdowns.map((b) => ({
-    weight: b.weightFraction!,
-    points: b.points!,
-    label: b.kpiName.slice(0, 16),
-  }));
-  const peopleOverall = weightedAverageFormula("Overall people score", overallItems);
+  const employeeOverall = weightedAverageFormula(
+    "Overall employee score",
+    allBreakdowns.map((b) => ({
+      weight: b.weightFraction!,
+      points: b.points!,
+      label: b.kpiName.slice(0, 16),
+    }))
+  );
+
+  const scoredDepts = departmentCards.filter((d) => d.weightedScore != null);
+  const deptOverallScore =
+    scoredDepts.length > 0
+      ? Math.round(
+          (scoredDepts.reduce((s, d) => s + (d.weightedScore ?? 0), 0) / scoredDepts.length) * 10
+        ) / 10
+      : null;
+  const deptOverallCalculation =
+    scoredDepts.length > 0
+      ? `Avg of department scores: (${scoredDepts.map((d) => `${d.department} ${d.weightedScore}%`).join(", ")}) ÷ ${scoredDepts.length} = ${deptOverallScore}%`
+      : "No department scores yet.";
 
   const plantRows = buildPlantKpiRows(kpis, quarter);
-  const plantItems = plantRows
-    .filter((r) => r.points != null && r.weightFraction != null)
-    .map((r) => ({
-      weight: r.weightFraction!,
-      points: r.points!,
-      label: r.kpiName.slice(0, 16),
-    }));
-  const plantOverall = weightedAverageFormula("Plant KPI score", plantItems);
+  const plantOverall = scoreFromKpiRows("Plant KPI score", plantRows);
 
   return {
     quarter,
     plantName,
-    people: {
-      overallScore: peopleOverall.score,
-      overallCalculation: peopleOverall.calculation,
+    employees: {
+      overallScore: employeeOverall.score,
+      overallCalculation: employeeOverall.calculation,
       summary: quarterlyReportSummary(quarterlyRows),
-      departments,
+      rows: employeeRows,
+    },
+    departments: {
+      overallScore: deptOverallScore,
+      overallCalculation: deptOverallCalculation,
+      cards: departmentCards,
     },
     plantKpis: {
       overallScore: plantOverall.score,
@@ -372,9 +449,11 @@ export function buildPlantPerformanceReport(
 export type PlantScorecardBrief = {
   unitId: string;
   plantName: string;
-  peopleScore: number | null;
+  employeeScore: number | null;
+  departmentScore: number | null;
   plantScore: number | null;
   employeeCount: number;
+  departmentCount: number;
   plantKpiCount: number;
 };
 
@@ -385,16 +464,17 @@ export function buildPlantScorecardBrief(
   quarter: FiscalQuarter
 ): PlantScorecardBrief {
   const report = buildPlantPerformanceReport(kpis, quarter, plantName);
-  const employeeCount = new Set(
-    kpis.filter((k) => k.kpiLevel === "INDIVIDUAL" && k.ownerName?.trim()).map((k) => k.ownerName!.trim())
-  ).size;
+  const employeeCount = report.employees.rows.length;
+  const departmentCount = report.departments.cards.length;
 
   return {
     unitId,
     plantName,
-    peopleScore: report.people.overallScore,
+    employeeScore: report.employees.overallScore,
+    departmentScore: report.departments.overallScore,
     plantScore: report.plantKpis.overallScore,
     employeeCount,
+    departmentCount,
     plantKpiCount: report.plantKpis.rows.length,
   };
 }

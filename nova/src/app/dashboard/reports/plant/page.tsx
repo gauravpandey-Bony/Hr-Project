@@ -107,8 +107,8 @@ export default async function PlantPerformanceReportPage({
             </div>
             <h1 className="text-3xl font-bold sm:text-4xl">{plantName}</h1>
             <p className="mt-2 max-w-2xl text-slate-300">
-              Section 1 (top): employee KRA/KPI achievement with weightage formula.
-              Section 2 (bottom): plant sales & operational KPIs. Every score shows its calculation basis.
+              Three-level scorecard: Employee KRA (top) → Department KRA (middle) → Plant KPIs (bottom).
+              Same weightage formula and calculation basis at every level.
             </p>
           </div>
         </div>
