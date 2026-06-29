@@ -502,6 +502,7 @@ model EmployeeMaster {
   grade          String?
   lastIncrementPercent Float?
   lastCtc        String?
+  lastPromotionDate String?
   managerName    String?
   sortOrder      Int      @default(0)
   isActive       Boolean  @default(true)

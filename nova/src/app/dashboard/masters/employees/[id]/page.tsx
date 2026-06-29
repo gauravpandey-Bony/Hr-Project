@@ -56,6 +56,7 @@ export default async function EmployeeProfilePage({
       dojLabel={formatProfileDoj(profile.employee.doj)}
       incrementLabel={formatIncrementPercent(profile.employee.lastIncrementPercent)}
       ctcLabel={formatCtc(profile.employee.lastCtc)}
+      promotionLabel={formatProfileDoj(profile.employee.lastPromotionDate)}
     />
   );
 }

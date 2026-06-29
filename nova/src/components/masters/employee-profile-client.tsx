@@ -41,6 +41,7 @@ type Draft = {
   grade: string;
   lastIncrementPercent: string;
   lastCtc: string;
+  lastPromotionDate: string;
   managerName: string;
   isActive: boolean;
 };
@@ -64,6 +65,7 @@ function toDraft(e: ProfilePayload): Draft {
     grade: e.grade ?? "",
     lastIncrementPercent: incStr,
     lastCtc: e.lastCtc ?? "",
+    lastPromotionDate: e.lastPromotionDate ?? "",
     managerName: e.managerName ?? "",
     isActive: e.isActive,
   };
@@ -114,6 +116,7 @@ export function EmployeeProfileClient({
   dojLabel,
   incrementLabel,
   ctcLabel,
+  promotionLabel,
 }: {
   employee: ProfilePayload;
   departments: DepartmentMaster[];
@@ -124,6 +127,7 @@ export function EmployeeProfileClient({
   dojLabel: string;
   incrementLabel: string;
   ctcLabel: string;
+  promotionLabel: string;
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
@@ -170,6 +174,7 @@ export function EmployeeProfileClient({
           grade: draft.grade || null,
           lastIncrementPercent,
           lastCtc: draft.lastCtc || null,
+          lastPromotionDate: draft.lastPromotionDate || null,
           managerName: draft.managerName || null,
           isActive: draft.isActive,
         }),
@@ -332,6 +337,22 @@ export function EmployeeProfileClient({
                 <div className="space-y-1">
                   <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">CTC (display)</p>
                   <p className="text-sm font-semibold text-foreground">{ctcLabel}</p>
+                </div>
+              )}
+              <Field
+                label="Last promotion date"
+                value={draft.lastPromotionDate}
+                editing={editing}
+                onChange={(v) => setDraft((d) => ({ ...d, lastPromotionDate: v }))}
+                placeholder="DD.MM.YYYY"
+              />
+              {!editing && (
+                <div className="space-y-1">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Last promotion</p>
+                  <p className="flex items-center gap-1 text-sm font-medium">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    {promotionLabel}
+                  </p>
                 </div>
               )}
             </div>

@@ -18,6 +18,7 @@ const updateSchema = z.object({
   grade: z.string().optional().nullable(),
   lastIncrementPercent: z.number().min(0).max(2).optional().nullable(),
   lastCtc: z.string().optional().nullable(),
+  lastPromotionDate: z.string().optional().nullable(),
   managerName: z.string().optional().nullable(),
   sortOrder: z.number().int().optional(),
   isActive: z.boolean().optional(),
