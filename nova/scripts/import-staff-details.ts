@@ -10,7 +10,8 @@ import {
   reconcileDepartmentAssignmentsForAllPlants,
   upsertDepartmentMaster,
 } from "../src/lib/masters/department-master-sync";
-import { DEFAULT_ORG_GROUPS, DEFAULT_STANDALONE_UNITS } from "../src/lib/org-units-defaults";
+import { listPlantUnitScopes } from "../src/lib/masters/plant-unit-scopes";
+import { employeeMasterWhereForPlant, plantDataScope } from "../src/lib/unit-workspace";
 import { assignDepartmentKpisToEmployee } from "../src/lib/kpi/assign-department-kpis";
 
 const ORG_SLUG = "bony-polymers";
@@ -45,21 +46,30 @@ async function main() {
 
   await enrichStaffDetailsManagers(db, org.id, rows);
 
+  const plantUnitKeys = new Set<string>([
+    ...rows.map((r) => r.plantUnitKey).filter(Boolean) as string[],
+    ...listPlantUnitScopes().map((u) => u.plantUnitKey),
+  ]);
+
   const deptByPlantKey = new Map<string, string>();
+  const bony37pLocation = "Bony Polymers 37-P";
   for (const d of ROSTER_DEPARTMENTS) {
-    const location = d.location ?? "Bony Polymers 37-P";
+    const location = d.location ?? bony37pLocation;
     const rosterKey = `${d.name}::${location}`;
     const { department } = await upsertDepartmentMaster(db, org.id, {
       name: d.name,
       location,
-      plantUnitKey: "Bony 37P",
+      plantUnitKey: "Bony Polymers",
       kraSheetId: d.kraSheetId ?? null,
       sortOrder: d.sortOrder ?? 0,
       isActive: true,
     });
     deptByPlantKey.set(rosterKey, department.id);
   }
-  await dedupeDepartmentMasters(db, org.id, "Bony 37P");
+
+  for (const plantUnitKey of plantUnitKeys) {
+    await dedupeDepartmentMasters(db, org.id, plantUnitKey);
+  }
 
   let created = 0;
   let updated = 0;
@@ -120,14 +130,7 @@ async function main() {
     }
   }
 
-  const allUnits = [
-    ...DEFAULT_ORG_GROUPS.flatMap((g) => g.units),
-    ...DEFAULT_STANDALONE_UNITS,
-  ].map((u) => ({
-    plantUnitKey: u.plantUnitKey,
-    locationAliases: u.locationAliases ? [...u.locationAliases] : undefined,
-    kpiPlantAliases: u.kpiPlantAliases ? [...u.kpiPlantAliases] : undefined,
-  }));
+  const allUnits = listPlantUnitScopes();
 
   const reconcile = await reconcileDepartmentAssignmentsForAllPlants(
     db,
@@ -135,13 +138,28 @@ async function main() {
     allUnits
   );
 
+  const perPlant: Record<string, number> = {};
+  for (const unit of allUnits) {
+    const scope = plantDataScope(
+      unit.plantUnitKey,
+      unit.locationAliases,
+      unit.kpiPlantAliases
+    );
+    perPlant[unit.plantUnitKey] = await db.employeeMaster.count({
+      where: {
+        ...employeeMasterWhereForPlant(org.id, scope),
+        isActive: true,
+      },
+    });
+  }
+
   const count = await db.employeeMaster.count({
     where: { organizationId: org.id, isActive: true },
   });
 
   console.log(
     JSON.stringify(
-      { created, updated, totalActive: count, reconcile, parseErrors: errors },
+      { created, updated, totalActive: count, perPlant, reconcile, parseErrors: errors },
       null,
       2
     )

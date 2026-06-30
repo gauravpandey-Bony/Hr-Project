@@ -1,6 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { reconcileDepartmentAssignmentsForAllPlants } from "../src/lib/masters/department-master-sync";
-import { DEFAULT_ORG_GROUPS, DEFAULT_STANDALONE_UNITS } from "../src/lib/org-units-defaults";
+import { listPlantUnitScopes } from "../src/lib/masters/plant-unit-scopes";
 
 const db = new PrismaClient();
 
@@ -11,14 +11,7 @@ async function main() {
     return;
   }
 
-  const allUnits = [
-    ...DEFAULT_ORG_GROUPS.flatMap((g) => g.units),
-    ...DEFAULT_STANDALONE_UNITS,
-  ].map((u) => ({
-    plantUnitKey: u.plantUnitKey,
-    locationAliases: u.locationAliases ? [...u.locationAliases] : undefined,
-    kpiPlantAliases: u.kpiPlantAliases ? [...u.kpiPlantAliases] : undefined,
-  }));
+  const allUnits = listPlantUnitScopes();
 
   const result = await reconcileDepartmentAssignmentsForAllPlants(
     db,

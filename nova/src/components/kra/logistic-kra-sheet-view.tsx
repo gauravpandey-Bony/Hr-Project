@@ -174,16 +174,6 @@ export function LogisticKraSheetView({
           </tbody>
         </table>
       </div>
-      <div className="grid grid-cols-2 gap-8 border-t border-slate-300 px-6 py-6 text-sm text-slate-700">
-        <div>
-          <p className="font-semibold">HOD - Signature</p>
-          <div className="mt-8 border-b border-slate-400" />
-        </div>
-        <div>
-          <p className="font-semibold">Employee Signature</p>
-          <div className="mt-8 border-b border-slate-400" />
-        </div>
-      </div>
     </div>
   );
 }

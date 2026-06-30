@@ -42,6 +42,7 @@ next-env.d.ts
 /prisma/dev.db
 /prisma/prod.db
 /data/*.xlsx
+!data/staff-details.xlsx
 /prisma/ci.db
 /prisma/shadow.db
 /prisma/prisma/

@@ -7,6 +7,7 @@ import {
   dedupeDepartmentMasters,
   findExistingDepartmentMaster,
   normalizeDepartmentMasterName,
+  reconcileDepartmentAssignmentsForAllPlants,
   upsertDepartmentMaster,
 } from "@/lib/masters/department-master-sync";
 import { isKraEmployeeWorkbook, parseKraWorkbook } from "@/lib/masters/kra-workbook";
@@ -22,6 +23,8 @@ import { syncKraWorkbook } from "@/lib/masters/sync-kra-workbook";
 import { resolvePlantFromWorkingLocation, summarizePlantAssignments } from "@/lib/masters/employee-plant-location";
 import { assignDepartmentKpisToEmployee } from "@/lib/kpi/assign-department-kpis";
 import { prepareStaffDetailsRows } from "@/lib/masters/staff-details-import";
+import { isStaffDetailsBuffer } from "@/lib/masters/staff-details-roster";
+import { listPlantUnitScopes } from "@/lib/masters/plant-unit-scopes";
 
 export async function POST(request: Request) {
   const user = await getCurrentUser();
@@ -163,7 +166,7 @@ export async function POST(request: Request) {
     const { department } = await upsertDepartmentMaster(db, user.organizationId, {
       name: d.name,
       location,
-      plantUnitKey: "Bony 37P",
+      plantUnitKey: "Bony Polymers",
       kraSheetId: d.kraSheetId ?? null,
       sortOrder: d.sortOrder ?? 0,
       isActive: true,
@@ -171,7 +174,9 @@ export async function POST(request: Request) {
     deptByPlantKey.set(rosterKey, department.id);
   }
 
-  await dedupeDepartmentMasters(db, user.organizationId, "Bony 37P");
+  for (const unit of listPlantUnitScopes()) {
+    await dedupeDepartmentMasters(db, user.organizationId, unit.plantUnitKey);
+  }
 
   let created = 0;
   let updated = 0;
@@ -262,6 +267,14 @@ export async function POST(request: Request) {
         kpisAssigned += r.assigned;
       }
     }
+  }
+
+  if (isStaffDetailsBuffer(buffer)) {
+    await reconcileDepartmentAssignmentsForAllPlants(
+      db,
+      user.organizationId,
+      listPlantUnitScopes()
+    );
   }
 
   return NextResponse.json({
