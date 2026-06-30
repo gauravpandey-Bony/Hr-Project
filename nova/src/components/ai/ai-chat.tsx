@@ -29,6 +29,11 @@ import {
   playNovaChime,
 } from "@/hooks/use-nova-wake";
 import { useMayaVoice } from "@/hooks/use-maya-voice";
+import {
+  isVoiceSecureContext,
+  primeMicrophoneForVoice,
+  voiceContextHint,
+} from "@/lib/speech-recognition";
 import { NOVA } from "@/lib/ai/nova-assistant";
 import { Button } from "@/components/ui/button";
 import {
@@ -145,26 +150,30 @@ export function AiChat({
     if (!getHeyNovaEnabled() || !getMicReadyStored()) return;
     setVoiceNeedsResume(true);
     unlockNovaVoice();
-    void navigator.mediaDevices
-      .getUserMedia({ audio: true })
-      .then(() => {
-        setMicReady(true);
-        setHeyNova(true);
-        setHeyNovaEnabled(true);
-        setVoiceNeedsResume(false);
-        window.setTimeout(() => startVoiceRef.current(), 500);
-      })
-      .catch(() => setVoiceNeedsResume(true));
+    void primeMicrophoneForVoice().then((primed) => {
+      if (!primed.ok) {
+        setVoiceNeedsResume(true);
+        if (primed.reason) setTtsError(primed.reason);
+        return;
+      }
+      setMicReady(true);
+      setHeyNova(true);
+      setHeyNovaEnabled(true);
+      setVoiceNeedsResume(false);
+      if (primed.speechOnly && !isVoiceSecureContext()) {
+        setTtsError(voiceContextHint());
+      }
+      window.setTimeout(() => startVoiceRef.current(), 500);
+    });
   }, []);
 
   async function enableListening() {
     unlockNovaVoice();
     setTtsError(null);
 
-    try {
-      await navigator.mediaDevices.getUserMedia({ audio: true });
-    } catch {
-      setTtsError("Allow microphone in browser settings.");
+    const primed = await primeMicrophoneForVoice();
+    if (!primed.ok) {
+      setTtsError(primed.reason ?? "Microphone unavailable in this browser.");
       return;
     }
 
@@ -173,6 +182,11 @@ export function AiChat({
     setHeyNova(true);
     setHeyNovaEnabled(true);
     setVoiceNeedsResume(false);
+    if (primed.speechOnly && !isVoiceSecureContext()) {
+      setTtsError(voiceContextHint());
+    } else if (primed.reason) {
+      setTtsError(primed.reason);
+    }
     window.setTimeout(() => startVoice(), 400);
   }
 

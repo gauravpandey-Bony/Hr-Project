@@ -6,6 +6,66 @@ let lastReleaseAt = 0;
 /** Chrome needs a gap between stop/abort and the next start (avoids "network" errors). */
 const MIN_RESTART_GAP_MS = 700;
 
+export function isBrowserSpeechRecognitionAvailable(): boolean {
+  if (typeof window === "undefined") return false;
+  const w = window as Window & {
+    SpeechRecognition?: unknown;
+    webkitSpeechRecognition?: unknown;
+  };
+  return !!(w.SpeechRecognition || w.webkitSpeechRecognition);
+}
+
+/** Mic APIs require HTTPS (or localhost). */
+export function isVoiceSecureContext(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.isSecureContext === true;
+}
+
+export function voiceContextHint(): string | null {
+  if (isVoiceSecureContext()) return null;
+  if (isBrowserSpeechRecognitionAvailable()) {
+    return "Mic works best on HTTPS — allow microphone when Chrome asks, or open the site via https://.";
+  }
+  return "Voice needs HTTPS (secure site). You can still type your question below.";
+}
+
+export type MicrophonePrimeResult = {
+  ok: boolean;
+  speechOnly: boolean;
+  reason?: string;
+};
+
+/** Preflight mic — on HTTP skip getUserMedia and let SpeechRecognition prompt. */
+export async function primeMicrophoneForVoice(): Promise<MicrophonePrimeResult> {
+  if (!isBrowserSpeechRecognitionAvailable()) {
+    return {
+      ok: false,
+      speechOnly: false,
+      reason: "Voice is not supported in this browser — use Chrome or Edge.",
+    };
+  }
+
+  if (!isVoiceSecureContext()) {
+    return { ok: true, speechOnly: true };
+  }
+
+  if (!navigator.mediaDevices?.getUserMedia) {
+    return { ok: true, speechOnly: true };
+  }
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    stream.getTracks().forEach((t) => t.stop());
+    return { ok: true, speechOnly: false };
+  } catch {
+    return {
+      ok: true,
+      speechOnly: true,
+      reason: voiceContextHint() ?? speechErrorMessage("not-allowed"),
+    };
+  }
+}
+
 export function claimSpeechRecognition(owner: "wake" | "manual"): boolean {
   if (activeOwner && activeOwner !== owner) return false;
   activeOwner = owner;
@@ -55,16 +115,8 @@ export function speechErrorMessage(code: string): string {
 }
 
 export async function ensureMicrophoneAccess(): Promise<boolean> {
-  if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
-    return true;
-  }
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    stream.getTracks().forEach((t) => t.stop());
-    return true;
-  } catch {
-    return false;
-  }
+  const primed = await primeMicrophoneForVoice();
+  return primed.ok;
 }
 
 export async function microphonePermissionGranted(): Promise<boolean> {
