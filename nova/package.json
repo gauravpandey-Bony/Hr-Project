@@ -14,6 +14,7 @@
     "import:37p": "npx tsx scripts/import-37p-roster.ts",
     "import:plant-kra": "npx tsx scripts/import-plant-kra-workbook.ts",
     "import:kra-data": "npx tsx scripts/import-kra-data.ts",
+    "import:staff": "npx tsx scripts/import-staff-details.ts",
     "db:push": "prisma db push",
     "db:reset": "prisma migrate reset --force",
     "postinstall": "prisma generate"

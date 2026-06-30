@@ -1,5 +1,6 @@
 import * as XLSX from "xlsx";
 import { is37pRosterMatrix, parse37pRoster } from "./37p-roster";
+import { isStaffDetailsMatrix, parseStaffDetailsRoster } from "./staff-details-roster";
 import { isKraEmployeeWorkbook, parseKraWorkbook } from "./kra-workbook";
 
 export type DepartmentImportRow = {
@@ -17,9 +18,13 @@ export type EmployeeImportRow = {
   designation?: string;
   department: string;
   location?: string;
+  /** Original working location from HR export (before plant mapping) */
+  rawLocation?: string;
+  plantUnitKey?: string;
   doj?: string;
   ecn?: string;
   managerName?: string;
+  managerEcn?: string;
   sortOrder?: number;
   isActive?: boolean;
 };
@@ -217,15 +222,32 @@ export function parseEmployeeXlsx(buffer: ArrayBuffer): {
     };
   }
 
+  if (isStaffDetailsMatrix(matrix)) {
+    return parseStaffDetailsRoster(buffer);
+  }
+
   if (isKraEmployeeWorkbook(buffer)) {
     return parseEmployeeKraWorkbook(buffer);
   }
 
   const headerRow = (matrix[0] ?? []).join(" ").toLowerCase();
+  const altHeaderRow = (matrix[1] ?? []).join(" ").toLowerCase();
 
-  if (headerRow.includes("department") && headerRow.includes("designation")) {
+  if (
+    headerRow.includes("department") &&
+    headerRow.includes("designation")
+  ) {
     const text = matrix.map((r) => r.join(",")).join("\n");
     return parseEmployeeCsv(text);
+  }
+
+  if (
+    altHeaderRow.includes("department") &&
+    altHeaderRow.includes("designation")
+  ) {
+    const text = matrix.slice(1).map((r) => r.join(",")).join("\n");
+    const headerLine = (matrix[1] ?? []).join(",");
+    return parseEmployeeCsv(`${headerLine}\n${text}`);
   }
 
   return parseEmployeeKraWorkbook(buffer);

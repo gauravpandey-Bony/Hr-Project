@@ -42,6 +42,14 @@ npm run db:purge-junk || true
 echo "==> Import KRA workbooks (37P + Fluid 58)"
 npm run import:kra-data || true
 
+STAFF_FILE="${STAFF_DETAILS_FILE:-$NOVA_DIR/data/staff-details.xlsx}"
+if [[ -f "$STAFF_FILE" ]]; then
+  echo "==> Import staff details (plant-wise employee assignment)"
+  npx tsx scripts/import-staff-details.ts "$STAFF_FILE" || true
+else
+  echo "WARN: Staff details file not found at $STAFF_FILE — skip employee plant assignment"
+fi
+
 echo "==> Building application"
 npm run build
 

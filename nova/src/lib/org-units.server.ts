@@ -15,6 +15,7 @@ import {
 } from "@/lib/org-units-defaults";
 import type { OrgGroup, OrgUnit } from "@/lib/org-units";
 import { parseStringArrayJson } from "@/lib/org-units";
+import { resolvePlantFromWorkingLocation } from "@/lib/masters/employee-plant-location";
 
 function mapUnit(row: OrgUnitMaster, groupSlug?: string): OrgUnit {
   const locationAliases = parseStringArrayJson(row.locationAliases);
@@ -324,14 +325,20 @@ export async function locationToPlantUnitKey(
   const trimmed = location?.trim();
   if (!trimmed) return "Bony 37P";
 
+  const fromRules = resolvePlantFromWorkingLocation(trimmed);
   const { allUnits } = await fetchOrgStructure(organizationId);
+
   const exact = allUnits.find(
-    (u) => u.plantUnitKey.toLowerCase() === trimmed.toLowerCase()
+    (u) => u.plantUnitKey.toLowerCase() === fromRules.plantUnitKey.toLowerCase()
   );
   if (exact) return exact.plantUnitKey;
 
   const aliasMatch = allUnits.find((u) =>
-    u.locationAliases.some((alias) => alias.toLowerCase() === trimmed.toLowerCase())
+    u.locationAliases.some(
+      (alias) =>
+        alias.toLowerCase() === trimmed.toLowerCase() ||
+        alias.toLowerCase() === fromRules.location.toLowerCase()
+    )
   );
   if (aliasMatch) return aliasMatch.plantUnitKey;
 
@@ -340,7 +347,7 @@ export async function locationToPlantUnitKey(
   );
   if (partial) return partial.plantUnitKey;
 
-  return trimmed;
+  return fromRules.plantUnitKey;
 }
 
 export type CreateOrgGroupInput = {

@@ -19,6 +19,7 @@ import {
   parseDepartmentOverrides,
 } from "@/lib/masters/preview-kra-upload";
 import { syncKraWorkbook } from "@/lib/masters/sync-kra-workbook";
+import { resolvePlantFromWorkingLocation, summarizePlantAssignments } from "@/lib/masters/employee-plant-location";
 import { assignDepartmentKpisToEmployee } from "@/lib/kpi/assign-department-kpis";
 
 function normalizeDepartment(name: string) {
@@ -184,18 +185,26 @@ export async function POST(request: Request) {
 
   for (const row of rows) {
     const deptName = normalizeDepartment(row.department);
-    const departmentId =
-      deptByName.get(deptName.toLowerCase()) ??
-      deptByName.get(normalizeDepartmentMasterName(row.department).toLowerCase()) ??
-      (
-        await findExistingDepartmentMaster(
-          db,
-          user.organizationId,
-          deptName,
-          row.location
-        )
-      )?.id ??
-      null;
+    const plantAssignment = resolvePlantFromWorkingLocation(
+      row.location ?? row.rawLocation
+    );
+    const plantUnitKey = row.plantUnitKey ?? plantAssignment.plantUnitKey;
+    const location = row.location ?? plantAssignment.location;
+
+    const deptKey = `${deptName}::${location}`;
+    let departmentId = deptByName.get(deptKey) ?? deptByName.get(deptName.toLowerCase());
+
+    if (!departmentId) {
+      const { department } = await upsertDepartmentMaster(db, user.organizationId, {
+        name: deptName,
+        location,
+        plantUnitKey,
+        isActive: true,
+      });
+      departmentId = department.id;
+      deptByName.set(deptKey, department.id);
+      deptByName.set(deptName.toLowerCase(), department.id);
+    }
 
     const existing = row.ecn
       ? await db.employeeMaster.findFirst({
@@ -213,7 +222,7 @@ export async function POST(request: Request) {
       designation: row.designation ?? null,
       departmentId,
       department: deptName,
-      location: row.location?.trim() || null,
+      location,
       doj: row.doj ?? null,
       ecn: row.ecn ?? null,
       managerName: row.managerName ?? null,
@@ -255,6 +264,7 @@ export async function POST(request: Request) {
     updated,
     kpisAssigned,
     rowsProcessed: rows.length,
+    plantSummary: summarizePlantAssignments(rows),
     parseErrors: errors,
   });
 }

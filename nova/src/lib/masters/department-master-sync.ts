@@ -120,7 +120,7 @@ export function departmentMatchKeys(name: string): Set<string> {
   if (/maintenance/.test(compact)) {
     add("Maintenance");
   }
-  if (/^store\b|bop store|compound store|green hollow/.test(compact)) {
+  if (/^store\b|bop store|compound store|green hollow|store.*purchase|purchase.*store/.test(compact)) {
     add("Store");
   }
   if (/dispatch.*assembly|production.*dispatch/.test(compact)) {

@@ -19,7 +19,10 @@ import {
   KraDepartmentPick,
   type KraDepartmentPickRow,
 } from "@/components/kra/kra-department-pick";
-import type { EmployeeUploadConflict } from "@/lib/masters/preview-employee-upload";
+import type {
+  EmployeeUploadConflict,
+  EmployeeUploadDuplicateInFile,
+} from "@/lib/masters/preview-employee-upload";
 
 const DEPARTMENT_TEMPLATE = {
   filename: "department-master-template.csv",
@@ -64,6 +67,8 @@ export function UploadMasterModal({
   const [error, setError] = useState<string | null>(null);
   const [employeeStep, setEmployeeStep] = useState<EmployeeStep>("file");
   const [conflicts, setConflicts] = useState<EmployeeUploadConflict[]>([]);
+  const [duplicatesInFile, setDuplicatesInFile] = useState<EmployeeUploadDuplicateInFile[]>([]);
+  const [plantSummary, setPlantSummary] = useState<Record<string, number>>({});
   const [newCount, setNewCount] = useState(0);
   const [updateCount, setUpdateCount] = useState(0);
   const [employeeRows, setEmployeeRows] = useState<KraDepartmentPickRow[]>([]);
@@ -73,6 +78,8 @@ export function UploadMasterModal({
   function resetEmployeeFlow() {
     setEmployeeStep("file");
     setConflicts([]);
+    setDuplicatesInFile([]);
+    setPlantSummary({});
     setNewCount(0);
     setUpdateCount(0);
     setEmployeeRows([]);
@@ -130,6 +137,8 @@ export function UploadMasterModal({
 
     if (isEmployees && res.status === 409 && data.requiresConfirmation) {
       setConflicts(data.conflicts ?? []);
+      setDuplicatesInFile(data.duplicatesInFile ?? []);
+      setPlantSummary(data.plantSummary ?? {});
       setNewCount(data.newCount ?? 0);
       setUpdateCount(data.updateCount ?? 0);
       setEmployeeStep("confirm");
@@ -210,6 +219,8 @@ export function UploadMasterModal({
         {confirming ? (
           <EmployeeUploadConfirm
             conflicts={conflicts}
+            duplicatesInFile={duplicatesInFile}
+            plantSummary={plantSummary}
             newCount={newCount}
             updateCount={updateCount}
             loading={loading}

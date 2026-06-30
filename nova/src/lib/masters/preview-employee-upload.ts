@@ -5,16 +5,26 @@ import {
   parseKraWorkbook,
 } from "./kra-workbook";
 import type { EmployeeImportRow } from "./import";
+import { summarizePlantAssignments } from "./employee-plant-location";
 
 export type EmployeeUploadConflict = {
   ecn: string;
   nameInFile: string;
   existingName: string;
   existingDepartment: string | null;
+  existingLocation?: string | null;
+  plantUnitKey?: string | null;
+};
+
+export type EmployeeUploadDuplicateInFile = {
+  ecn: string;
+  names: string[];
 };
 
 export type EmployeeUploadPreview = {
   conflicts: EmployeeUploadConflict[];
+  duplicatesInFile: EmployeeUploadDuplicateInFile[];
+  plantSummary: Record<string, number>;
   newCount: number;
   updateCount: number;
   totalEmployees: number;
@@ -55,6 +65,8 @@ export async function findEmployeeEcnConflicts(
         nameInFile: row.name,
         existingName: existing.name,
         existingDepartment: existing.department,
+        existingLocation: existing.location,
+        plantUnitKey: "plantUnitKey" in row ? (row as { plantUnitKey?: string }).plantUnitKey : null,
       });
     }
   }
@@ -62,10 +74,27 @@ export async function findEmployeeEcnConflicts(
   return conflicts;
 }
 
+function findDuplicateEcnsInFile(
+  rows: { ecn?: string | null; name: string }[]
+): EmployeeUploadDuplicateInFile[] {
+  const byEcn = new Map<string, string[]>();
+  for (const row of rows) {
+    const ecnKey = isValidKraEcn(row.ecn) ? row.ecn!.trim() : null;
+    if (!ecnKey) continue;
+    const list = byEcn.get(ecnKey) ?? [];
+    list.push(row.name);
+    byEcn.set(ecnKey, list);
+  }
+  return [...byEcn.entries()]
+    .filter(([, names]) => names.length > 1)
+    .map(([ecn, names]) => ({ ecn, names }));
+}
+
 function summarizePreview(
-  employees: { ecn?: string | null; name: string }[],
+  employees: { ecn?: string | null; name: string; location?: string | null }[],
   conflicts: EmployeeUploadConflict[],
-  errors: string[] = []
+  errors: string[] = [],
+  duplicatesInFile: EmployeeUploadDuplicateInFile[] = []
 ): EmployeeUploadPreview {
   const withEcn = employees.filter((e) => isValidKraEcn(e.ecn));
   const updateCount = conflicts.length;
@@ -76,10 +105,12 @@ function summarizePreview(
 
   return {
     conflicts,
+    duplicatesInFile,
+    plantSummary: summarizePlantAssignments(employees),
     newCount,
     updateCount,
     totalEmployees: employees.length,
-    requiresConfirmation: conflicts.length > 0,
+    requiresConfirmation: conflicts.length > 0 || duplicatesInFile.length > 0,
     errors,
   };
 }
@@ -96,7 +127,8 @@ export async function previewKraWorkbookUpload(
   }
 
   const conflicts = await findEmployeeEcnConflicts(db, organizationId, employees);
-  return summarizePreview(employees, conflicts, errors);
+  const duplicatesInFile = findDuplicateEcnsInFile(employees);
+  return summarizePreview(employees, conflicts, errors, duplicatesInFile);
 }
 
 export async function previewEmployeeRowsUpload(
@@ -106,10 +138,16 @@ export async function previewEmployeeRowsUpload(
 ): Promise<EmployeeUploadPreview> {
   const employees = rows
     .filter((r) => r.name?.trim())
-    .map((r) => ({ ecn: r.ecn, name: r.name!.trim() }));
+    .map((r) => ({
+      ecn: r.ecn,
+      name: r.name!.trim(),
+      location: r.location,
+      plantUnitKey: r.plantUnitKey,
+    }));
 
   const conflicts = await findEmployeeEcnConflicts(db, organizationId, employees);
-  return summarizePreview(employees, conflicts);
+  const duplicatesInFile = findDuplicateEcnsInFile(employees);
+  return summarizePreview(employees, conflicts, [], duplicatesInFile);
 }
 
 export function isEmployeeKraBuffer(buffer: ArrayBuffer): boolean {
