@@ -54,6 +54,7 @@ echo "==> Import KRA workbooks (37P + Fluid 58)"
 npm run import:kra-data || true
 
 echo "==> Building application"
+rm -rf .next
 npm run build
 
 echo "==> Restarting PM2 process"

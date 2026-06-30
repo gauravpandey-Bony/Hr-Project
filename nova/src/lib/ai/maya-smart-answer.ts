@@ -377,7 +377,7 @@ export function answerFromDatabase(message: string, ctx: OrgContext): ChatBlock[
 
   blocks.push({
     type: "text",
-    content: `Maine database me dhunda — **${ctx.workspace}** me ${ctx.stats.employeeMaster} employees aur ${ctx.stats.kpis} KPIs hain. Zyada specific puchho, jaise:\n\n• "IT me kitne log hain?"\n• "Bhupesh Kumar ka manager kaun hai?"\n• "Red KPIs kaun se hain?"\n• "Production department ke employees"`,
+    content: `Maine database me dhunda — **${ctx.workspace}** me ${ctx.stats.employeeMaster} employees aur ${ctx.stats.kpis} KPIs hain. Zyada specific puchho, jaise:\n\n• "IT me kitne log hain?"\n• "Bhupesh Sharma ka report"\n• "Red KPIs kaun se hain?"\n• "Production department ke employees"`,
   });
   if (ctx.departmentHeadcount && Object.keys(ctx.departmentHeadcount).length) {
     const top = Object.entries(ctx.departmentHeadcount)

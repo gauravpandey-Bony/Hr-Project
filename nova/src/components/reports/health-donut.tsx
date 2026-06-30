@@ -46,7 +46,7 @@ export function HealthDonut({
             fill="none"
             stroke="currentColor"
             strokeWidth={stroke}
-            className="text-slate-100"
+            className="text-muted"
           />
           {segments.map((seg) => {
             const pct = seg.value / sum;
@@ -79,8 +79,8 @@ export function HealthDonut({
             onCenterClick && "hover:bg-slate-50/80 cursor-pointer"
           )}
         >
-          <span className="text-3xl font-bold text-slate-900">{centerValue ?? total}</span>
-          <span className="text-xs font-medium uppercase tracking-wider text-slate-400">
+          <span className="text-3xl font-bold text-foreground">{centerValue ?? total}</span>
+          <span className="text-sm font-medium text-muted-foreground">
             {centerLabel}
           </span>
         </CenterTag>
@@ -102,8 +102,8 @@ export function HealthDonut({
               style={{ backgroundColor: seg.color }}
             />
             <div>
-              <p className="text-sm font-semibold text-slate-800">{seg.label}</p>
-              <p className="text-xs text-slate-500">
+              <p className="text-base font-semibold text-foreground">{seg.label}</p>
+              <p className="text-sm text-muted-foreground">
                 {seg.value} KPI{seg.value !== 1 ? "s" : ""} ·{" "}
                 {total ? Math.round((seg.value / total) * 100) : 0}%
                 {seg.onClick && " · click"}

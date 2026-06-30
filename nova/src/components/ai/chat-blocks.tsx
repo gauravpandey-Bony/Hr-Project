@@ -39,7 +39,7 @@ function BlockRenderer({
   if (block.type === "text") {
     return (
       <div
-        className="prose prose-sm max-w-none text-foreground dark:prose-invert"
+        className="prose prose-base max-w-none text-foreground dark:prose-invert"
         dangerouslySetInnerHTML={{
           __html: block.content
             .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
@@ -54,15 +54,15 @@ function BlockRenderer({
     return (
       <div className="overflow-x-auto rounded-lg border border-border bg-card">
         {block.title && (
-          <p className="border-b border-border bg-muted px-3 py-2 text-xs font-semibold text-muted-foreground">
+          <p className="border-b border-border bg-muted px-3 py-2.5 text-sm font-semibold text-foreground">
             {block.title}
           </p>
         )}
-        <table className="w-full min-w-[480px] text-xs">
+        <table className="w-full min-w-[480px] text-sm">
           <thead className="bg-muted text-left text-muted-foreground">
             <tr>
               {block.headers.map((h) => (
-                <th key={h} className="whitespace-nowrap px-3 py-2 font-medium">
+                <th key={h} className="whitespace-nowrap px-3 py-2.5 font-semibold">
                   {h}
                 </th>
               ))}
@@ -72,7 +72,7 @@ function BlockRenderer({
             {block.rows.map((row, ri) => (
               <tr key={ri} className="hover:bg-muted/50">
                 {row.map((cell, ci) => (
-                  <td key={ci} className="px-3 py-2 text-foreground">
+                  <td key={ci} className="px-3 py-2.5 text-foreground">
                     {ci === statusCol ? (
                       <StatusBadge status={cell} />
                     ) : (
@@ -115,7 +115,7 @@ function StatusBadge({ status }: { status: string }) {
           : "bg-slate-100 text-slate-700";
   const label = s === "green" ? "On track" : s === "red" || s === "amber" ? "Off target" : status;
   return (
-    <span className={cn("inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold", cls)}>
+    <span className={cn("inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold", cls)}>
       {label}
     </span>
   );
@@ -163,7 +163,7 @@ function KpiSuggestionsBlock({
             })
           }
           className={cn(
-            "flex w-full gap-2 rounded-lg border bg-white p-2.5 text-left text-xs",
+            "flex w-full gap-2 rounded-lg border bg-card p-3 text-left text-sm",
             selected.has(i) ? "border-violet-400" : "border-slate-200"
           )}
         >
@@ -176,8 +176,8 @@ function KpiSuggestionsBlock({
             {selected.has(i) && <Check className="h-2.5 w-2.5" />}
           </div>
           <div>
-            <p className="font-medium text-slate-900">{item.name}</p>
-            <p className="text-slate-500">
+            <p className="font-medium text-foreground">{item.name}</p>
+            <p className="text-muted-foreground">
               {item.category} · Target {item.targetValue} {item.unit}
             </p>
           </div>
@@ -188,7 +188,7 @@ function KpiSuggestionsBlock({
           type="button"
           onClick={apply}
           disabled={applying || selected.size === 0}
-          className="w-full rounded-lg bg-violet-600 py-2 text-xs font-medium text-white hover:bg-violet-700 disabled:opacity-50"
+          className="w-full rounded-lg bg-violet-600 py-2.5 text-sm font-medium text-white hover:bg-violet-700 disabled:opacity-50"
         >
           {applying ? "Adding…" : `Add ${selected.size} KPIs to library`}
         </button>

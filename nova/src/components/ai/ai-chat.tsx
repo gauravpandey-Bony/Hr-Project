@@ -44,7 +44,7 @@ import {
 
 const STARTERS = [
   "IT department me kitne log hain?",
-  "Bhupesh Kumar ka manager kaun hai?",
+  "Bhupesh Sharma ka report",
   "Bony 37P ke red KPIs dikhao",
   "Production department ke employees",
 ];
@@ -320,8 +320,8 @@ export function AiChat({
     if (voicePhase === "awakened" && micListening) return "Active — bolo apna sawaal";
     if (micListening) return "Sun rahi hoon…";
     if (micDead) return "Mic reconnect ho raha hai…";
-    if (novaArmed) return 'Say "Hey Maya" — phir command';
-    return `Type ${NOVA.name}, …`;
+    if (novaArmed) return "Bolo apna sawaal";
+    return "Kuch bhi puchho…";
   }
 
   const engineLabel = "";
@@ -400,7 +400,7 @@ export function AiChat({
             <p className="text-sm font-medium text-violet-900 dark:text-violet-100">
               {voiceNeedsResume ? "Voice was on — tap to resume" : "Hey Maya — tap once to enable"}
             </p>
-            <p className="mt-1 text-xs text-violet-700 dark:text-violet-300">
+            <p className="mt-1 text-sm text-violet-700 dark:text-violet-300">
               Phir bolo &quot;Hey Maya&quot; — voice active ho jayega
             </p>
             <Button
@@ -438,7 +438,7 @@ export function AiChat({
               </div>
               <div
                 className={cn(
-                  "rounded-2xl px-4 py-3 text-sm",
+                  "rounded-2xl px-4 py-3 text-base",
                   m.role === "user"
                     ? "max-w-[85%] bg-emerald-600 text-white"
                     : hasDashboard
@@ -464,7 +464,7 @@ export function AiChat({
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-violet-100 dark:bg-violet-900/50">
               <Loader2 className="h-4 w-4 animate-spin text-violet-600 dark:text-violet-400" />
             </div>
-            <div className="rounded-2xl bg-muted px-4 py-3 text-sm text-muted-foreground">
+            <div className="rounded-2xl bg-muted px-4 py-3 text-base text-foreground">
               {NOVA.name} is preparing your report…
             </div>
           </div>
@@ -480,7 +480,7 @@ export function AiChat({
               type="button"
               onClick={() => send(s)}
               disabled={loading}
-              className="rounded-full border border-border bg-muted px-2.5 py-1 text-[11px] text-muted-foreground hover:border-violet-400/50 hover:bg-violet-500/10 hover:text-foreground"
+              className="rounded-full border border-border bg-muted px-3 py-1.5 text-sm text-foreground hover:border-violet-400/50 hover:bg-violet-500/10"
             >
               {s}
             </button>
@@ -521,9 +521,9 @@ export function AiChat({
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && send()}
-            placeholder={`${NOVA.name}, Bhupesh Sharma report…`}
+            placeholder="Kuch bhi puchho — employee, department, plant, KPI…"
             className={cn(
-              "flex-1 rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground",
+              "flex-1 rounded-xl border border-border bg-background px-4 py-3 text-base text-foreground placeholder:text-muted-foreground",
               novaCapturing && "border-violet-500/50 ring-2 ring-violet-500/20"
             )}
           />
@@ -562,17 +562,17 @@ export function AiChat({
           </p>
         )}
         {heyNova && micReady && micListening && voicePhase !== "awakened" && !voiceError && (
-          <p className="mt-1 text-center text-[11px] text-emerald-600 dark:text-emerald-400">
+          <p className="mt-1 text-center text-sm text-emerald-600 dark:text-emerald-400">
             ● Sun rahi hoon — bolo <strong>&quot;Hey Maya&quot;</strong> ya <strong>&quot;Maya, report…&quot;</strong>
           </p>
         )}
         {micDead && !voiceError && (
-          <p className="mt-1 text-center text-[11px] text-amber-600 dark:text-amber-400">
+          <p className="mt-1 text-center text-sm text-amber-600 dark:text-amber-400">
             ● Mic reconnect ho raha hai… thoda wait karein ya mic button dabayein
           </p>
         )}
         {heyNova && micReady && lastHeard && (
-          <p className="mt-1 text-center text-[10px] text-muted-foreground">
+          <p className="mt-1 text-center text-sm text-muted-foreground">
             Suna: &quot;{lastHeard.slice(-80)}&quot;
           </p>
         )}

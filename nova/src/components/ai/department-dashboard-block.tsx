@@ -27,14 +27,14 @@ function ProgressBar({
     status === "green" ? "bg-emerald-500" : status === "amber" ? "bg-amber-500" : "bg-red-500";
 
   return (
-    <div className={cn("space-y-1", compact && "py-0.5")}>
+    <div className={cn("space-y-1.5", compact && "py-0.5")}>
       <div className="flex items-start justify-between gap-2">
-        <p className={cn("font-medium text-foreground", compact ? "text-[11px] leading-tight" : "text-xs")}>
+        <p className={cn("font-medium text-foreground", compact ? "text-sm leading-snug" : "text-base")}>
           {label}
         </p>
-        <span className="shrink-0 text-[11px] font-semibold tabular-nums text-muted-foreground">{progress}%</span>
+        <span className="shrink-0 text-sm font-semibold tabular-nums text-foreground">{progress}%</span>
       </div>
-      <div className="h-2 overflow-hidden rounded-full bg-muted">
+      <div className="h-2.5 overflow-hidden rounded-full bg-muted">
         <div
           className={cn("h-full rounded-full transition-all duration-500", barColor)}
           style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
@@ -50,13 +50,13 @@ export function DepartmentDashboardBlock({ data }: { data: DepartmentDashboardDa
   return (
     <div className="w-full min-w-0 space-y-4 rounded-xl border border-violet-200/80 bg-gradient-to-b from-card to-muted/30 p-4 shadow-sm dark:border-violet-800/40">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-3">
-        <div className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-600 text-white shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-violet-600 text-white shadow-sm">
             <BarChart3 className="h-5 w-5" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-foreground">{data.department}</h3>
-            <p className="text-[11px] text-muted-foreground">{data.headline}</p>
+            <h3 className="text-lg font-bold text-foreground">{data.department}</h3>
+            <p className="text-sm text-muted-foreground">{data.headline}</p>
           </div>
         </div>
       </div>
@@ -65,20 +65,18 @@ export function DepartmentDashboardBlock({ data }: { data: DepartmentDashboardDa
         {data.stats.map((s) => (
           <div
             key={s.label}
-            className={cn("rounded-lg border px-3 py-2.5 shadow-sm", TONE_CARD[s.tone])}
+            className={cn("rounded-lg border px-3 py-3 shadow-sm", TONE_CARD[s.tone])}
           >
-            <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{s.label}</p>
-            <p className="mt-0.5 text-lg font-bold tabular-nums text-foreground">{s.value}</p>
-            {s.sub && <p className="text-[10px] text-muted-foreground">{s.sub}</p>}
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{s.label}</p>
+            <p className="mt-0.5 text-xl font-bold tabular-nums text-foreground">{s.value}</p>
+            {s.sub && <p className="text-xs text-muted-foreground">{s.sub}</p>}
           </div>
         ))}
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="rounded-xl border border-border bg-card p-4">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Health mix
-          </p>
+          <p className="mb-3 text-sm font-semibold text-foreground">Health mix</p>
           {total > 0 ? (
             <HealthDonut
               segments={data.statusSegments}
@@ -92,9 +90,7 @@ export function DepartmentDashboardBlock({ data }: { data: DepartmentDashboardDa
         </div>
 
         <div className="rounded-xl border border-border bg-card p-4">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            By category (avg progress)
-          </p>
+          <p className="mb-3 text-sm font-semibold text-foreground">By category (avg progress)</p>
           {data.categoryBars.length ? (
             <div className="space-y-3">
               {data.categoryBars.map((c) => (
@@ -108,17 +104,17 @@ export function DepartmentDashboardBlock({ data }: { data: DepartmentDashboardDa
               ))}
             </div>
           ) : (
-            <p className="text-sm text-slate-500">—</p>
+            <p className="text-sm text-muted-foreground">—</p>
           )}
         </div>
       </div>
 
-      <div className="rounded-xl border border-slate-200 bg-white p-4">
-        <p className="mb-3 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
-          <TrendingUp className="h-3.5 w-3.5" />
+      <div className="rounded-xl border border-border bg-card p-4">
+        <p className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-foreground">
+          <TrendingUp className="h-4 w-4" />
           KPI progress
         </p>
-        <div className="max-h-56 space-y-2.5 overflow-y-auto pr-1">
+        <div className="max-h-64 space-y-3 overflow-y-auto pr-1">
           {data.kpiBars.map((k) => (
             <ProgressBar key={k.name} label={k.name} progress={k.progress} status={k.status} compact />
           ))}
@@ -127,19 +123,19 @@ export function DepartmentDashboardBlock({ data }: { data: DepartmentDashboardDa
 
       <div className="grid gap-3 sm:grid-cols-2">
         {data.concerns.length > 0 && (
-          <div className="rounded-xl border border-red-100 bg-red-50/50 p-3">
-            <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-red-800">
-              <AlertTriangle className="h-3.5 w-3.5" />
+          <div className="rounded-xl border border-red-200 bg-red-50/50 p-4 dark:border-red-900/50 dark:bg-red-950/30">
+            <p className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-red-800 dark:text-red-300">
+              <AlertTriangle className="h-4 w-4" />
               Needs attention
             </p>
             <ul className="space-y-2">
               {data.concerns.map((k) => (
                 <li
                   key={k.name}
-                  className="rounded-lg border border-red-100 bg-white px-2.5 py-2 text-[11px]"
+                  className="rounded-lg border border-red-100 bg-card px-3 py-2.5 text-sm dark:border-red-900/40"
                 >
-                  <p className="font-medium text-slate-900">{k.name}</p>
-                  <p className="text-slate-600">
+                  <p className="font-medium text-foreground">{k.name}</p>
+                  <p className="text-muted-foreground">
                     {k.actual} → target {k.target} · {k.progress}
                   </p>
                 </li>
@@ -149,19 +145,19 @@ export function DepartmentDashboardBlock({ data }: { data: DepartmentDashboardDa
         )}
 
         {data.highlights.length > 0 && (
-          <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-3">
-            <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-emerald-800">
-              <CheckCircle2 className="h-3.5 w-3.5" />
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/30">
+            <p className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-emerald-800 dark:text-emerald-300">
+              <CheckCircle2 className="h-4 w-4" />
               On track
             </p>
             <ul className="space-y-2">
               {data.highlights.map((k) => (
                 <li
                   key={k.name}
-                  className="rounded-lg border border-emerald-100 bg-white px-2.5 py-2 text-[11px]"
+                  className="rounded-lg border border-emerald-100 bg-card px-3 py-2.5 text-sm dark:border-emerald-900/40"
                 >
-                  <p className="font-medium text-slate-900">{k.name}</p>
-                  <p className="text-slate-600">
+                  <p className="font-medium text-foreground">{k.name}</p>
+                  <p className="text-muted-foreground">
                     {k.actual} / {k.target} · {k.progress}
                   </p>
                 </li>
