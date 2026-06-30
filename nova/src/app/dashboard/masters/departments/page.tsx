@@ -8,7 +8,12 @@ import {
   requireAdminWorkspace,
 } from "@/lib/unit-workspace.server";
 import { DepartmentMasterClient } from "@/components/masters/department-master-client";
-import { formatDepartmentDisplayName, departmentsAreEquivalent } from "@/lib/masters/department-master-sync";
+import {
+  departmentsAreEquivalent,
+  formatDepartmentDisplayName,
+  reconcileDepartmentAssignmentsForPlant,
+  staffedDepartmentNamesFromEmployees,
+} from "@/lib/masters/department-master-sync";
 import { filterRealKraEmployees } from "@/lib/masters/logistics-kra-junk";
 
 export default async function DepartmentMasterPage({
@@ -23,6 +28,14 @@ export default async function DepartmentMasterPage({
   const { unit: unitId } = await searchParams;
   const workspace = await resolveWorkspace(user, unitId);
   requireAdminWorkspace(user, workspace);
+
+  if (workspace.dataScope) {
+    await reconcileDepartmentAssignmentsForPlant(
+      db,
+      user.organizationId,
+      workspace.dataScope
+    );
+  }
 
   const departments = await db.departmentMaster.findMany({
     where: workspace.dataScope
@@ -42,13 +55,22 @@ export default async function DepartmentMasterPage({
     select: { departmentId: true, department: true, name: true },
   });
 
-  const staffedDeptIds = new Set<string>();
-  const staffedDeptNames = new Set<string>();
-  for (const emp of filterRealKraEmployees(employees)) {
-    if (emp.departmentId) staffedDeptIds.add(emp.departmentId);
-    const name = emp.department?.trim();
-    if (name) staffedDeptNames.add(formatDepartmentDisplayName(name));
-  }
+  const linkedDeptIds = [
+    ...new Set(employees.map((emp) => emp.departmentId).filter(Boolean)),
+  ] as string[];
+  const linkedDepartments =
+    linkedDeptIds.length > 0
+      ? await db.departmentMaster.findMany({
+          where: { organizationId: user.organizationId, id: { in: linkedDeptIds } },
+          select: { id: true, name: true },
+        })
+      : [];
+  const deptNameById = new Map(linkedDepartments.map((d) => [d.id, d.name]));
+
+  const { staffedDeptIds, staffedDeptNames } = staffedDepartmentNamesFromEmployees(
+    employees,
+    deptNameById
+  );
 
   if (workspace.dataScope) {
     const plantKpis = await db.kpi.findMany({

@@ -67,18 +67,34 @@ export async function fetchKraSheets(
             isActive: true,
             ...employeeMasterWhereForPlant(organizationId, scope),
           },
-          select: { department: true },
+          select: { department: true, departmentId: true },
         })
       : Promise.resolve([]),
   ]);
 
-  const deptNamesFromStaff = new Set(
-    scopedEmployees
-      .map((e) => e.department?.trim())
-      .filter((n): n is string => Boolean(n))
-  );
+  const linkedDeptIds = [
+    ...new Set(scopedEmployees.map((emp) => emp.departmentId).filter(Boolean)),
+  ] as string[];
+  const linkedDepartments =
+    linkedDeptIds.length > 0
+      ? await db.departmentMaster.findMany({
+          where: { organizationId, id: { in: linkedDeptIds } },
+          select: { id: true, name: true },
+        })
+      : [];
+  const deptNameById = new Map(linkedDepartments.map((d) => [d.id, d.name]));
 
-  const deptByName = new Map(departments.map((d) => [d.name, d]));
+  const deptNamesFromStaff = new Set<string>();
+  for (const emp of scopedEmployees) {
+    const raw =
+      emp.department?.trim() ||
+      (emp.departmentId ? deptNameById.get(emp.departmentId)?.trim() : undefined);
+    if (raw) deptNamesFromStaff.add(raw);
+  }
+
+  const deptByName = new Map(
+    departments.map((d) => [formatDepartmentDisplayName(d.name), d])
+  );
 
   const withSheetId = departments.filter(
     (d) => d.kraSheetId && d.kpiLevel !== "INDIVIDUAL"
@@ -92,7 +108,11 @@ export async function fetchKraSheets(
   for (const name of deptNamesFromStaff) {
     if (isPlantHeadRoleDepartment(name)) continue;
     if (isHiddenKraDepartment(name)) continue;
-    if (!deptByName.has(name)) {
+    const displayName = formatDepartmentDisplayName(name);
+    const hasEquivalent = [...deptByName.keys()].some((existing) =>
+      departmentsAreEquivalent(existing, displayName)
+    );
+    if (!hasEquivalent) {
       source = [
         ...source,
         {
@@ -162,12 +182,13 @@ export async function fetchKraSheets(
   attachProductionSubSheets(sheets);
 
   if (scope && scopedEmployees.length > 0) {
-    const employeeDisplayDepts = new Set(
-      scopedEmployees
-        .map((e) => e.department?.trim())
-        .filter((n): n is string => Boolean(n))
-        .map((n) => formatDepartmentDisplayName(n))
-    );
+    const employeeDisplayDepts = new Set<string>();
+    for (const emp of scopedEmployees) {
+      const raw =
+        emp.department?.trim() ||
+        (emp.departmentId ? deptNameById.get(emp.departmentId)?.trim() : undefined);
+      if (raw) employeeDisplayDepts.add(formatDepartmentDisplayName(raw));
+    }
 
     const plantKpis = await db.kpi.findMany({
       where: {

@@ -9,6 +9,7 @@ import {
 } from "@/lib/unit-workspace";
 import { normalizeRosterDepartment } from "./37p-roster";
 import { normalizeKraDepartment } from "./kra-workbook";
+import { filterRealKraEmployees } from "./logistics-kra-junk";
 
 export type DepartmentUpsertInput = {
   name: string;
@@ -496,23 +497,25 @@ export async function deactivateEmptyDepartments(
     }),
     db.employeeMaster.findMany({
       where: { organizationId, isActive: true },
-      select: { departmentId: true, department: true },
+      select: { departmentId: true, department: true, name: true },
     }),
   ]);
 
-  const staffedDeptIds = new Set<string>();
-  const staffedDeptNames = new Set<string>();
-  for (const emp of activeEmployees) {
-    if (emp.departmentId) staffedDeptIds.add(emp.departmentId);
-    const name = emp.department?.trim();
-    if (name) staffedDeptNames.add(departmentNameKey(name));
-  }
+  const deptNameById = await loadDepartmentNameById(
+    db,
+    organizationId,
+    activeEmployees.map((emp) => emp.departmentId)
+  );
+  const { staffedDeptIds, staffedDeptNames } = staffedDepartmentNamesFromEmployees(
+    activeEmployees,
+    deptNameById
+  );
 
   let deactivated = 0;
   for (const dept of departments) {
     const hasStaff =
       staffedDeptIds.has(dept.id) ||
-      staffedDeptNames.has(departmentNameKey(dept.name));
+      [...staffedDeptNames].some((name) => departmentsAreEquivalent(name, dept.name));
     if (hasStaff) continue;
 
     await db.departmentMaster.update({
@@ -525,11 +528,49 @@ export async function deactivateEmptyDepartments(
   return { deactivated };
 }
 
-export type PlantUnitScopeInput = {
-  plantUnitKey: string;
-  locationAliases?: string[];
-  kpiPlantAliases?: string[];
-};
+export function staffedDepartmentNamesFromEmployees(
+  employees: Array<{ name: string; department?: string | null; departmentId?: string | null }>,
+  deptNameById: Map<string, string>
+): { staffedDeptIds: Set<string>; staffedDeptNames: Set<string> } {
+  const staffedDeptIds = new Set<string>();
+  const staffedDeptNames = new Set<string>();
+
+  for (const emp of filterRealKraEmployees(employees)) {
+    if (emp.departmentId) staffedDeptIds.add(emp.departmentId);
+    const raw =
+      emp.department?.trim() ||
+      (emp.departmentId ? deptNameById.get(emp.departmentId)?.trim() : undefined);
+    if (raw) staffedDeptNames.add(formatDepartmentDisplayName(raw));
+  }
+
+  return { staffedDeptIds, staffedDeptNames };
+}
+
+async function loadDepartmentNameById(
+  db: PrismaClient,
+  organizationId: string,
+  departmentIds: Array<string | null | undefined>
+): Promise<Map<string, string>> {
+  const ids = [...new Set(departmentIds.filter((id): id is string => Boolean(id)))];
+  if (!ids.length) return new Map();
+
+  const rows = await db.departmentMaster.findMany({
+    where: { organizationId, id: { in: ids } },
+    select: { id: true, name: true },
+  });
+
+  return new Map(rows.map((row) => [row.id, row.name]));
+}
+
+function resolveEmployeeDepartmentName(
+  employee: { department?: string | null; departmentId?: string | null },
+  deptNameById: Map<string, string>
+): string | null {
+  const fromText = employee.department?.trim();
+  if (fromText) return fromText;
+  if (!employee.departmentId) return null;
+  return deptNameById.get(employee.departmentId)?.trim() ?? null;
+}
 
 /** Ensure each active employee in a plant links to a department row at that plant's location. */
 export async function reconcileDepartmentAssignmentsForPlant(
@@ -555,11 +596,17 @@ export async function reconcileDepartmentAssignmentsForPlant(
     },
   });
 
+  const deptNameById = await loadDepartmentNameById(
+    db,
+    organizationId,
+    employees.map((emp) => emp.departmentId)
+  );
+
   let created = 0;
   let reassigned = 0;
 
   for (const emp of employees) {
-    const deptName = emp.department?.trim();
+    const deptName = resolveEmployeeDepartmentName(emp, deptNameById);
     if (!deptName) continue;
 
     const location = emp.location?.trim() || canonicalLocation;
@@ -593,6 +640,12 @@ export async function reconcileDepartmentAssignmentsForPlant(
 
   return { created, reassigned };
 }
+
+export type PlantUnitScopeInput = {
+  plantUnitKey: string;
+  locationAliases?: string[];
+  kpiPlantAliases?: string[];
+};
 
 /** Reconcile department ↔ employee links for every configured plant unit. */
 export async function reconcileDepartmentAssignmentsForAllPlants(
