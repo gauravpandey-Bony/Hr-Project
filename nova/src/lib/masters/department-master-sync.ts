@@ -2,8 +2,10 @@ import type { DepartmentMaster, PrismaClient } from "@prisma/client";
 import { getLocationVariantsForPlant } from "@/lib/org-units";
 import {
   departmentMasterWhereForPlant,
+  employeeMasterWhereForPlant,
   isLegacyBony37pPlant,
   plantDataScope,
+  type PlantDataScope,
 } from "@/lib/unit-workspace";
 import { normalizeRosterDepartment } from "./37p-roster";
 import { normalizeKraDepartment } from "./kra-workbook";
@@ -59,7 +61,12 @@ export function normalizeDepartmentMasterName(raw: string): string {
     return fromRoster.masterName;
   }
 
-  return titleCaseName(trimmed);
+  const titled = titleCaseName(trimmed);
+  const key = titled.toLowerCase();
+  if (key === "it" || key === "it & systems" || key === "it & system") {
+    return "IT & Systems";
+  }
+  return titled;
 }
 
 export function departmentNameKey(name: string): string {
@@ -174,12 +181,19 @@ function locationsSharePlant(
   b?: string | null,
   plantUnitKey?: string | null
 ): boolean {
+  const scopeKey = plantUnitKey?.trim() || a?.trim() || b?.trim() || "";
   const variants = new Set(
-    locationVariantsForDepartment(a, plantUnitKey).map((v) => v.toLowerCase())
+    locationVariantsForDepartment(scopeKey, scopeKey || undefined).map((v) =>
+      v.toLowerCase()
+    )
   );
-  const other = (b ?? "").trim().toLowerCase();
-  if (!other) return true;
-  return variants.has(other) || canonicalDepartmentLocation(b, plantUnitKey).toLowerCase() === canonicalDepartmentLocation(a, plantUnitKey).toLowerCase();
+  const aLoc = (a ?? "").trim().toLowerCase();
+  const bLoc = (b ?? "").trim().toLowerCase();
+
+  if (!aLoc && !bLoc) return true;
+  if (!aLoc || !bLoc) return isLegacyBony37pPlant(scopeKey);
+
+  return variants.has(aLoc) && variants.has(bLoc);
 }
 
 export async function findExistingDepartmentMaster(
@@ -205,7 +219,9 @@ export async function findExistingDepartmentMaster(
     if (!departmentsAreEquivalent(d.name, canonicalName)) return false;
     const loc = (d.location ?? "").trim().toLowerCase();
     if (!loc) return legacy;
-    return variants.includes(loc) || locationsSharePlant(location, d.location, plantUnitKey);
+    if (variants.includes(loc)) return true;
+    if (legacy) return locationsSharePlant(location, d.location, plantUnitKey);
+    return false;
   });
 
   return matches[0] ?? null;
@@ -507,4 +523,105 @@ export async function deactivateEmptyDepartments(
   }
 
   return { deactivated };
+}
+
+export type PlantUnitScopeInput = {
+  plantUnitKey: string;
+  locationAliases?: string[];
+  kpiPlantAliases?: string[];
+};
+
+/** Ensure each active employee in a plant links to a department row at that plant's location. */
+export async function reconcileDepartmentAssignmentsForPlant(
+  db: PrismaClient,
+  organizationId: string,
+  scope: PlantDataScope
+): Promise<{ created: number; reassigned: number }> {
+  const canonicalLocation = canonicalDepartmentLocation(
+    scope.locationAliases[0] ?? scope.plantUnitKey,
+    scope.plantUnitKey
+  );
+
+  const employees = await db.employeeMaster.findMany({
+    where: {
+      ...employeeMasterWhereForPlant(organizationId, scope),
+      isActive: true,
+    },
+    select: {
+      id: true,
+      department: true,
+      departmentId: true,
+      location: true,
+    },
+  });
+
+  let created = 0;
+  let reassigned = 0;
+
+  for (const emp of employees) {
+    const deptName = emp.department?.trim();
+    if (!deptName) continue;
+
+    const location = emp.location?.trim() || canonicalLocation;
+    const { department, created: wasCreated } = await upsertDepartmentMaster(
+      db,
+      organizationId,
+      {
+        name: deptName,
+        location,
+        plantUnitKey: scope.plantUnitKey,
+        isActive: true,
+      }
+    );
+
+    if (wasCreated) created++;
+
+    const needsUpdate =
+      emp.departmentId !== department.id ||
+      emp.department !== department.name;
+    if (needsUpdate) {
+      await db.employeeMaster.update({
+        where: { id: emp.id },
+        data: {
+          departmentId: department.id,
+          department: department.name,
+        },
+      });
+      reassigned++;
+    }
+  }
+
+  return { created, reassigned };
+}
+
+/** Reconcile department ↔ employee links for every configured plant unit. */
+export async function reconcileDepartmentAssignmentsForAllPlants(
+  db: PrismaClient,
+  organizationId: string,
+  units: PlantUnitScopeInput[]
+): Promise<{ plants: number; created: number; reassigned: number }> {
+  let created = 0;
+  let reassigned = 0;
+  let plants = 0;
+
+  for (const unit of units) {
+    const locationAliases =
+      unit.locationAliases?.length ? unit.locationAliases : [unit.plantUnitKey];
+    const kpiPlantAliases =
+      unit.kpiPlantAliases?.length ? unit.kpiPlantAliases : [unit.plantUnitKey];
+    const scope = plantDataScope(unit.plantUnitKey, locationAliases, kpiPlantAliases);
+
+    const result = await reconcileDepartmentAssignmentsForPlant(
+      db,
+      organizationId,
+      scope
+    );
+    if (result.created > 0 || result.reassigned > 0) {
+      plants++;
+      created += result.created;
+      reassigned += result.reassigned;
+    }
+  }
+
+  return { plants, created, reassigned };
 }

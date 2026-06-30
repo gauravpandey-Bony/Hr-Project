@@ -125,6 +125,7 @@ export function KraPageClient({
         name: e.name,
         designation: e.designation,
         managerName: e.managerName,
+        ecn: e.ecn,
       }))
     );
   }, [allKpis, sheet?.department, quarter, deptEmployees]);

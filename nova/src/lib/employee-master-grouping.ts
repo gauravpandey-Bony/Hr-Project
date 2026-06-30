@@ -1,5 +1,10 @@
 import type { DepartmentMaster, EmployeeMaster } from "@prisma/client";
 import { personNamesMatch } from "@/lib/person-name";
+import {
+  buildEcnToNameMap,
+  isEmployeeCode,
+  resolveReportingManagerName,
+} from "@/lib/reporting-manager";
 
 export type ManagerTeamSection = {
   type: "manager-team";
@@ -64,13 +69,18 @@ export function groupEmployeesByDepartment(
         ? "General"
         : (deptById.get(deptId)?.name ?? deptNameFor(deptEmployees[0]!, deptById));
 
+    const ecnToName = buildEcnToNameMap(deptEmployees);
+    const resolveManagerKey = (manager: string) =>
+      resolveReportingManagerName(manager, deptEmployees) || manager;
+
     const reportsByManager = new Map<string, EmployeeMaster[]>();
     for (const emp of deptEmployees) {
       const manager = emp.managerName?.trim();
       if (!emp.isActive || !manager || personNamesMatch(emp.name, manager)) continue;
-      const list = reportsByManager.get(manager) ?? [];
+      const key = resolveManagerKey(manager);
+      const list = reportsByManager.get(key) ?? [];
       list.push(emp);
-      reportsByManager.set(manager, list);
+      reportsByManager.set(key, list);
     }
 
     const sections: Array<ManagerTeamSection | StandaloneSection> = [];
@@ -82,7 +92,14 @@ export function groupEmployeesByDepartment(
         a.name.localeCompare(b.name)
       );
       const managerRow =
-        deptEmployees.find((e) => personNamesMatch(e.name, managerName)) ?? null;
+        deptEmployees.find((e) => personNamesMatch(e.name, managerName)) ??
+        deptEmployees.find(
+          (e) =>
+            isEmployeeCode(managerName) && e.ecn?.trim() === managerName.trim()
+        ) ??
+        (isEmployeeCode(managerName)
+          ? deptEmployees.find((e) => ecnToName.get(managerName) === e.name) ?? null
+          : null);
       for (const r of reports) placed.add(r.id);
       if (managerRow) placed.add(managerRow.id);
 

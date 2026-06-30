@@ -47,7 +47,7 @@ export default async function EmployeeProfilePage({
 
   const allEmployees = await db.employeeMaster.findMany({
     where: { organizationId: user.organizationId, isActive: true },
-    select: { id: true, name: true, designation: true },
+    select: { id: true, name: true, designation: true, ecn: true },
     orderBy: [{ name: "asc" }],
   });
 

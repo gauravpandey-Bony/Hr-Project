@@ -5,6 +5,7 @@ import {
   kpiStableId,
   isValidKraEcn,
   normalizeKraDepartment,
+  sanitizeKraDesignation,
   type KraWorkbookEmployee,
   type KraWorkbookKpi,
   type KraWorkbookParseResult,
@@ -130,16 +131,20 @@ async function upsertEmployees(
           where: { organizationId, name: row.name, department: row.department },
         });
 
+    const deptName = normalizeKraDepartment(row.department ?? row.departmentRaw ?? "").masterName;
     const data = {
       name: row.name,
-      designation: row.designation ?? null,
+      designation:
+        sanitizeKraDesignation(row.designation) ??
+        sanitizeKraDesignation(existing?.designation) ??
+        null,
       departmentId,
-      department: row.department,
-      location: row.location?.trim() || defaultLocation?.trim() || null,
-      doj: row.doj ?? null,
-      ecn: ecnKey,
-      managerName: row.managerName ?? null,
-      sortOrder: row.sortOrder ?? 0,
+      department: deptName,
+      location: row.location?.trim() || defaultLocation?.trim() || existing?.location || null,
+      doj: row.doj ?? existing?.doj ?? null,
+      ecn: ecnKey ?? existing?.ecn ?? null,
+      managerName: row.managerName?.trim() || existing?.managerName || null,
+      sortOrder: row.sortOrder ?? existing?.sortOrder ?? 0,
       isActive: existing?.isActive ?? true,
     };
 

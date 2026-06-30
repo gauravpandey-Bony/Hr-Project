@@ -1,13 +1,16 @@
 import { readFileSync, existsSync } from "fs";
 import { PrismaClient } from "@prisma/client";
 import { parseStaffDetailsRoster } from "../src/lib/masters/staff-details-roster";
+import { enrichStaffDetailsManagers } from "../src/lib/masters/staff-details-import";
 import { summarizePlantAssignments } from "../src/lib/masters/employee-plant-location";
 import { normalizeRosterDepartment, ROSTER_DEPARTMENTS } from "../src/lib/masters/37p-roster";
 import {
   dedupeDepartmentMasters,
   normalizeDepartmentMasterName,
+  reconcileDepartmentAssignmentsForAllPlants,
   upsertDepartmentMaster,
 } from "../src/lib/masters/department-master-sync";
+import { DEFAULT_ORG_GROUPS, DEFAULT_STANDALONE_UNITS } from "../src/lib/org-units-defaults";
 import { assignDepartmentKpisToEmployee } from "../src/lib/kpi/assign-department-kpis";
 
 const ORG_SLUG = "bony-polymers";
@@ -44,17 +47,21 @@ async function main() {
 
   console.log("Plant summary:", summarizePlantAssignments(rows));
 
-  const deptByName = new Map<string, string>();
+  await enrichStaffDetailsManagers(db, org.id, rows);
+
+  const deptByPlantKey = new Map<string, string>();
   for (const d of ROSTER_DEPARTMENTS) {
+    const location = d.location ?? "Bony Polymers 37-P";
+    const rosterKey = `${d.name}::${location}`;
     const { department } = await upsertDepartmentMaster(db, org.id, {
       name: d.name,
-      location: d.location ?? "Bony Polymers 37-P",
+      location,
       plantUnitKey: "Bony 37P",
       kraSheetId: d.kraSheetId ?? null,
       sortOrder: d.sortOrder ?? 0,
       isActive: true,
     });
-    deptByName.set(d.name.toLowerCase(), department.id);
+    deptByPlantKey.set(rosterKey, department.id);
   }
   await dedupeDepartmentMasters(db, org.id, "Bony 37P");
 
@@ -62,11 +69,11 @@ async function main() {
   let updated = 0;
 
   for (const row of rows) {
-    const deptName = normalizeDepartment(row.department);
+    const deptName = normalizeDepartmentMasterName(row.department);
     const location = row.location ?? "Bony Polymers 37-P";
     const deptKey = `${deptName}::${location}`;
 
-    let departmentId = deptByName.get(deptKey);
+    let departmentId = deptByPlantKey.get(deptKey);
     if (!departmentId) {
       const { department } = await upsertDepartmentMaster(db, org.id, {
         name: deptName,
@@ -75,7 +82,7 @@ async function main() {
         isActive: true,
       });
       departmentId = department.id;
-      deptByName.set(deptKey, department.id);
+      deptByPlantKey.set(deptKey, department.id);
     }
 
     const existing = row.ecn
@@ -117,12 +124,31 @@ async function main() {
     }
   }
 
+  const allUnits = [
+    ...DEFAULT_ORG_GROUPS.flatMap((g) => g.units),
+    ...DEFAULT_STANDALONE_UNITS,
+  ].map((u) => ({
+    plantUnitKey: u.plantUnitKey,
+    locationAliases: u.locationAliases ? [...u.locationAliases] : undefined,
+    kpiPlantAliases: u.kpiPlantAliases ? [...u.kpiPlantAliases] : undefined,
+  }));
+
+  const reconcile = await reconcileDepartmentAssignmentsForAllPlants(
+    db,
+    org.id,
+    allUnits
+  );
+
   const count = await db.employeeMaster.count({
     where: { organizationId: org.id, isActive: true },
   });
 
   console.log(
-    JSON.stringify({ created, updated, totalActive: count, parseErrors: errors }, null, 2)
+    JSON.stringify(
+      { created, updated, totalActive: count, reconcile, parseErrors: errors },
+      null,
+      2
+    )
   );
   await db.$disconnect();
 }

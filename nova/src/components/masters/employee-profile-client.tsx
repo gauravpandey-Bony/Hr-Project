@@ -22,6 +22,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { appendUnitQuery } from "@/lib/unit-workspace";
 import { confirmReportingManagerChange } from "@/lib/employee-master-grouping";
+import { resolveReportingManagerName } from "@/lib/reporting-manager";
 
 type KpiBrief = Pick<Kpi, "id" | "name" | "department" | "kraName" | "plantUnit">;
 
@@ -130,12 +131,17 @@ export function EmployeeProfileClient({
   incrementLabel: string;
   ctcLabel: string;
   promotionLabel: string;
-  allEmployees?: Pick<EmployeeMaster, "id" | "name" | "designation">[];
+  allEmployees?: Pick<EmployeeMaster, "id" | "name" | "designation" | "ecn">[];
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [draft, setDraft] = useState<Draft>(() => toDraft(initial));
+  const [draft, setDraft] = useState<Draft>(() => {
+    const d = toDraft(initial);
+    d.managerName =
+      resolveReportingManagerName(d.managerName, allEmployees) || d.managerName;
+    return d;
+  });
 
   const kraHref = unitId
     ? appendUnitQuery("/dashboard/kra", unitId)
@@ -314,7 +320,10 @@ export function EmployeeProfileClient({
                 </p>
                 {editing ? (
                   <select
-                    value={draft.managerName}
+                    value={
+                      resolveReportingManagerName(draft.managerName, allEmployees) ||
+                      draft.managerName
+                    }
                     onChange={(e) =>
                       setDraft((d) => ({ ...d, managerName: e.target.value }))
                     }
@@ -326,13 +335,16 @@ export function EmployeeProfileClient({
                       .map((e) => (
                         <option key={e.id} value={e.name}>
                           {e.name}
+                          {e.ecn ? ` (${e.ecn})` : ""}
                           {e.designation ? ` · ${e.designation}` : ""}
                         </option>
                       ))}
                   </select>
                 ) : (
                   <p className="text-sm font-medium text-foreground">
-                    {draft.managerName || "—"}
+                    {resolveReportingManagerName(draft.managerName, allEmployees) ||
+                      draft.managerName ||
+                      "—"}
                   </p>
                 )}
               </div>

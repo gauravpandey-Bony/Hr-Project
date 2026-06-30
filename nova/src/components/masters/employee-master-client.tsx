@@ -26,6 +26,8 @@ import {
   confirmReportingManagerChange,
   groupEmployeesByDepartment,
 } from "@/lib/employee-master-grouping";
+import { resolveReportingManagerName } from "@/lib/reporting-manager";
+import { sanitizeKraDesignation } from "@/lib/masters/kra-workbook";
 import { StickyTableShell } from "@/components/ui/sticky-table-shell";
 import {
   TableBody,
@@ -56,7 +58,7 @@ type Draft = {
 function toDraft(e: EmployeeMaster): Draft {
   return {
     name: e.name,
-    designation: e.designation ?? "",
+    designation: sanitizeKraDesignation(e.designation) ?? "",
     departmentId: e.departmentId ?? "",
     location: e.location ?? "",
     doj: e.doj ?? "",
@@ -85,7 +87,15 @@ export function EmployeeMasterClient({
   const router = useRouter();
   const [rows, setRows] = useState(initialRows);
   const [drafts, setDrafts] = useState<Record<string, Draft>>(() =>
-    Object.fromEntries(initialRows.map((r) => [r.id, toDraft(r)]))
+    Object.fromEntries(
+      initialRows.map((r) => {
+        const draft = toDraft(r);
+        draft.managerName =
+          resolveReportingManagerName(draft.managerName, initialRows) ||
+          draft.managerName;
+        return [r.id, draft];
+      })
+    )
   );
   const [savingId, setSavingId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
@@ -386,7 +396,9 @@ export function EmployeeMasterClient({
               onChange={(e) => patch(row.id, { designation: e.target.value })}
             />
           ) : (
-            <span className="block leading-snug">{row.designation ?? "—"}</span>
+            <span className="block leading-snug">
+              {sanitizeKraDesignation(row.designation) ?? "—"}
+            </span>
           )}
         </TableCell>
         <TableCell className={MASTER_CELL}>
@@ -444,7 +456,9 @@ export function EmployeeMasterClient({
           {isAdmin ? (
             <select
               className={masterCellInput("min-w-[180px] max-w-none")}
-              value={d.managerName}
+              value={
+                resolveReportingManagerName(d.managerName, rows) || d.managerName
+              }
               onChange={(e) => patch(row.id, { managerName: e.target.value })}
             >
               <option value="">— Select reporting manager —</option>
@@ -453,12 +467,17 @@ export function EmployeeMasterClient({
                 .map((e) => (
                   <option key={e.id} value={e.name}>
                     {e.name}
+                    {e.ecn ? ` (${e.ecn})` : ""}
                     {e.designation ? ` · ${e.designation}` : ""}
                   </option>
                 ))}
             </select>
           ) : (
-            <span className="block leading-snug">{row.managerName ?? "—"}</span>
+            <span className="block leading-snug">
+              {resolveReportingManagerName(row.managerName, rows) ||
+                row.managerName ||
+                "—"}
+            </span>
           )}
         </TableCell>
         <TableCell className={MASTER_CELL}>

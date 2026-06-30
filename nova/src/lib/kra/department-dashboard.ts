@@ -9,6 +9,7 @@ import {
   buildQuarterlyReportRows,
   quarterlyReportSummary,
 } from "@/lib/kra/quarterly-report";
+import { resolveReportingManagerName } from "@/lib/reporting-manager";
 
 type KpiPick = Pick<
   Kpi,
@@ -79,6 +80,7 @@ export function buildDepartmentDashboard(
     name: string;
     designation?: string | null;
     managerName?: string | null;
+    ecn?: string | null;
   }[]
 ): DepartmentDashboardData {
   const individual = kpis.filter((k) => k.kpiLevel === "INDIVIDUAL");
@@ -118,7 +120,10 @@ export function buildDepartmentDashboard(
       employeeId: emp.id,
       name: emp.name,
       designation: emp.designation ?? null,
-      managerName: emp.managerName ?? null,
+      managerName:
+        resolveReportingManagerName(emp.managerName, employees) ||
+        emp.managerName ||
+        null,
       kpiCount: active?.kpiCount ?? 0,
       scores,
       activeQuarterScore: scores[quarter],

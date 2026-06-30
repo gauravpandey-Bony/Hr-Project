@@ -67,6 +67,24 @@ export const ROSTER_DEPT_MAP: Record<
     kpiDepartment: "Plant Head",
     sortOrder: 2,
   },
+  IT: {
+    masterName: "IT & Systems",
+    kraSheetId: "it",
+    kpiDepartment: "IT & Systems",
+    sortOrder: 14,
+  },
+  "IT & SYSTEMS": {
+    masterName: "IT & Systems",
+    kraSheetId: "it",
+    kpiDepartment: "IT & Systems",
+    sortOrder: 14,
+  },
+  EDP: {
+    masterName: "IT & Systems",
+    kraSheetId: "it",
+    kpiDepartment: "IT & Systems",
+    sortOrder: 14,
+  },
   PPC: {
     masterName: "PPC",
     kraSheetId: "production",
@@ -78,6 +96,96 @@ export const ROSTER_DEPT_MAP: Record<
     kraSheetId: "production",
     kpiDepartment: "Production",
     sortOrder: 12,
+  },
+  "STORE & PURCHASE": {
+    masterName: "Store",
+    kraSheetId: "store",
+    kpiDepartment: "Store",
+    sortOrder: 5,
+  },
+  STORES: {
+    masterName: "Store",
+    kraSheetId: "store",
+    kpiDepartment: "Store",
+    sortOrder: 5,
+  },
+  "HUMAN RESOURCES": {
+    masterName: "Human Resources",
+    kraSheetId: "plant",
+    kpiDepartment: "All Departments",
+    sortOrder: 8,
+  },
+  "Q.A": {
+    masterName: "Quality Assurance",
+    kraSheetId: "qa",
+    kpiDepartment: "Quality Assurance",
+    sortOrder: 3,
+  },
+  QA: {
+    masterName: "Quality Assurance",
+    kraSheetId: "qa",
+    kpiDepartment: "Quality Assurance",
+    sortOrder: 3,
+  },
+  QMS: {
+    masterName: "Quality Assurance",
+    kraSheetId: "qa",
+    kpiDepartment: "Quality Assurance",
+    sortOrder: 3,
+  },
+  MAINtenace: {
+    masterName: "Maintenance",
+    kraSheetId: "maintenance",
+    kpiDepartment: "Maintenance",
+    sortOrder: 4,
+  },
+  MAINTENACE: {
+    masterName: "Maintenance",
+    kraSheetId: "maintenance",
+    kpiDepartment: "Maintenance",
+    sortOrder: 4,
+  },
+  "R&D": {
+    masterName: "Development",
+    kraSheetId: "production",
+    kpiDepartment: "Production",
+    sortOrder: 12,
+  },
+  LOGISTICS: {
+    masterName: "Logistics",
+    kraSheetId: "logistics",
+    kpiDepartment: "Logistics",
+    sortOrder: 15,
+  },
+  LABORATORY: {
+    masterName: "Laboratory",
+    kraSheetId: "qa",
+    kpiDepartment: "Quality Assurance",
+    sortOrder: 3,
+  },
+  "LAB TESTING": {
+    masterName: "Laboratory",
+    kraSheetId: "qa",
+    kpiDepartment: "Quality Assurance",
+    sortOrder: 3,
+  },
+  LAB: {
+    masterName: "Laboratory",
+    kraSheetId: "qa",
+    kpiDepartment: "Quality Assurance",
+    sortOrder: 3,
+  },
+  COSTING: {
+    masterName: "Costing",
+    kraSheetId: "costing-mis",
+    kpiDepartment: "MIS",
+    sortOrder: 10,
+  },
+  ADMIN: {
+    masterName: "Admin",
+    kraSheetId: "plant",
+    kpiDepartment: "All Departments",
+    sortOrder: 16,
   },
 };
 
@@ -96,6 +204,14 @@ function buildRosterDepartments(): DepartmentImportRow[] {
   }
 
   // KPI library still uses "Billing" / "IT" labels — keep for filters & legacy rows
+  if (!byName.has("IT & Systems")) {
+    byName.set("IT & Systems", {
+      name: "IT & Systems",
+      kraSheetId: "it",
+      location: "Bony Polymers 37-P",
+      sortOrder: 14,
+    });
+  }
   if (!byName.has("Billing")) {
     byName.set("Billing", {
       name: "Billing",
@@ -104,14 +220,8 @@ function buildRosterDepartments(): DepartmentImportRow[] {
       sortOrder: 13,
     });
   }
-  if (!byName.has("IT")) {
-    byName.set("IT", {
-      name: "IT",
-      kraSheetId: "it",
-      location: "Bony Polymers 37-P",
-      sortOrder: 14,
-    });
-  }
+
+  byName.delete("IT");
 
   return Array.from(byName.values()).sort(
     (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)

@@ -155,26 +155,22 @@ export async function POST(request: Request) {
     );
   }
 
-  const depts = await db.departmentMaster.findMany({
-    where: { organizationId: user.organizationId, isActive: true },
-  });
-  const deptByName = new Map(
-    depts.map((d) => [normalizeDepartmentMasterName(d.name).toLowerCase(), d.id])
-  );
+  /** Plant-scoped cache: `${deptName}::${location}` → department id */
+  const deptByPlantKey = new Map<string, string>();
 
   for (const d of ROSTER_DEPARTMENTS) {
-    const key = normalizeDepartmentMasterName(d.name).toLowerCase();
-    if (!deptByName.has(key)) {
-      const { department } = await upsertDepartmentMaster(db, user.organizationId, {
-        name: d.name,
-        location: d.location ?? "Bony Polymers 37-P",
-        plantUnitKey: "Bony 37P",
-        kraSheetId: d.kraSheetId ?? null,
-        sortOrder: d.sortOrder ?? 0,
-        isActive: true,
-      });
-      deptByName.set(key, department.id);
-    }
+    const location = d.location ?? "Bony Polymers 37-P";
+    const rosterKey = `${normalizeDepartmentMasterName(d.name)}::${location}`;
+    if (deptByPlantKey.has(rosterKey)) continue;
+    const { department } = await upsertDepartmentMaster(db, user.organizationId, {
+      name: d.name,
+      location,
+      plantUnitKey: "Bony 37P",
+      kraSheetId: d.kraSheetId ?? null,
+      sortOrder: d.sortOrder ?? 0,
+      isActive: true,
+    });
+    deptByPlantKey.set(rosterKey, department.id);
   }
 
   await dedupeDepartmentMasters(db, user.organizationId, "Bony 37P");
@@ -192,7 +188,18 @@ export async function POST(request: Request) {
     const location = row.location ?? plantAssignment.location;
 
     const deptKey = `${deptName}::${location}`;
-    let departmentId = deptByName.get(deptKey) ?? deptByName.get(deptName.toLowerCase());
+    let departmentId = deptByPlantKey.get(deptKey);
+
+    if (!departmentId) {
+      const existing = await findExistingDepartmentMaster(
+        db,
+        user.organizationId,
+        deptName,
+        location,
+        plantUnitKey
+      );
+      departmentId = existing?.id;
+    }
 
     if (!departmentId) {
       const { department } = await upsertDepartmentMaster(db, user.organizationId, {
@@ -202,9 +209,9 @@ export async function POST(request: Request) {
         isActive: true,
       });
       departmentId = department.id;
-      deptByName.set(deptKey, department.id);
-      deptByName.set(deptName.toLowerCase(), department.id);
     }
+
+    deptByPlantKey.set(deptKey, departmentId);
 
     const existing = row.ecn
       ? await db.employeeMaster.findFirst({

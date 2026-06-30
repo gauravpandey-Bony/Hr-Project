@@ -84,6 +84,29 @@ function slug(s: string): string {
     .slice(0, 48);
 }
 
+/** KPI table / score row labels — not employee designation. */
+const KRA_TABLE_LABEL =
+  /^(total\s*score|weighted\s*score|overall\s*score|grand\s*total|score\s*%|s\.?\s*no\.?|sr\.?\s*no\.?|kpi|kra|weightage|weight\s*%|annual\s*target|last\s*year|uom|unit|target|achieved|perspective|remark|rating|q[1-4])$/i;
+
+export function isKraTableLabel(value: string): boolean {
+  const v = value.trim();
+  if (!v) return true;
+  if (KRA_TABLE_LABEL.test(v)) return true;
+  if (/^q[1-4]\s*(target|achieved)?$/i.test(v)) return true;
+  return false;
+}
+
+/** Reject designation values mis-read from KRA sheet score/footer rows. */
+export function sanitizeKraDesignation(
+  value?: string | null
+): string | undefined {
+  const v = value?.trim();
+  if (!v) return undefined;
+  if (isKraTableLabel(v)) return undefined;
+  if (isKraHeaderLabelValue(v)) return undefined;
+  return v;
+}
+
 function parseHeaderBlock(text: string): Partial<KraWorkbookEmployee> {
   const out: Partial<KraWorkbookEmployee> = {};
   const pick = (re: RegExp) => text.match(re)?.[1]?.trim();
@@ -92,7 +115,7 @@ function parseHeaderBlock(text: string): Partial<KraWorkbookEmployee> {
   if (name) out.name = name.replace(/\s+/g, " ").trim();
 
   out.level = pick(/Level:\s*([^\r\n]+)/i);
-  out.designation = pick(/Designation:\s*([^\r\n]+)/i);
+  out.designation = sanitizeKraDesignation(pick(/Designation:\s*([^\r\n]+)/i));
   const deptRaw = pick(/Department:\s*([^\r\n]+)/i);
   if (deptRaw) {
     out.departmentRaw = deptRaw.replace(/\.$/, "").trim();
@@ -134,7 +157,7 @@ export function normalizeKraDepartment(raw: string): {
   if (/logistic/i.test(d)) {
     return { masterName: "Logistics", kraSheetId: "logistics" };
   }
-  if (/it\s*&?\s*systems?/i.test(d)) {
+  if (/it\s*&?\s*sys/i.test(d)) {
     return { masterName: "IT & Systems", kraSheetId: "it" };
   }
   if (/human resource|^hr$/i.test(d)) {
@@ -308,7 +331,7 @@ function inferDepartmentFromTitle(title: string, sheetName = ""): string {
   if (/maintenance|maint/i.test(t)) return "Maintenance";
   if (/quality|qa/i.test(t)) return "Quality";
   if (/tool\s*room/i.test(t)) return "Tool Room";
-  if (/it\s*&?\s*system/i.test(t)) return "IT";
+  if (/it\s*&?\s*system/i.test(t)) return "IT & Systems";
   if (/\bstore\b/i.test(t)) return "Store";
   if (/human resource|\bhr\b/i.test(t)) return "HR";
   if (/plant head|operations|sf-1 prithla/i.test(t)) return "Production";
@@ -351,13 +374,45 @@ function parseLogisticKraHeaderRow(row: unknown[]): Partial<KraWorkbookEmployee>
   const out: Partial<KraWorkbookEmployee> = {};
 
   for (let i = 0; i < cells.length; i++) {
-    const inlineName = cells[i].match(/^name\s+(.+)$/i);
+    const cell = cells[i];
+    if (!cell) continue;
+
+    if (isKraTableLabel(cell)) break;
+
+    const inlineName = cell.match(/^name\s+(.+)$/i);
     if (inlineName?.[1]?.trim()) {
       out.name = titleCaseName(inlineName[1]);
       continue;
     }
 
-    const label = cells[i].toLowerCase().replace(/[^a-z.]/g, "");
+    const inlineDoj = cell.match(/^doj\s+(.+)$/i);
+    if (inlineDoj?.[1]?.trim()) {
+      out.doj = excelSerialToDoj(inlineDoj[1]) ?? inlineDoj[1].trim();
+      continue;
+    }
+
+    const inlineEcn = cell.match(/^e\.?code\s+(.+)$/i);
+    if (inlineEcn?.[1]?.trim()) {
+      out.ecn = formatEcn(inlineEcn[1]);
+      continue;
+    }
+
+    const inlineDept = cell.match(/^department\s+(.+)$/i);
+    if (inlineDept?.[1]?.trim()) {
+      out.departmentRaw = inlineDept[1].trim();
+      out.department = normalizeKraDepartment(inlineDept[1]).masterName;
+      continue;
+    }
+
+    const inlineDesig = cell.match(/^designation\s+(.+)$/i);
+    if (inlineDesig?.[1]?.trim()) {
+      const desig = sanitizeKraDesignation(inlineDesig[1]);
+      if (desig && !out.designation) out.designation = desig;
+      continue;
+    }
+
+    const label = cell.toLowerCase().replace(/[^a-z.]/g, "");
+    if (label === "kpi" || label === "kra" || label === "sno") break;
     let val = "";
     for (let j = i + 1; j < cells.length; j++) {
       if (cells[j]) {
@@ -366,19 +421,24 @@ function parseLogisticKraHeaderRow(row: unknown[]): Partial<KraWorkbookEmployee>
       }
     }
     if (!val) continue;
+    if (isKraTableLabel(val)) break;
     if (label === "department" || label === "dept") {
       if (/^designation$/i.test(val)) continue;
     }
     if (label === "name" && isKraHeaderLabelValue(val)) continue;
+    if ((label === "ecode" || label === "e.code") && /^department\b/i.test(val)) continue;
+    if ((label === "department" || label === "dept") && /^designation\b/i.test(val)) continue;
 
-    if (label === "name") out.name = titleCaseName(val);
-    else if (label === "doj") out.doj = excelSerialToDoj(val) ?? val;
-    else if (label === "ecode" || label === "e.code") out.ecn = formatEcn(val);
-    else if (label === "department" || label === "dept") {
+    if (label === "name" && !out.name) out.name = titleCaseName(val);
+    else if (label === "doj" && !out.doj) out.doj = excelSerialToDoj(val) ?? val;
+    else if ((label === "ecode" || label === "e.code") && !out.ecn) out.ecn = formatEcn(val);
+    else if ((label === "department" || label === "dept") && !out.department) {
       out.departmentRaw = val;
       out.department = normalizeKraDepartment(val).masterName;
-    } else if (label === "designation") out.designation = val;
-    else if (label === "location") out.location = val;
+    } else if (label === "designation" && !out.designation) {
+      const desig = sanitizeKraDesignation(val);
+      if (desig) out.designation = desig;
+    } else if (label === "location" && !out.location) out.location = val;
   }
 
   return out;

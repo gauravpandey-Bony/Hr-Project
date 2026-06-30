@@ -11,6 +11,7 @@ import {
 } from "@/lib/unit-workspace.server";
 import { EmployeeMasterClient } from "@/components/masters/employee-master-client";
 import { filterRealKraEmployees } from "@/lib/masters/logistics-kra-junk";
+import { sanitizeKraDesignation } from "@/lib/masters/kra-workbook";
 
 export default async function EmployeeMasterPage({
   searchParams,
@@ -44,7 +45,10 @@ export default async function EmployeeMasterPage({
 
   return (
     <EmployeeMasterClient
-      initialRows={filterRealKraEmployees(employees)}
+      initialRows={filterRealKraEmployees(employees).map((e) => ({
+        ...e,
+        designation: sanitizeKraDesignation(e.designation) ?? null,
+      }))}
       departments={departments}
       isAdmin={user.role === "ADMIN"}
       unitId={workspace.unitId}

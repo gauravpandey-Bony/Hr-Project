@@ -10,7 +10,7 @@ import {
   PLANT_HEAD_KPI_DEPARTMENT,
   PLANT_HEAD_KRA_SHEET_ID,
 } from "@/lib/masters/37p-roster";
-import { formatDepartmentDisplayName } from "@/lib/masters/department-master-sync";
+import { formatDepartmentDisplayName, departmentsAreEquivalent } from "@/lib/masters/department-master-sync";
 import {
   filterRealKraEmployees,
   isHiddenKraDepartment,
@@ -19,8 +19,10 @@ import {
 import {
   departmentMasterWhereForPlant,
   employeeMasterWhereForPlant,
+  kpiWhereForPlantScope,
   type PlantDataScope,
 } from "@/lib/unit-workspace";
+import { personNamesMatch } from "@/lib/person-name";
 
 export type KraSubSheet = {
   id: string;
@@ -159,14 +161,30 @@ export async function fetchKraSheets(
 
   attachProductionSubSheets(sheets);
 
-  if (scopedEmployees.length > 0) {
+  if (scope && scopedEmployees.length > 0) {
     const employeeDisplayDepts = new Set(
       scopedEmployees
         .map((e) => e.department?.trim())
         .filter((n): n is string => Boolean(n))
         .map((n) => formatDepartmentDisplayName(n))
     );
-    return sheets.filter((s) => employeeDisplayDepts.has(s.department));
+
+    const plantKpis = await db.kpi.findMany({
+      where: {
+        organizationId,
+        isActive: true,
+        ...kpiWhereForPlantScope(scope),
+      },
+      select: { department: true },
+    });
+    for (const k of plantKpis) {
+      const dept = k.department?.trim();
+      if (dept) employeeDisplayDepts.add(formatDepartmentDisplayName(dept));
+    }
+
+    return sheets.filter((s) =>
+      [...employeeDisplayDepts].some((ed) => departmentsAreEquivalent(ed, s.department))
+    );
   }
 
   return sheets;
@@ -212,7 +230,8 @@ export type KraEmployeeRow = {
 
 export async function fetchKraEmployeesByDepartment(
   organizationId: string,
-  extraWhere?: Prisma.EmployeeMasterWhereInput
+  extraWhere?: Prisma.EmployeeMasterWhereInput,
+  scope?: PlantDataScope | null
 ): Promise<Record<string, KraEmployeeRow[]>> {
   const employees = await db.employeeMaster.findMany({
     where: { organizationId, isActive: true, ...extraWhere },
@@ -229,8 +248,58 @@ export async function fetchKraEmployeesByDepartment(
     },
   });
 
+  const seenIds = new Set(employees.map((e) => e.id));
+  const merged = [...employees];
+
+  if (scope) {
+    const plantKpis = await db.kpi.findMany({
+      where: {
+        organizationId,
+        isActive: true,
+        kpiLevel: "INDIVIDUAL",
+        ...kpiWhereForPlantScope(scope),
+      },
+      select: { ownerName: true, department: true },
+    });
+
+    const ownerNames = [
+      ...new Set(
+        plantKpis.map((k) => k.ownerName?.trim()).filter((n): n is string => Boolean(n))
+      ),
+    ];
+
+    if (ownerNames.length) {
+      const orgEmployees = await db.employeeMaster.findMany({
+        where: { organizationId, isActive: true },
+        select: {
+          id: true,
+          name: true,
+          department: true,
+          designation: true,
+          ecn: true,
+          doj: true,
+          location: true,
+          managerName: true,
+        },
+      });
+
+      for (const owner of ownerNames) {
+        const match = orgEmployees.find((e) => personNamesMatch(e.name, owner));
+        if (match && !seenIds.has(match.id)) {
+          seenIds.add(match.id);
+          const kpiDept = plantKpis.find((k) => k.ownerName && personNamesMatch(k.ownerName, owner))
+            ?.department;
+          merged.push({
+            ...match,
+            department: kpiDept?.trim() || match.department,
+          });
+        }
+      }
+    }
+  }
+
   const byDept: Record<string, KraEmployeeRow[]> = {};
-  for (const emp of filterRealKraEmployees(employees)) {
+  for (const emp of filterRealKraEmployees(merged)) {
     if (isHiddenKraDepartment(emp.department)) continue;
     const dept = formatDepartmentDisplayName(emp.department?.trim() || "General");
     if (isHiddenKraDepartment(dept)) continue;

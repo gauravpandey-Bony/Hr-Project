@@ -42,7 +42,7 @@ export default async function KraPage({
       orderBy: [{ kpiLevel: "asc" }, { weightage: "desc" }],
     }),
     fetchKraSheets(user.organizationId, workspace.dataScope),
-    fetchKraEmployeesByDepartment(user.organizationId, employeeScope),
+    fetchKraEmployeesByDepartment(user.organizationId, employeeScope, workspace.dataScope),
     getCompanyContext(user.organizationId),
   ]);
 

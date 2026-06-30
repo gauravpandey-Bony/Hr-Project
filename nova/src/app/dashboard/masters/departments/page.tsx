@@ -2,13 +2,13 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { managerDashboardRedirect } from "@/lib/access-control";
 import { getCurrentUser } from "@/lib/auth";
-import { departmentMasterWhereForPlant, employeeMasterWhereForPlant } from "@/lib/unit-workspace";
+import { departmentMasterWhereForPlant, employeeMasterWhereForPlant, kpiWhereForPlantScope } from "@/lib/unit-workspace";
 import {
   resolveWorkspace,
   requireAdminWorkspace,
 } from "@/lib/unit-workspace.server";
 import { DepartmentMasterClient } from "@/components/masters/department-master-client";
-import { formatDepartmentDisplayName } from "@/lib/masters/department-master-sync";
+import { formatDepartmentDisplayName, departmentsAreEquivalent } from "@/lib/masters/department-master-sync";
 import { filterRealKraEmployees } from "@/lib/masters/logistics-kra-junk";
 
 export default async function DepartmentMasterPage({
@@ -50,10 +50,25 @@ export default async function DepartmentMasterPage({
     if (name) staffedDeptNames.add(formatDepartmentDisplayName(name));
   }
 
+  if (workspace.dataScope) {
+    const plantKpis = await db.kpi.findMany({
+      where: {
+        organizationId: user.organizationId,
+        isActive: true,
+        ...kpiWhereForPlantScope(workspace.dataScope),
+      },
+      select: { department: true },
+    });
+    for (const k of plantKpis) {
+      const dept = k.department?.trim();
+      if (dept) staffedDeptNames.add(formatDepartmentDisplayName(dept));
+    }
+  }
+
   const departmentsWithEmployees = departments.filter(
     (d) =>
       staffedDeptIds.has(d.id) ||
-      staffedDeptNames.has(formatDepartmentDisplayName(d.name))
+      [...staffedDeptNames].some((name) => departmentsAreEquivalent(name, d.name))
   );
 
   return (

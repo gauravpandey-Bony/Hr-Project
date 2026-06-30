@@ -16,6 +16,42 @@ function formatEcn(code: unknown): string {
   return String(code).trim();
 }
 
+function normalizeDesignation(raw: string): string {
+  return raw.trim().replace(/\s+/g, " ");
+}
+
+function formatStaffDetailsDoj(raw: unknown): string | undefined {
+  if (raw === "" || raw == null) return undefined;
+
+  const numericSerial =
+    typeof raw === "number"
+      ? raw
+      : typeof raw === "string" && /^\d+(\.\d+)?$/.test(raw.trim())
+        ? Number(raw)
+        : null;
+
+  if (numericSerial != null && numericSerial >= 1000) {
+    const parsed = XLSX.SSF.parse_date_code(numericSerial);
+    if (parsed) {
+      const d = String(parsed.d).padStart(2, "0");
+      const m = String(parsed.m).padStart(2, "0");
+      return `${d}.${m}.${parsed.y}`;
+    }
+  }
+
+  const s = String(raw).trim();
+  if (!s) return undefined;
+
+  const parsed = new Date(s);
+  if (!isNaN(parsed.getTime()) && /[a-z]/i.test(s)) {
+    const d = String(parsed.getDate()).padStart(2, "0");
+    const m = String(parsed.getMonth() + 1).padStart(2, "0");
+    return `${d}.${m}.${parsed.y}`;
+  }
+
+  return s;
+}
+
 function normHeader(h: string): string {
   return h.toLowerCase().replace(/[^a-z]+/g, "");
 }
@@ -35,6 +71,16 @@ export function isStaffDetailsMatrix(matrix: string[][]): boolean {
   return false;
 }
 
+export function isStaffDetailsBuffer(buffer: ArrayBuffer): boolean {
+  const wb = XLSX.read(buffer, { type: "array", cellDates: false });
+  const sheet = wb.Sheets[wb.SheetNames[0]];
+  const matrix = XLSX.utils.sheet_to_json<string[]>(sheet, {
+    header: 1,
+    defval: "",
+  }) as string[][];
+  return isStaffDetailsMatrix(matrix);
+}
+
 function findHeaderRow(matrix: string[][]): number {
   for (let i = 0; i < Math.min(matrix.length, 8); i++) {
     const headers = (matrix[i] ?? []).map((c) => normHeader(String(c ?? "")));
@@ -43,6 +89,33 @@ function findHeaderRow(matrix: string[][]): number {
     }
   }
   return -1;
+}
+
+export function buildStaffDetailsEcnMap(
+  rows: EmployeeImportRow[]
+): Map<string, string> {
+  const ecnToName = new Map<string, string>();
+  for (const row of rows) {
+    if (row.ecn && row.name) ecnToName.set(row.ecn, row.name);
+  }
+  return ecnToName;
+}
+
+export function resolveStaffDetailsManagers(
+  rows: EmployeeImportRow[],
+  ecnToName: Map<string, string>
+): void {
+  for (const row of rows) {
+    if (!row.managerEcn) continue;
+    const mgr = ecnToName.get(row.managerEcn);
+    if (mgr) {
+      row.managerName = mgr;
+      continue;
+    }
+    if (row.managerName && /^\d{4,}$/.test(row.managerName.trim())) {
+      row.managerName = undefined;
+    }
+  }
 }
 
 export function parseStaffDetailsRoster(buffer: ArrayBuffer): {
@@ -96,17 +169,18 @@ export function parseStaffDetailsRoster(buffer: ArrayBuffer): {
     const name = titleCaseName(rawName);
     const department = normalizeDepartmentMasterName(rawDept);
     const reportingCode = iReporting >= 0 ? formatEcn(line[iReporting]) : "";
+    const rawDesig = iDesig >= 0 ? String(line[iDesig] ?? "").trim() : "";
 
     if (ecn) ecnToName.set(ecn, name);
 
     rows.push({
       name,
-      designation: iDesig >= 0 ? String(line[iDesig] ?? "").trim() || undefined : undefined,
+      designation: rawDesig ? normalizeDesignation(rawDesig) : undefined,
       department,
       location,
       rawLocation: rawLocation || undefined,
       plantUnitKey,
-      doj: iDoj >= 0 ? String(line[iDoj] ?? "").trim() || undefined : undefined,
+      doj: iDoj >= 0 ? formatStaffDetailsDoj(line[iDoj]) : undefined,
       ecn: ecn || undefined,
       managerEcn: reportingCode || undefined,
       sortOrder: rows.length + 1,
@@ -114,13 +188,7 @@ export function parseStaffDetailsRoster(buffer: ArrayBuffer): {
     });
   }
 
-  for (const row of rows) {
-    if (row.managerEcn && ecnToName.has(row.managerEcn)) {
-      row.managerName = ecnToName.get(row.managerEcn);
-    } else if (row.managerEcn) {
-      row.managerName = row.managerEcn;
-    }
-  }
+  resolveStaffDetailsManagers(rows, ecnToName);
 
   if (!rows.length) errors.push("No employee rows found");
   return { rows, errors };
