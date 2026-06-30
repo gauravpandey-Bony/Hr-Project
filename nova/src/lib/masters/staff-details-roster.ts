@@ -46,7 +46,7 @@ function formatStaffDetailsDoj(raw: unknown): string | undefined {
   if (!isNaN(parsed.getTime()) && /[a-z]/i.test(s)) {
     const d = String(parsed.getDate()).padStart(2, "0");
     const m = String(parsed.getMonth() + 1).padStart(2, "0");
-    return `${d}.${m}.${parsed.y}`;
+    return `${d}.${m}.${parsed.getFullYear()}`;
   }
 
   return s;

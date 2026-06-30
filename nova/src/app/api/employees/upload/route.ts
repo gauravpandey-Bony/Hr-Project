@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { parseUploadFile, type EmployeeImportRow } from "@/lib/masters/import";
-import { normalizeRosterDepartment, ROSTER_DEPARTMENTS } from "@/lib/masters/37p-roster";
+import { ROSTER_DEPARTMENTS } from "@/lib/masters/37p-roster";
 import {
   dedupeDepartmentMasters,
   findExistingDepartmentMaster,
@@ -21,10 +21,7 @@ import {
 import { syncKraWorkbook } from "@/lib/masters/sync-kra-workbook";
 import { resolvePlantFromWorkingLocation, summarizePlantAssignments } from "@/lib/masters/employee-plant-location";
 import { assignDepartmentKpisToEmployee } from "@/lib/kpi/assign-department-kpis";
-
-function normalizeDepartment(name: string) {
-  return normalizeRosterDepartment(name).masterName;
-}
+import { prepareStaffDetailsRows } from "@/lib/masters/staff-details-import";
 
 export async function POST(request: Request) {
   const user = await getCurrentUser();
@@ -132,7 +129,8 @@ export async function POST(request: Request) {
   const blob = new Blob([buffer]);
   const clone = new File([blob], file.name, { type: file.type });
   const { rows: parsedRows, errors } = await parseUploadFile(clone, "employees");
-  const rows = parsedRows as EmployeeImportRow[];
+  let rows = parsedRows as EmployeeImportRow[];
+  rows = await prepareStaffDetailsRows(db, user.organizationId, buffer, rows);
   if (!confirmOverwrite) {
     const preview = await previewEmployeeRowsUpload(db, user.organizationId, rows);
     if (preview.requiresConfirmation) {
@@ -180,7 +178,7 @@ export async function POST(request: Request) {
   let kpisAssigned = 0;
 
   for (const row of rows) {
-    const deptName = normalizeDepartment(row.department);
+    const deptName = normalizeDepartmentMasterName(row.department);
     const plantAssignment = resolvePlantFromWorkingLocation(
       row.location ?? row.rawLocation
     );

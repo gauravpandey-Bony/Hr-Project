@@ -3,7 +3,7 @@ import { PrismaClient } from "@prisma/client";
 import { parseStaffDetailsRoster } from "../src/lib/masters/staff-details-roster";
 import { enrichStaffDetailsManagers } from "../src/lib/masters/staff-details-import";
 import { summarizePlantAssignments } from "../src/lib/masters/employee-plant-location";
-import { normalizeRosterDepartment, ROSTER_DEPARTMENTS } from "../src/lib/masters/37p-roster";
+import { ROSTER_DEPARTMENTS } from "@/lib/masters/37p-roster";
 import {
   dedupeDepartmentMasters,
   normalizeDepartmentMasterName,
@@ -15,10 +15,6 @@ import { assignDepartmentKpisToEmployee } from "../src/lib/kpi/assign-department
 
 const ORG_SLUG = "bony-polymers";
 const DEFAULT_FILE = "/Users/rampal/Desktop/Staff Details edp (1).xlsx";
-
-function normalizeDepartment(name: string) {
-  return normalizeRosterDepartment(name).masterName;
-}
 
 async function main() {
   const filePath = process.argv[2] ?? DEFAULT_FILE;
