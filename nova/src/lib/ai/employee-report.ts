@@ -694,11 +694,38 @@ async function employeeMatchesUnit(
 }
 
 export async function tryEmployeeReportBlocks(
-  _message: string,
-  _organizationId: string,
-  _requesterRole: UserRole,
-  _plantUnitKey?: string | null,
-  _unitName?: string | null
+  message: string,
+  organizationId: string,
+  requesterRole: UserRole,
+  plantUnitKey?: string | null,
+  unitName?: string | null
 ): Promise<ChatBlock[] | null> {
-  return null;
+  if (requesterRole === "EMPLOYEE") return null;
+  if (!looksLikeEmployeeReportQuery(message)) return null;
+
+  const resolved = await resolveEmployeeFromQuery(message, organizationId);
+  if (!resolved) {
+    return suggestSimilarEmployees(message, organizationId, plantUnitKey ?? undefined);
+  }
+
+  if (requesterRole === "MANAGER" && plantUnitKey) {
+    const inUnit = await employeeMatchesUnit(organizationId, resolved, plantUnitKey);
+    if (!inUnit) {
+      return [
+        {
+          type: "text",
+          content: `Ye employee aapke unit **${unitName ?? plantUnitKey}** me nahi mila.`,
+        },
+      ];
+    }
+  }
+
+  const dashboard = await buildEmployeeDashboard(organizationId, resolved);
+  return [
+    {
+      type: "text",
+      content: `**${dashboard.employee.name}** — KPI performance report (${dashboard.headline}).`,
+    },
+    { type: "employee_dashboard", data: dashboard },
+  ];
 }

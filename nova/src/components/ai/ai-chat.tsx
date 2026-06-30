@@ -43,10 +43,10 @@ import {
 } from "@/components/ui/tooltip";
 
 const STARTERS = [
-  "Maya, Bhupesh Sharma report",
-  "Maya, production department report",
-  "Maya, Mahima employee report",
-  "Maya, show all KPIs",
+  "IT department me kitne log hain?",
+  "Bhupesh Kumar ka manager kaun hai?",
+  "Bony 37P ke red KPIs dikhao",
+  "Production department ke employees",
 ];
 
 export function AiChat({
@@ -70,10 +70,10 @@ export function AiChat({
         {
           type: "text",
           content: orgWide
-            ? `**Hey Maya** — pucho kuch bhi! Main **saare units**, employees, departments aur KPIs ke baare mein bata sakta hoon.\n\nTry:\n• **Maya, Bhupesh Sharma report**\n• **Maya, production department report**\n• **Maya, show all KPIs**`
+            ? `**Hey Maya** — kuch bhi puchho! Employees, departments, plants, KPIs — seedha sawal likho ya bolo.`
             : unitName
-              ? `**Hey Maya** — ask about **${unitName}** KPIs, employees, or reports.`
-              : `**Hey Maya** — ask about KPIs, employees, or department reports.`,
+              ? `**Hey Maya** — **${unitName}** ke baare me kuch bhi puchho.`
+              : `**Hey Maya** — seedha sawal puchho, koi command yaad karne ki zaroorat nahi.`,
         },
       ],
     },

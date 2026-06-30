@@ -3,11 +3,15 @@ import {
   mergeKpiWhereForWorkspace,
   reviewAssignmentWhereForUser,
 } from "@/lib/access-control";
-import { employeeMasterWhereForPlant } from "@/lib/unit-workspace";
+import {
+  departmentMasterWhereForPlant,
+  employeeMasterWhereForPlant,
+} from "@/lib/unit-workspace";
 import { formatKpiValue } from "@/lib/kpi";
 import { evaluateKpiCurrent } from "@/lib/kpi-quarters";
 import { COMPANY } from "@/lib/company";
 import { normalizePersonName } from "@/lib/person-name";
+import { formatDepartmentDisplayName } from "@/lib/masters/department-master-sync";
 import type { User } from "@prisma/client";
 
 import { plantDataScope, type PlantDataScope } from "@/lib/unit-workspace";
@@ -30,20 +34,14 @@ export async function buildOrganizationContext(
     scope?.dataScope ??
     (plantUnitKey ? plantDataScope(plantUnitKey) : null);
 
-  const unitEmployees =
+  const employeeWhere =
     dataScope && !scoped
-      ? await db.employeeMaster.findMany({
-          where: {
-            ...employeeMasterWhereForPlant(organizationId, dataScope),
-            isActive: true,
-          },
-          select: { name: true },
-        })
-      : [];
+      ? { ...employeeMasterWhereForPlant(organizationId, dataScope), isActive: true }
+      : { organizationId, isActive: true };
 
-  const unitNameSet = new Set(
-    unitEmployees.map((e) => normalizePersonName(e.name))
-  );
+  const deptWhere = dataScope
+    ? { ...departmentMasterWhereForPlant(organizationId, dataScope), isActive: true }
+    : { organizationId, isActive: true };
 
   const [
     org,
@@ -56,6 +54,9 @@ export async function buildOrganizationContext(
     surveys,
     compensation,
     placements,
+    employees,
+    departments,
+    plants,
   ] = await Promise.all([
     db.organization.findUnique({ where: { id: organizationId } }),
     db.user.findMany({
@@ -118,7 +119,35 @@ export async function buildOrganizationContext(
         : { session: { organizationId } },
       include: { user: { select: { name: true } } },
     }),
+    db.employeeMaster.findMany({
+      where: employeeWhere,
+      select: {
+        name: true,
+        ecn: true,
+        department: true,
+        designation: true,
+        location: true,
+        managerName: true,
+      },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      take: 500,
+    }),
+    db.departmentMaster.findMany({
+      where: deptWhere,
+      select: { name: true, location: true, headName: true },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      take: 80,
+    }),
+    db.orgUnitMaster.findMany({
+      where: { organizationId, isActive: true },
+      select: { name: true, slug: true, plantUnitKey: true },
+      orderBy: { sortOrder: "asc" },
+    }),
   ]);
+
+  const unitNameSet = new Set(
+    employees.map((e) => normalizePersonName(e.name))
+  );
 
   const kpiOwnerNames = new Set(
     kpis
@@ -157,6 +186,25 @@ export async function buildOrganizationContext(
 
   const pendingReviews = assignments.filter((a) => a.status !== "SUBMITTED");
 
+  const departmentHeadcount: Record<string, number> = {};
+  for (const emp of employees) {
+    const key = emp.department?.trim();
+    if (!key) continue;
+    const display = formatDepartmentDisplayName(key);
+    departmentHeadcount[display] = (departmentHeadcount[display] ?? 0) + 1;
+  }
+
+  const employeeLocations = [
+    ...new Set(employees.map((e) => e.location).filter((l): l is string => Boolean(l?.trim()))),
+  ];
+
+  const kpiHealth = { green: 0, amber: 0, red: 0 };
+  for (const k of kpiSummary) {
+    if (k.status === "green") kpiHealth.green++;
+    else if (k.status === "amber") kpiHealth.amber++;
+    else if (k.status === "red") kpiHealth.red++;
+  }
+
   const workspaceLabel =
     !dataScope && !scoped
       ? `${COMPANY.shortName} — all units`
@@ -171,6 +219,7 @@ export async function buildOrganizationContext(
     generatedAt: new Date().toISOString(),
     stats: {
       employees: filteredUsers.length,
+      employeeMaster: employees.length,
       kpis: kpis.length,
       goals: goals.length,
       activeCycles: cycles.filter((c) => c.status === "ACTIVE").length,
@@ -179,6 +228,12 @@ export async function buildOrganizationContext(
       surveys: surveys.length,
     },
     users: filteredUsers,
+    employees,
+    departments,
+    plants,
+    departmentHeadcount,
+    employeeLocations,
+    kpiHealth,
     kpis: kpiSummary,
     goals: goals.map((g) => ({
       title: g.title,
