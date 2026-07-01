@@ -1,5 +1,10 @@
 /** Shared org unit types — data lives in DB (see org-units.server.ts). */
 
+import {
+  DEFAULT_ORG_GROUPS,
+  DEFAULT_STANDALONE_UNITS,
+} from "@/lib/org-units-defaults";
+
 export type OrgUnit = {
   id: string;
   name: string;
@@ -52,6 +57,27 @@ export function aliasesForUnit(unit: Pick<OrgUnit, "plantUnitKey" | "locationAli
     locationAliases: unit.locationAliases.length > 0 ? unit.locationAliases : [key],
     kpiPlantAliases: unit.kpiPlantAliases.length > 0 ? unit.kpiPlantAliases : [key],
   };
+}
+
+/** Canonical employee.location / import target for a plant unit key. */
+export function importLocationForPlantUnitKey(plantUnitKey: string): string {
+  const key = plantUnitKey.trim();
+  const fromDefaults = [
+    ...DEFAULT_ORG_GROUPS.flatMap((g) => g.units),
+    ...DEFAULT_STANDALONE_UNITS,
+  ].find((u) => u.plantUnitKey === key);
+
+  if (fromDefaults) {
+    const { locationAliases } = aliasesForUnit({
+      plantUnitKey: fromDefaults.plantUnitKey,
+      locationAliases: [...(fromDefaults.locationAliases ?? [])],
+      kpiPlantAliases: [...(fromDefaults.kpiPlantAliases ?? [])],
+    });
+    const specific = locationAliases.find((a) => a.trim() !== key);
+    return specific ?? key;
+  }
+
+  return key;
 }
 
 export function getAllOrgUnitsFromStructure(structure: {

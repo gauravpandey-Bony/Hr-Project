@@ -70,7 +70,8 @@ async function upsertPlantKpis(
   organizationId: string,
   kpis: PlantKraWorkbookKpi[],
   adminUserId: string | null,
-  rajKumarUserId: string | null
+  rajKumarUserId: string | null,
+  plantUnitKey: string
 ): Promise<{ created: number; updated: number; entriesCreated: number; rajKumarLinked: number }> {
   let created = 0;
   let updated = 0;
@@ -102,7 +103,7 @@ async function upsertPlantKpis(
       department: k.department,
       kraName: k.kraName,
       weightage: k.weightage,
-      plantUnit: PLANT_UNIT,
+      plantUnit: plantUnitKey,
       kpiLevel: k.kpiLevel,
       ownerName: k.ownerName ?? null,
       ownerId,
@@ -148,8 +149,10 @@ export async function syncPlantKraWorkbook(
   organizationId: string,
   buffer: ArrayBuffer,
   adminUserId?: string | null,
-  rajKumarUserId?: string | null
+  rajKumarUserId?: string | null,
+  options?: { plantUnitKey?: string | null }
 ): Promise<SyncPlantKraResult> {
+  const plantUnit = options?.plantUnitKey?.trim() || PLANT_UNIT;
   const { kpis, errors } = parsePlantKraWorkbook(buffer);
   if (!kpis.length) {
     return {
@@ -182,7 +185,8 @@ export async function syncPlantKraWorkbook(
     organizationId,
     kpis,
     adminUserId ?? null,
-    rajUser
+    rajUser,
+    plantUnit
   );
 
   if (rajUser) {

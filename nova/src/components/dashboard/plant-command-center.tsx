@@ -129,12 +129,16 @@ export function PlantCommandCenter({
   plantUnitKey,
   employeeIdByName,
   reportsByQuarter,
+  hasKpiData = true,
+  employeeCount = 0,
 }: {
   unitName: string;
   unitId: string;
   plantUnitKey: string;
   employeeIdByName: Record<string, string>;
   reportsByQuarter: Record<FiscalQuarter, PlantPerformanceReport>;
+  hasKpiData?: boolean;
+  employeeCount?: number;
 }) {
   const [filter, setFilter] = useState<string>("q1");
   const quarter = QUARTER_MAP[filter] ?? "q1";
@@ -209,6 +213,11 @@ export function PlantCommandCenter({
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-indigo-300">Plant command center</p>
             <h2 className="mt-1 text-3xl font-bold tracking-tight sm:text-4xl">{unitName}</h2>
             <p className="mt-2 max-w-lg text-sm text-slate-400">{profile.tagline}</p>
+            {!hasKpiData && employeeCount > 0 && (
+              <p className="mt-2 max-w-lg text-sm text-amber-200/90">
+                {employeeCount} employees in master — upload KRA Excel to unlock KPI scores and spotlight metrics.
+              </p>
+            )}
             <div className="mt-5 grid grid-cols-3 gap-3 sm:max-w-md">
               <ScorePill label="Plant" value={report?.plantKpis.overallScore} />
               <ScorePill label="Departments" value={report?.departments.overallScore} />
@@ -248,7 +257,13 @@ export function PlantCommandCenter({
             ))}
           </div>
         ) : (
-          <EmptyPanel message="Upload employee KRA sheets to see department scores." />
+          <EmptyPanel
+            message={
+              employeeCount > 0
+                ? `${employeeCount} employees in master — upload KRA sheets to score departments.`
+                : "Upload employee KRA sheets to see department scores."
+            }
+          />
         )}
       </section>
 

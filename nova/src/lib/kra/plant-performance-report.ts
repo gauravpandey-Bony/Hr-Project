@@ -446,6 +446,55 @@ export function buildPlantPerformanceReport(
   };
 }
 
+type EmployeeMasterRow = {
+  name: string;
+  department: string | null;
+};
+
+/** When KPI rows are missing, show department headcount from Employee Master on the plant dashboard. */
+export function enrichPlantReportWithEmployeeMaster(
+  report: PlantPerformanceReport,
+  employees: EmployeeMasterRow[]
+): PlantPerformanceReport {
+  if (report.departments.cards.length > 0 || employees.length === 0) {
+    return report;
+  }
+
+  const byDept = new Map<string, number>();
+  for (const row of employees) {
+    const dept = row.department?.trim() || "Unassigned";
+    byDept.set(dept, (byDept.get(dept) ?? 0) + 1);
+  }
+
+  const cards: DepartmentScorecard[] = [...byDept.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([department, employeeCount]) => ({
+      department,
+      employeeCount,
+      kpiRows: [],
+      kpiScore: null,
+      kpiCalculation: "Upload KRA sheets to score department KPIs.",
+      employeeRollupScore: null,
+      employeeRollupCalculation: "No employee KRA data yet.",
+      weightedScore: null,
+      calculation: `${employeeCount} employee${employeeCount === 1 ? "" : "s"} in master — upload KRA Excel to enable scores.`,
+      employees: [],
+    }));
+
+  return {
+    ...report,
+    departments: {
+      overallScore: null,
+      overallCalculation: `${employees.length} employees in master across ${cards.length} departments — KRA upload pending.`,
+      cards,
+    },
+    employees: {
+      ...report.employees,
+      overallCalculation: `${employees.length} employees assigned to this plant. Upload KRA workbooks to score KPIs.`,
+    },
+  };
+}
+
 export type PlantScorecardBrief = {
   unitId: string;
   plantName: string;

@@ -13,10 +13,13 @@ import { KPI_CATEGORIES } from "@/lib/company";
 import { getOrgUnitBySlug } from "@/lib/org-units.server";
 import { OBSOLETE_UNIT_REDIRECTS } from "@/lib/org-units-defaults";
 import { aliasesForUnit } from "@/lib/org-units";
-import { plantDataScope } from "@/lib/unit-workspace";
+import { plantDataScope, employeeMasterWhereForPlant } from "@/lib/unit-workspace";
 import { MyDashboardClient } from "@/components/dashboard/my-dashboard-client";
 import { PlantCommandCenter } from "@/components/dashboard/plant-command-center";
-import { buildPlantPerformanceReport } from "@/lib/kra/plant-performance-report";
+import {
+  buildPlantPerformanceReport,
+  enrichPlantReportWithEmployeeMaster,
+} from "@/lib/kra/plant-performance-report";
 import type { FiscalQuarter } from "@/lib/kpi-quarters";
 import { GenerateKpiPromptButton } from "@/components/ai/generate-kpi-prompt-modal";
 import { UploadKraWorkbookButton } from "@/components/kra/upload-kra-workbook-button";
@@ -86,32 +89,42 @@ export default async function UnitDashboardPage({
         select: KPI_SELECT,
       });
 
-  const reportsByQuarter = Object.fromEntries(
-    QUARTERS.map((q) => [q, buildPlantPerformanceReport(scorecardKpis, q, unit.name)])
-  ) as Record<FiscalQuarter, ReturnType<typeof buildPlantPerformanceReport>>;
-
-  const employeesInPlant =
-    scorecardKpis.length > 0 && !isEmployeeRole(user.role)
+  const plantEmployees =
+    !isEmployeeRole(user.role)
       ? await db.employeeMaster.findMany({
           where: {
-            organizationId: user.organizationId,
+            ...employeeMasterWhereForPlant(user.organizationId, dataScope),
             isActive: true,
-            name: {
-              in: [
-                ...new Set(
-                  scorecardKpis
-                    .filter((k) => k.kpiLevel === "INDIVIDUAL" && k.ownerName?.trim())
-                    .map((k) => k.ownerName!.trim())
-                ),
-              ],
-            },
           },
-          select: { id: true, name: true },
+          select: { id: true, name: true, department: true },
+          orderBy: { name: "asc" },
         })
       : [];
 
+  const reportsByQuarter = Object.fromEntries(
+    QUARTERS.map((q) => {
+      const base = buildPlantPerformanceReport(scorecardKpis, q, unit.name);
+      return [
+        q,
+        enrichPlantReportWithEmployeeMaster(base, plantEmployees),
+      ];
+    })
+  ) as Record<FiscalQuarter, ReturnType<typeof buildPlantPerformanceReport>>;
+
+  const hasPlantDashboard =
+    !isEmployeeRole(user.role) && (scorecardKpis.length > 0 || plantEmployees.length > 0);
+
+  const kpiOwnerNames = [
+    ...new Set(
+      scorecardKpis
+        .filter((k) => k.kpiLevel === "INDIVIDUAL" && k.ownerName?.trim())
+        .map((k) => k.ownerName!.trim())
+    ),
+  ];
   const employeeIdByName = Object.fromEntries(
-    employeesInPlant.map((e) => [e.name, e.id])
+    plantEmployees
+      .filter((e) => kpiOwnerNames.length === 0 || kpiOwnerNames.includes(e.name))
+      .map((e) => [e.name, e.id])
   );
 
   const categories = KPI_CATEGORIES.filter((cat) => kpis.some((k) => k.category === cat));
@@ -209,17 +222,19 @@ export default async function UnitDashboardPage({
         />
       )}
 
-      {scorecardKpis.length > 0 && !isEmployeeRole(user.role) && (
+      {hasPlantDashboard && (
         <PlantCommandCenter
           unitName={unit.name}
           unitId={params.unitId}
           plantUnitKey={unit.plantUnitKey}
           employeeIdByName={employeeIdByName}
           reportsByQuarter={reportsByQuarter}
+          hasKpiData={scorecardKpis.length > 0}
+          employeeCount={plantEmployees.length}
         />
       )}
 
-      {kpis.length > 0 && !isEmployeeRole(user.role) && scorecardKpis.length === 0 && (
+      {kpis.length > 0 && !isEmployeeRole(user.role) && scorecardKpis.length === 0 && !hasPlantDashboard && (
         <MyDashboardClient
           kpis={kpis}
           categories={categories}
@@ -227,7 +242,7 @@ export default async function UnitDashboardPage({
         />
       )}
 
-      {kpis.length === 0 && (
+      {kpis.length === 0 && !hasPlantDashboard && (
         <div className="rounded-3xl border border-dashed border-slate-300 bg-gradient-to-b from-slate-50 to-white py-20 text-center shadow-inner animate-fade-up">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-100">
             <Target className="h-8 w-8 text-emerald-600" />

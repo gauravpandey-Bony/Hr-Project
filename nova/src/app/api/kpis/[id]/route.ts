@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
@@ -65,6 +66,8 @@ export async function PATCH(
       data: { quarterTargets },
     });
     await syncKpiEntryFromQuarters(kpi.id, kpi.quarterTargets, user.id);
+    revalidatePath("/dashboard/units", "layout");
+    revalidatePath("/dashboard/reports", "layout");
     return NextResponse.json(kpi);
   }
 
@@ -84,6 +87,9 @@ export async function PATCH(
   if (data.quarterTargets !== undefined) {
     await syncKpiEntryFromQuarters(kpi.id, kpi.quarterTargets, user.id);
   }
+
+  revalidatePath("/dashboard/units", "layout");
+  revalidatePath("/dashboard/reports", "layout");
 
   return NextResponse.json(kpi);
 }

@@ -1,4 +1,4 @@
-import { readFileSync, existsSync } from "fs";
+import { readFileSync, existsSync, readdirSync } from "fs";
 import path from "path";
 import { PrismaClient } from "@prisma/client";
 import { syncKraWorkbook } from "../src/lib/masters/sync-kra-workbook";
@@ -6,31 +6,56 @@ import { purgeLogisticsJunkData } from "../src/lib/masters/logistics-kra-junk";
 
 const ORG_SLUG = "bony-polymers";
 
-const BONY_37P_PLANT = "Bony Polymers";
-const BONY_37P_LOCATION = "Bony Polymers 37-P";
+type PlantKraImport = {
+  dataDir: string;
+  plantUnitKey: string;
+  location: string;
+  /** When set, only these files are imported (exact filenames). Otherwise all .xlsx/.xls in folder. */
+  files?: readonly string[];
+};
 
-const BONY_37P_KRA_FILES = [
-  "Costing & MIS KRA KPI 26-27.xlsx",
-  "New KRA KPI 2026.xlsx",
-] as const;
-
-const BONY_FLUID_58_PLANT = "Bony Fluid 58";
-
-const BONY_FLUID_58_KRA_FILES = [
-  "Suraj KRA.xlsx",
-  "Raman Singh KRA.xlsx",
-  "Rahul Narwar- Dispatch & Assembly.xlsx",
-  "Quality.xlsx",
-  "Pardeep Dagar KRA & KPI.xlsx",
-  "Maintenance.XLSX",
-  "Jitender KRA & KPI_Plant 58.xlsx",
-  "Gulab Singh KRA & KPI_Plant 58.xlsx",
-  "Dinesh KRA.xlsx",
-] as const;
+/** KRA workbooks grouped by plant — imported on every deploy. */
+const PLANT_KRA_IMPORTS: PlantKraImport[] = [
+  {
+    dataDir: "data/bony-37p-kra",
+    plantUnitKey: "Bony Polymers",
+    location: "Bony Polymers 37-P",
+    files: ["Costing & MIS KRA KPI 26-27.xlsx", "New KRA KPI 2026.xlsx"],
+  },
+  {
+    dataDir: "data/bony-fluid-58-kra",
+    plantUnitKey: "Bony Fluid 58",
+    location: "Bony Fluid 58",
+  },
+  {
+    dataDir: "data/saket-unit1-kra",
+    plantUnitKey: "Saket Fabs Sheet Metal",
+    location: "Saket Fabs Prithla",
+  },
+  {
+    dataDir: "data/logistics-kra",
+    plantUnitKey: "Bony Polymers",
+    location: "Bony Polymers 37-P",
+  },
+];
 
 function readWorkbookBuffer(filePath: string): ArrayBuffer {
   const buffer = readFileSync(filePath);
   return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
+}
+
+function listWorkbookFiles(dirPath: string, explicit?: readonly string[]): string[] {
+  if (explicit?.length) {
+    return explicit.filter((name) => {
+      const full = path.join(dirPath, name);
+      return existsSync(full);
+    });
+  }
+  if (!existsSync(dirPath)) return [];
+  return readdirSync(dirPath).filter((name) => {
+    const lower = name.toLowerCase();
+    return lower.endsWith(".xlsx") || lower.endsWith(".xls");
+  });
 }
 
 async function importFile(
@@ -66,26 +91,33 @@ async function main() {
 
   const results: Record<string, unknown>[] = [];
 
-  for (const file of BONY_37P_KRA_FILES) {
-    const filePath = path.join(process.cwd(), "data/bony-37p-kra", file);
-    if (!existsSync(filePath)) {
-      results.push({ file, unit: BONY_37P_PLANT, error: `File not found: ${filePath}` });
-      continue;
-    }
-    results.push(
-      await importFile(db, org.id, admin?.id, filePath, BONY_37P_PLANT, BONY_37P_LOCATION)
-    );
-  }
+  for (const plant of PLANT_KRA_IMPORTS) {
+    const dirPath = path.join(process.cwd(), plant.dataDir);
+    const files = listWorkbookFiles(dirPath, plant.files);
 
-  for (const file of BONY_FLUID_58_KRA_FILES) {
-    const filePath = path.join(process.cwd(), "data/bony-fluid-58-kra", file);
-    if (!existsSync(filePath)) {
-      results.push({ file, unit: BONY_FLUID_58_PLANT, error: `File not found: ${filePath}` });
+    if (!files.length) {
+      results.push({
+        unit: plant.plantUnitKey,
+        dataDir: plant.dataDir,
+        error: `No workbook files found in ${dirPath}`,
+      });
       continue;
     }
-    results.push(
-      await importFile(db, org.id, admin?.id, filePath, BONY_FLUID_58_PLANT, BONY_FLUID_58_PLANT)
-    );
+
+    for (const file of files) {
+      const filePath = path.join(dirPath, file);
+      try {
+        results.push(
+          await importFile(db, org.id, admin?.id, filePath, plant.plantUnitKey, plant.location)
+        );
+      } catch (err) {
+        results.push({
+          file,
+          unit: plant.plantUnitKey,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
   }
 
   const junkPurged = await purgeLogisticsJunkData(db, org.id);
@@ -95,9 +127,18 @@ async function main() {
   const kpiCount = await db.kpi.count({
     where: { organizationId: org.id, isActive: true },
   });
+  const kpiByPlant = await db.kpi.groupBy({
+    by: ["plantUnit"],
+    where: { organizationId: org.id, isActive: true },
+    _count: { id: true },
+  });
 
   console.log(
-    JSON.stringify({ employeeCount, kpiCount, junkPurged, imports: results }, null, 2)
+    JSON.stringify(
+      { employeeCount, kpiCount, kpiByPlant, junkPurged, imports: results },
+      null,
+      2
+    )
   );
 
   await db.$disconnect();

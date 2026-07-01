@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
@@ -61,6 +62,9 @@ export async function POST(
       enteredById: user.id,
     },
   });
+
+  revalidatePath("/dashboard/units", "layout");
+  revalidatePath("/dashboard/reports", "layout");
 
   return NextResponse.json(entry, { status: 201 });
 }

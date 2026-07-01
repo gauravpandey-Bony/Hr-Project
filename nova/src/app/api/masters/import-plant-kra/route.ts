@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { parseKraWorkbook, isValidKraEcn } from "@/lib/masters/kra-workbook";
@@ -6,6 +7,7 @@ import { previewKraUpload, parseDepartmentOverrides } from "@/lib/masters/previe
 import { findEmployeeEcnConflicts } from "@/lib/masters/preview-employee-upload";
 import { syncKraWorkbook } from "@/lib/masters/sync-kra-workbook";
 import { syncPlantKraWorkbook } from "@/lib/masters/sync-plant-kra-workbook";
+import { importLocationForPlantUnitKey } from "@/lib/org-units";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -37,13 +39,20 @@ export async function POST(request: Request) {
     const skipDepartmentCheck = formData.get("skipDepartmentCheck") === "true";
     const departmentOverrides = parseDepartmentOverrides(formData.get("departmentOverrides"));
     const plantUnitKey = String(formData.get("plantUnitKey") ?? "").trim() || null;
+    const importLocation = plantUnitKey
+      ? importLocationForPlantUnitKey(plantUnitKey)
+      : null;
 
     const parsed = parseKraWorkbook(buffer, file.name);
     const employeeKra = parsed.employees.length > 0;
     const syncOptions = employeeKra
       ? {
           ...(plantUnitKey
-            ? { plantUnitKey, location: plantUnitKey, sourceFileName: file.name }
+            ? {
+                plantUnitKey,
+                location: importLocation ?? plantUnitKey,
+                sourceFileName: file.name,
+              }
             : { sourceFileName: file.name }),
           departmentOverrides,
           preParsed: parsed,
@@ -101,7 +110,9 @@ export async function POST(request: Request) {
 
     const result = employeeKra
       ? await syncKraWorkbook(db, user.organizationId, buffer, user.id, syncOptions)
-      : await syncPlantKraWorkbook(db, user.organizationId, buffer, user.id);
+      : await syncPlantKraWorkbook(db, user.organizationId, buffer, user.id, null, {
+          plantUnitKey,
+        });
 
     const failed = employeeKra
       ? !result.employeeCount && !("kpiCount" in result && result.kpiCount)
@@ -121,6 +132,10 @@ export async function POST(request: Request) {
     const message = employeeKra
       ? `Imported ${result.employeesCreated ?? 0} employees and ${result.kpisCreated ?? 0} KPIs (${result.entriesCreated ?? 0} entries).`
       : `Imported ${result.kpisCreated} new and ${result.kpisUpdated} updated KPIs (${result.entriesCreated} monthly entries).`;
+
+    revalidatePath("/dashboard/units", "layout");
+    revalidatePath("/dashboard/reports", "layout");
+    revalidatePath("/dashboard/kra", "layout");
 
     return NextResponse.json({
       ok: true,
