@@ -82,14 +82,14 @@ export default async function KpisPage({
           <table className="w-full caption-bottom text-sm">
             <TableHeader className="sticky top-0 z-10 bg-card/95 backdrop-blur-md">
               <TableRow className="hover:bg-transparent border-b border-border/80">
-                <TableHead className="pl-5">KPI</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Frequency</TableHead>
-                <TableHead className="text-right">Actual</TableHead>
-                <TableHead className="text-right">Target</TableHead>
-                <TableHead className="text-right">Progress</TableHead>
-                <TableHead className="text-right">Status</TableHead>
-                <TableHead className="w-28 pr-5 text-right" />
+                <TableHead className="h-9 py-2 pl-5">KPI</TableHead>
+                <TableHead className="h-9 py-2">Category</TableHead>
+                <TableHead className="h-9 py-2">Frequency</TableHead>
+                <TableHead className="h-9 py-2 text-right">Actual</TableHead>
+                <TableHead className="h-9 py-2 text-right">Target</TableHead>
+                <TableHead className="h-9 min-w-[148px] py-2 text-right">Progress</TableHead>
+                <TableHead className="h-9 py-2 text-right">Status</TableHead>
+                <TableHead className="h-9 w-[108px] py-2 pr-5 text-right" />
               </TableRow>
             </TableHeader>
             <TableBody>

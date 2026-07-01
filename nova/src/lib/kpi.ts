@@ -120,8 +120,35 @@ export function latestValue(
   return sorted[0].value;
 }
 
+const PLACEHOLDER_UNITS = new Set(["text", "n/a", "na", "none", ""]);
+
+function normalizeKpiUnit(unit: string): string {
+  return unit.trim();
+}
+
+export function isPlaceholderKpiUnit(unit: string): boolean {
+  return PLACEHOLDER_UNITS.has(normalizeKpiUnit(unit).toLowerCase());
+}
+
+export function formatKpiValueParts(
+  value: number,
+  unit: string
+): { value: string; unit: string | null } {
+  const normalized = normalizeKpiUnit(unit);
+  if (normalized === "%" || /%|availability|percent/i.test(normalized)) {
+    return { value: `${value.toFixed(1)}%`, unit: null };
+  }
+  if (normalized === "₹ Lakh" || normalized === "Lakh") {
+    return { value: `₹${value.toFixed(1)}L`, unit: null };
+  }
+  const formatted = value.toLocaleString("en-IN", { maximumFractionDigits: 1 });
+  return {
+    value: formatted,
+    unit: !normalized || isPlaceholderKpiUnit(normalized) ? null : normalized,
+  };
+}
+
 export function formatKpiValue(value: number, unit: string): string {
-  if (unit === "%" || /%|availability|percent/i.test(unit)) return `${value.toFixed(1)}%`;
-  if (unit === "₹ Lakh" || unit === "Lakh") return `₹${value.toFixed(1)}L`;
-  return `${value.toLocaleString("en-IN", { maximumFractionDigits: 1 })} ${unit}`;
+  const { value: formatted, unit: suffix } = formatKpiValueParts(value, unit);
+  return suffix ? `${formatted} ${suffix}` : formatted;
 }

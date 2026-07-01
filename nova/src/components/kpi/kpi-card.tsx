@@ -5,6 +5,7 @@ import { CategoryBadge } from "./category-badge";
 import {
   entryTimestamp,
   formatKpiValue,
+  formatKpiValueParts,
   type KpiStatus,
 } from "@/lib/kpi";
 import type { QuarterFilter } from "@/lib/ai/employee-quarter-filter";
@@ -12,7 +13,7 @@ import { evaluateKpiForFilter } from "@/lib/kpi-dashboard-filter";
 import { evaluateKpiCurrent } from "@/lib/kpi-quarters";
 import type { Kpi, KpiEntry } from "@prisma/client";
 import { cn } from "@/lib/utils";
-import { ArrowUpRight, PenLine } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpRight, Plus } from "lucide-react";
 import {
   TableCell,
   TableRow,
@@ -175,7 +176,7 @@ export function StatusPill({
   status: KpiStatus;
   className?: string;
 }) {
-  const labels = { green: "On target", amber: "Off target", red: "Off target" };
+  const labels = { green: "On track", amber: "At risk", red: "Off target" };
   const styles = {
     green:
       "bg-emerald-500/15 text-emerald-700 ring-emerald-500/25 dark:text-emerald-300",
@@ -186,7 +187,7 @@ export function StatusPill({
   return (
     <span
       className={cn(
-        "inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 ring-inset",
+        "inline-flex whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 ring-inset",
         styles[status],
         className
       )}
@@ -208,6 +209,51 @@ const progressBarFill: Record<KpiStatus, string> = {
   red: "from-rose-500 to-pink-500",
 };
 
+function KpiMetricValue({
+  value,
+  unit,
+  emphasize = false,
+}: {
+  value: number;
+  unit: string;
+  emphasize?: boolean;
+}) {
+  const parts = formatKpiValueParts(value, unit);
+
+  return (
+    <div
+      className={cn(
+        "inline-flex items-baseline justify-end gap-1 tabular-nums",
+        emphasize ? "text-foreground" : "text-muted-foreground"
+      )}
+    >
+      <span className={cn("text-sm", emphasize ? "font-medium" : "font-normal")}>
+        {parts.value}
+      </span>
+      {parts.unit && (
+        <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground/70">
+          {parts.unit}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function DirectionBadge({ direction }: { direction: Kpi["direction"] }) {
+  const lower = direction === "LOWER_IS_BETTER";
+  return (
+    <span
+      className={cn(
+        "inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md",
+        lower ? "bg-sky-500/10 text-sky-600" : "bg-emerald-500/10 text-emerald-600"
+      )}
+      title={lower ? "Lower is better" : "Higher is better"}
+    >
+      {lower ? <ArrowDown className="h-3 w-3" /> : <ArrowUp className="h-3 w-3" />}
+    </span>
+  );
+}
+
 export function KpiSummaryRow({
   kpi,
 }: {
@@ -217,19 +263,19 @@ export function KpiSummaryRow({
 
   const freqLabel =
     kpi.frequency === "DAILY" ? "Daily" : kpi.frequency === "WEEKLY" ? "Weekly" : "Monthly";
-  const dirIcon = kpi.direction === "LOWER_IS_BETTER" ? "↓" : "↑";
+  const barWidth = progress > 0 ? Math.min(100, Math.max(progress, 4)) : 0;
 
   return (
     <TableRow
       className={cn(
-        "group border-l-[3px] transition-colors hover:bg-muted/40",
+        "group border-l-[3px] transition-colors hover:bg-muted/30",
         rowStatusBorder[status]
       )}
     >
-      <TableCell className="py-4">
+      <TableCell className="max-w-xs py-2.5 pl-5">
         <Link
           href={`/dashboard/kpis/${kpi.id}`}
-          className="font-semibold text-foreground transition group-hover:text-primary"
+          className="font-medium text-foreground transition group-hover:text-primary"
         >
           {kpi.name}
         </Link>
@@ -239,44 +285,49 @@ export function KpiSummaryRow({
           </p>
         )}
       </TableCell>
-      <TableCell>
+      <TableCell className="py-2.5">
         <CategoryBadge category={kpi.category} />
       </TableCell>
-      <TableCell className="text-muted-foreground">{freqLabel}</TableCell>
-      <TableCell className="text-right">
-        <span className="font-semibold tabular-nums text-foreground">
-          {formatKpiValue(current, kpi.unit)}
-        </span>
+      <TableCell className="py-2.5 text-sm text-muted-foreground">{freqLabel}</TableCell>
+      <TableCell className="py-2.5 text-right">
+        <KpiMetricValue value={current} unit={kpi.unit} emphasize />
       </TableCell>
-      <TableCell className="text-right text-muted-foreground">
-        <span className="tabular-nums">{formatKpiValue(kpi.targetValue, kpi.unit)}</span>{" "}
-        <span className="text-muted-foreground/60">{dirIcon}</span>
+      <TableCell className="py-2.5 text-right">
+        <div className="inline-flex items-center justify-end gap-1.5">
+          <KpiMetricValue value={kpi.targetValue} unit={kpi.unit} />
+          <DirectionBadge direction={kpi.direction} />
+        </div>
       </TableCell>
-      <TableCell className="min-w-[120px]">
-        <div className="flex items-center justify-end gap-2">
-          <div className="hidden h-1.5 w-16 overflow-hidden rounded-full bg-muted sm:block">
+      <TableCell className="min-w-[148px] py-2.5">
+        <div className="flex items-center justify-end gap-2.5">
+          <div className="h-2 w-[72px] overflow-hidden rounded-full bg-muted ring-1 ring-border/60">
             <div
               className={cn(
-                "h-full rounded-full bg-gradient-to-r transition-all",
-                progressBarFill[status]
+                "h-full rounded-full bg-gradient-to-r transition-all duration-500",
+                progress > 0 ? progressBarFill[status] : "bg-muted-foreground/20"
               )}
-              style={{ width: `${Math.min(100, progress)}%` }}
+              style={{ width: `${barWidth}%` }}
             />
           </div>
-          <span className="w-10 text-right text-sm font-medium tabular-nums text-foreground">
+          <span
+            className={cn(
+              "w-9 text-right text-xs font-medium tabular-nums",
+              progress > 0 ? "text-foreground" : "text-muted-foreground"
+            )}
+          >
             {progress}%
           </span>
         </div>
       </TableCell>
-      <TableCell className="text-right">
+      <TableCell className="py-2.5 text-right">
         <StatusPill status={status} />
       </TableCell>
-      <TableCell className="text-right">
+      <TableCell className="py-2.5 pr-5 text-right">
         <Link
           href={`/dashboard/track?kpi=${kpi.id}`}
-          className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-background/80 px-3 text-xs font-medium text-foreground shadow-sm transition hover:border-primary/40 hover:bg-primary/10 hover:text-primary"
+          className="inline-flex h-8 items-center gap-1 rounded-lg border border-border/80 bg-background px-2.5 text-xs font-medium text-foreground shadow-sm transition hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
         >
-          <PenLine className="h-3.5 w-3.5" />
+          <Plus className="h-3.5 w-3.5" />
           <span className="hidden sm:inline">Add data</span>
         </Link>
       </TableCell>
