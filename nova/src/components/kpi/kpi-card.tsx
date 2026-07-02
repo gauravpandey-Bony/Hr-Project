@@ -177,30 +177,42 @@ export function StatusPill({
   className?: string;
 }) {
   const labels = { green: "On track", amber: "At risk", red: "Off target" };
+  const dots = {
+    green: "bg-emerald-500",
+    amber: "bg-amber-500",
+    red: "bg-rose-500",
+  };
   const styles = {
     green:
-      "bg-emerald-500/15 text-emerald-700 ring-emerald-500/25 dark:text-emerald-300",
+      "bg-emerald-500/12 text-emerald-700 ring-emerald-500/20 dark:text-emerald-300",
     amber:
-      "bg-amber-500/15 text-amber-800 ring-amber-500/25 dark:text-amber-300",
-    red: "bg-rose-500/15 text-rose-700 ring-rose-500/25 dark:text-rose-300",
+      "bg-amber-500/12 text-amber-800 ring-amber-500/20 dark:text-amber-300",
+    red: "bg-rose-500/12 text-rose-700 ring-rose-500/20 dark:text-rose-300",
   };
   return (
     <span
       className={cn(
-        "inline-flex whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 ring-inset",
+        "inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 ring-inset",
         styles[status],
         className
       )}
     >
+      <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", dots[status])} />
       {labels[status]}
     </span>
   );
 }
 
 const rowStatusBorder: Record<KpiStatus, string> = {
-  green: "border-l-emerald-500",
-  amber: "border-l-amber-500",
-  red: "border-l-rose-500",
+  green: "border-l-emerald-500/90",
+  amber: "border-l-amber-500/90",
+  red: "border-l-rose-500/90",
+};
+
+const rowStatusHover: Record<KpiStatus, string> = {
+  green: "hover:bg-emerald-500/[0.045] hover:shadow-[inset_0_0_0_1px_rgba(16,185,129,0.08)]",
+  amber: "hover:bg-amber-500/[0.045] hover:shadow-[inset_0_0_0_1px_rgba(245,158,11,0.08)]",
+  red: "hover:bg-rose-500/[0.045] hover:shadow-[inset_0_0_0_1px_rgba(244,63,94,0.08)]",
 };
 
 const progressBarFill: Record<KpiStatus, string> = {
@@ -209,14 +221,34 @@ const progressBarFill: Record<KpiStatus, string> = {
   red: "from-rose-500 to-pink-500",
 };
 
+const progressBarTrack: Record<KpiStatus, string> = {
+  green: "group-hover:bg-emerald-500/10 group-hover:ring-emerald-500/20",
+  amber: "group-hover:bg-amber-500/10 group-hover:ring-amber-500/20",
+  red: "group-hover:bg-rose-500/10 group-hover:ring-rose-500/20",
+};
+
+const progressTextColor: Record<KpiStatus, string> = {
+  green: "text-emerald-600 dark:text-emerald-400",
+  amber: "text-amber-600 dark:text-amber-400",
+  red: "text-rose-600 dark:text-rose-400",
+};
+
+const actualValueColor: Record<KpiStatus, string> = {
+  green: "text-emerald-700 dark:text-emerald-300",
+  amber: "text-amber-700 dark:text-amber-300",
+  red: "text-foreground",
+};
+
 function KpiMetricValue({
   value,
   unit,
   emphasize = false,
+  status,
 }: {
   value: number;
   unit: string;
   emphasize?: boolean;
+  status?: KpiStatus;
 }) {
   const parts = formatKpiValueParts(value, unit);
 
@@ -224,14 +256,14 @@ function KpiMetricValue({
     <div
       className={cn(
         "inline-flex items-baseline justify-end gap-1 tabular-nums",
-        emphasize ? "text-foreground" : "text-muted-foreground"
+        emphasize && status ? actualValueColor[status] : emphasize ? "text-foreground" : "text-muted-foreground"
       )}
     >
-      <span className={cn("text-sm", emphasize ? "font-medium" : "font-normal")}>
+      <span className={cn("text-sm", emphasize ? "font-semibold" : "font-normal")}>
         {parts.value}
       </span>
       {parts.unit && (
-        <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground/70">
+        <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground/65">
           {parts.unit}
         </span>
       )}
@@ -244,7 +276,7 @@ function DirectionBadge({ direction }: { direction: Kpi["direction"] }) {
   return (
     <span
       className={cn(
-        "inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md",
+        "inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md opacity-70 transition group-hover:opacity-100",
         lower ? "bg-sky-500/10 text-sky-600" : "bg-emerald-500/10 text-emerald-600"
       )}
       title={lower ? "Lower is better" : "Higher is better"}
@@ -268,66 +300,72 @@ export function KpiSummaryRow({
   return (
     <TableRow
       className={cn(
-        "group border-l-[3px] transition-colors hover:bg-muted/30",
-        rowStatusBorder[status]
+        "group border-l-[3px] transition-[background-color,box-shadow] duration-200 even:bg-muted/[0.18]",
+        rowStatusBorder[status],
+        rowStatusHover[status]
       )}
     >
-      <TableCell className="max-w-xs py-2.5 pl-5">
+      <TableCell className="px-4 py-2.5 pl-5">
         <Link
           href={`/dashboard/kpis/${kpi.id}`}
-          className="font-medium text-foreground transition group-hover:text-primary"
+          className="block truncate font-medium text-foreground underline-offset-2 transition group-hover:text-primary group-hover:underline"
         >
           {kpi.name}
         </Link>
         {kpi.description && (
-          <p className="mt-0.5 max-w-md text-xs text-muted-foreground line-clamp-1">
+          <p className="mt-0.5 truncate text-xs text-muted-foreground/80">
             {kpi.description}
           </p>
         )}
       </TableCell>
-      <TableCell className="py-2.5">
+      <TableCell className="px-3 py-2.5">
         <CategoryBadge category={kpi.category} />
       </TableCell>
-      <TableCell className="py-2.5 text-sm text-muted-foreground">{freqLabel}</TableCell>
-      <TableCell className="py-2.5 text-right">
-        <KpiMetricValue value={current} unit={kpi.unit} emphasize />
+      <TableCell className="px-3 py-2.5 text-sm text-muted-foreground">{freqLabel}</TableCell>
+      <TableCell className="px-3 py-2.5 text-right">
+        <KpiMetricValue value={current} unit={kpi.unit} emphasize status={status} />
       </TableCell>
-      <TableCell className="py-2.5 text-right">
+      <TableCell className="px-3 py-2.5 text-right">
         <div className="inline-flex items-center justify-end gap-1.5">
           <KpiMetricValue value={kpi.targetValue} unit={kpi.unit} />
           <DirectionBadge direction={kpi.direction} />
         </div>
       </TableCell>
-      <TableCell className="min-w-[148px] py-2.5">
-        <div className="flex items-center justify-end gap-2.5">
-          <div className="h-2 w-[72px] overflow-hidden rounded-full bg-muted ring-1 ring-border/60">
+      <TableCell className="px-3 py-2.5">
+        <div className="flex items-center justify-end gap-2">
+          <div
+            className={cn(
+              "h-2 w-[76px] overflow-hidden rounded-full bg-muted/90 ring-1 ring-border/50 transition-[background-color,box-shadow] duration-200",
+              progressBarTrack[status]
+            )}
+          >
             <div
               className={cn(
-                "h-full rounded-full bg-gradient-to-r transition-all duration-500",
-                progress > 0 ? progressBarFill[status] : "bg-muted-foreground/20"
+                "h-full rounded-full bg-gradient-to-r transition-all duration-500 group-hover:brightness-110",
+                progress > 0 ? progressBarFill[status] : "bg-muted-foreground/25"
               )}
               style={{ width: `${barWidth}%` }}
             />
           </div>
           <span
             className={cn(
-              "w-9 text-right text-xs font-medium tabular-nums",
-              progress > 0 ? "text-foreground" : "text-muted-foreground"
+              "w-9 text-right text-xs font-semibold tabular-nums transition-colors duration-200",
+              progress > 0 ? progressTextColor[status] : "text-muted-foreground/70"
             )}
           >
             {progress}%
           </span>
         </div>
       </TableCell>
-      <TableCell className="py-2.5 text-right">
+      <TableCell className="px-3 py-2.5 text-right">
         <StatusPill status={status} />
       </TableCell>
-      <TableCell className="py-2.5 pr-5 text-right">
+      <TableCell className="px-3 py-2.5 pr-5 text-right">
         <Link
           href={`/dashboard/track?kpi=${kpi.id}`}
-          className="inline-flex h-8 items-center gap-1 rounded-lg border border-border/80 bg-background px-2.5 text-xs font-medium text-foreground shadow-sm transition hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
+          className="inline-flex h-8 items-center gap-1 rounded-lg border border-border/70 bg-background/90 px-2.5 text-xs font-medium text-muted-foreground shadow-sm transition-all duration-200 hover:border-primary/45 hover:bg-primary/10 hover:text-primary hover:shadow-md group-hover:border-primary/35 group-hover:bg-primary/[0.07] group-hover:text-primary"
         >
-          <Plus className="h-3.5 w-3.5" />
+          <Plus className="h-3.5 w-3.5 transition-transform duration-200 group-hover:scale-110" />
           <span className="hidden sm:inline">Add data</span>
         </Link>
       </TableCell>
