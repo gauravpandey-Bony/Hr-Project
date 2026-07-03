@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Filter, Loader2 } from "lucide-react";
+import Link from "next/link";
+import { Filter, Loader2, Users, X } from "lucide-react";
 import { Card3D } from "@/components/ui/card-3d";
 import { cn } from "@/lib/utils";
 import { useOrgUnits } from "@/components/providers/org-units-provider";
@@ -12,6 +13,18 @@ type DeptRow = {
   name: string;
   headName: string | null;
   location: string | null;
+  employeeCount: number;
+};
+
+type DeptEmployee = {
+  id: string;
+  name: string;
+  ecn: string | null;
+  designation: string | null;
+  location: string | null;
+  plantLabel?: string;
+  managerName: string | null;
+  department: string | null;
 };
 
 function deptEmoji(name: string): string {
@@ -59,6 +72,11 @@ function DeptTile({
           <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/20 text-sm ring-1 ring-white/25 backdrop-blur-sm">
             {deptEmoji(dept.name)}
           </span>
+          {dept.employeeCount > 0 && (
+            <span className="rounded-full bg-black/20 px-2 py-0.5 text-[10px] font-semibold tabular-nums ring-1 ring-white/20">
+              {dept.employeeCount}
+            </span>
+          )}
         </div>
         <h3 className="relative mt-2 text-xs font-bold leading-tight tracking-tight sm:text-sm">
           {dept.name}
@@ -73,12 +91,21 @@ function DeptTile({
   );
 }
 
+function departmentsOverlap(a: string, b: string): boolean {
+  const norm = (s: string) => s.toLowerCase().trim();
+  const an = norm(a);
+  const bn = norm(b);
+  return an === bn || an.includes(bn) || bn.includes(an);
+}
+
 export function DepartmentBrowser() {
   const { groups, standaloneUnits } = useOrgUnits();
   const [companyFilter, setCompanyFilter] = useState("all");
   const [departments, setDepartments] = useState<DeptRow[]>([]);
   const [selectedDept, setSelectedDept] = useState<DeptRow | null>(null);
+  const [deptEmployees, setDeptEmployees] = useState<DeptEmployee[]>([]);
   const [loadingDepts, setLoadingDepts] = useState(true);
+  const [loadingEmployees, setLoadingEmployees] = useState(false);
 
   const companyOptions = useMemo(() => {
     const opts: { value: string; label: string }[] = [
@@ -102,12 +129,15 @@ export function DepartmentBrowser() {
     const named = departments.filter((d) => d.name?.trim());
     const kept: DeptRow[] = [];
     for (const d of named) {
-      const norm = d.name.toLowerCase();
-      const overlaps = kept.some((k) => {
-        const kn = k.name.toLowerCase();
-        return kn === norm || kn.includes(norm) || norm.includes(kn);
-      });
-      if (!overlaps) kept.push(d);
+      const idx = kept.findIndex((k) => departmentsOverlap(k.name, d.name));
+      if (idx >= 0) {
+        kept[idx] = {
+          ...kept[idx],
+          employeeCount: kept[idx].employeeCount + d.employeeCount,
+        };
+      } else {
+        kept.push({ ...d });
+      }
     }
     return kept.sort((a, b) => a.name.localeCompare(b.name));
   }, [departments]);
@@ -121,25 +151,81 @@ export function DepartmentBrowser() {
           : "";
       const res = await fetch(`/api/departments${qs}`);
       if (res.ok) {
-        setDepartments(await res.json());
+        const raw = (await res.json()) as Array<{
+          id: string;
+          name: string;
+          headName: string | null;
+          location: string | null;
+          _count?: { employees?: number };
+        }>;
+        setDepartments(
+          raw.map((d) => ({
+            id: d.id,
+            name: d.name,
+            headName: d.headName,
+            location: d.location,
+            employeeCount: d._count?.employees ?? 0,
+          }))
+        );
       }
     } finally {
       setLoadingDepts(false);
     }
   }, [companyFilter]);
 
+  const loadEmployees = useCallback(
+    async (dept: DeptRow) => {
+      setLoadingEmployees(true);
+      setDeptEmployees([]);
+      try {
+        const params = new URLSearchParams();
+        params.set("department", dept.name);
+        if (companyFilter !== "all") {
+          params.set("unit", companyFilter);
+        }
+        const res = await fetch(`/api/employees?${params}`);
+        if (res.ok) {
+          setDeptEmployees(await res.json());
+        }
+      } finally {
+        setLoadingEmployees(false);
+      }
+    },
+    [companyFilter]
+  );
+
   useEffect(() => {
     void loadDepartments();
   }, [loadDepartments]);
 
+  useEffect(() => {
+    if (selectedDept) {
+      void loadEmployees(selectedDept);
+    } else {
+      setDeptEmployees([]);
+    }
+  }, [selectedDept, loadEmployees]);
+
   function handleDeptClick(dept: DeptRow) {
-    setSelectedDept((prev) => (prev?.id === dept.id ? null : dept));
+    setSelectedDept((prev) => {
+      if (prev?.name === dept.name) return null;
+      return dept;
+    });
   }
 
   function handleCompanyChange(value: string) {
     setCompanyFilter(value);
     setSelectedDept(null);
   }
+
+  const employeesByPlant = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const e of deptEmployees) {
+      const key = e.plantLabel || e.location || "Unknown";
+      map.set(key, (map.get(key) ?? 0) + 1);
+    }
+    return [...map.entries()].sort((a, b) => b[1] - a[1]);
+  }, [deptEmployees]);
 
   return (
     <div className="space-y-4">
@@ -179,10 +265,10 @@ export function DepartmentBrowser() {
         <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
           {visibleDepartments.map((dept, i) => (
             <DeptTile
-              key={dept.id}
+              key={`${dept.name}-${dept.id}`}
               dept={dept}
               gradient={UNIT_GRADIENT_PRESETS[i % UNIT_GRADIENT_PRESETS.length]}
-              active={selectedDept?.id === dept.id}
+              active={selectedDept?.name === dept.name}
               onSelect={() => handleDeptClick(dept)}
             />
           ))}
@@ -190,12 +276,104 @@ export function DepartmentBrowser() {
       )}
 
       {selectedDept && (
-        <div className="animate-fade-up rounded-2xl border border-border/80 bg-card px-4 py-4 text-sm text-muted-foreground shadow-soft sm:px-5">
-          <p className="font-semibold text-foreground">{selectedDept.name}</p>
-          <p className="mt-1">
-            {selectedDept.headName ? `Head: ${selectedDept.headName}` : "No department head set"}
-            {selectedDept.location ? ` · ${selectedDept.location}` : ""}
-          </p>
+        <div className="animate-fade-up overflow-hidden rounded-2xl border border-border/80 bg-card shadow-soft">
+          <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border/60 bg-muted/30 px-4 py-3 sm:px-5">
+            <div>
+              <p className="flex items-center gap-2 text-base font-semibold text-foreground">
+                <Users className="h-4 w-4 text-primary" />
+                {selectedDept.name}
+              </p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {selectedDept.headName ? `Head: ${selectedDept.headName}` : "No department head"}
+                {companyFilter !== "all" ? ` · ${companyLabel}` : " · All plants"}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSelectedDept(null)}
+              className="rounded-lg p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+              aria-label="Close employee list"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          {loadingEmployees ? (
+            <div className="flex items-center justify-center gap-2 py-10 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Loading employees…
+            </div>
+          ) : deptEmployees.length === 0 ? (
+            <p className="px-4 py-8 text-center text-sm text-muted-foreground sm:px-5">
+              No active employees in this department
+              {companyFilter !== "all" ? ` for ${companyLabel}` : ""}.
+            </p>
+          ) : (
+            <>
+              {employeesByPlant.length > 1 && (
+                <div className="flex flex-wrap gap-2 border-b border-border/50 px-4 py-2.5 sm:px-5">
+                  {employeesByPlant.map(([plant, count]) => (
+                    <span
+                      key={plant}
+                      className="rounded-full border border-primary/20 bg-primary/5 px-2.5 py-0.5 text-[11px] font-medium text-foreground"
+                    >
+                      {plant}{" "}
+                      <span className="text-muted-foreground">({count})</span>
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              <div className="max-h-[min(420px,50vh)] overflow-auto scrollbar-thin">
+                <table className="w-full text-sm">
+                  <thead className="sticky top-0 z-10 bg-card/95 backdrop-blur-sm">
+                    <tr className="border-b border-border/60 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      <th className="px-4 py-2.5 sm:px-5">Employee</th>
+                      <th className="hidden px-3 py-2.5 sm:table-cell">ECN</th>
+                      <th className="px-3 py-2.5">Plant</th>
+                      <th className="hidden px-3 py-2.5 md:table-cell">Designation</th>
+                      <th className="hidden px-3 py-2.5 lg:table-cell">Reporting</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {deptEmployees.map((emp) => (
+                      <tr
+                        key={emp.id}
+                        className="border-b border-border/40 transition hover:bg-muted/40"
+                      >
+                        <td className="px-4 py-2.5 sm:px-5">
+                          <Link
+                            href={`/dashboard/masters/employees/${emp.id}`}
+                            className="font-medium text-foreground hover:text-primary hover:underline"
+                          >
+                            {emp.name}
+                          </Link>
+                        </td>
+                        <td className="hidden px-3 py-2.5 font-mono text-xs text-muted-foreground sm:table-cell">
+                          {emp.ecn ?? "—"}
+                        </td>
+                        <td className="px-3 py-2.5">
+                          <span className="inline-flex max-w-[140px] truncate rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-foreground">
+                            {emp.plantLabel || emp.location || "—"}
+                          </span>
+                        </td>
+                        <td className="hidden max-w-[160px] truncate px-3 py-2.5 text-muted-foreground md:table-cell">
+                          {emp.designation ?? "—"}
+                        </td>
+                        <td className="hidden max-w-[140px] truncate px-3 py-2.5 text-muted-foreground lg:table-cell">
+                          {emp.managerName ?? "—"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="border-t border-border/60 px-4 py-2 text-xs text-muted-foreground sm:px-5">
+                {deptEmployees.length} employee{deptEmployees.length === 1 ? "" : "s"}
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>

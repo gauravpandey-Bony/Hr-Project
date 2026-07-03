@@ -7,6 +7,13 @@ import { employeeMasterWhereForUserAsync } from "@/lib/access-control";
 import { getOrgUnitBySlug } from "@/lib/org-units.server";
 import { getLocationVariantsForPlant } from "@/lib/org-units";
 import { filterRealKraEmployees } from "@/lib/masters/logistics-kra-junk";
+import { departmentsAreEquivalent } from "@/lib/masters/department-master-sync";
+import { resolvePlantFromWorkingLocation } from "@/lib/masters/employee-plant-location";
+
+function plantLabelFromLocation(location: string | null | undefined): string {
+  if (!location?.trim()) return "—";
+  return resolvePlantFromWorkingLocation(location).plantUnitKey;
+}
 
 const createSchema = z.object({
   name: z.string().min(1),
@@ -34,6 +41,7 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const departmentId = searchParams.get("departmentId");
+  const departmentName = searchParams.get("department")?.trim();
   const unitSlug = searchParams.get("unit");
 
   const baseWhere = await employeeMasterWhereForUserAsync(user);
@@ -61,7 +69,20 @@ export async function GET(request: Request) {
     include: { dept: { select: { name: true } } },
   });
 
-  return NextResponse.json(filterRealKraEmployees(employees));
+  let rows = filterRealKraEmployees(employees);
+
+  if (departmentName) {
+    rows = rows.filter((e) =>
+      departmentsAreEquivalent(e.department ?? "", departmentName)
+    );
+  }
+
+  return NextResponse.json(
+    rows.map((e) => ({
+      ...e,
+      plantLabel: plantLabelFromLocation(e.location),
+    }))
+  );
 }
 
 export async function POST(request: Request) {
