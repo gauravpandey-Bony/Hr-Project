@@ -83,8 +83,9 @@ const config: Config = {
         "88": "22rem",
       },
       boxShadow: {
-        soft: "0 1px 2px 0 rgb(0 0 0 / 0.03), 0 4px 16px -2px rgb(0 0 0 / 0.06)",
-        elevated: "0 8px 24px -4px rgb(0 0 0 / 0.08), 0 2px 8px -2px rgb(0 0 0 / 0.04)",
+        soft: "0 1px 2px 0 rgb(0 0 0 / 0.04), 0 2px 8px -2px rgb(0 0 0 / 0.06), 0 8px 24px -8px rgb(0 0 0 / 0.04)",
+        elevated:
+          "0 1px 0 0 rgb(255 255 255 / 0.8) inset, 0 4px 24px -4px rgb(0 0 0 / 0.08), 0 12px 40px -12px rgb(16 185 129 / 0.08)",
         glow: "0 0 0 1px rgb(16 185 129 / 0.1), 0 8px 32px -8px rgb(16 185 129 / 0.25)",
         "inner-soft": "inset 0 1px 0 0 rgb(255 255 255 / 0.6)",
         raised:

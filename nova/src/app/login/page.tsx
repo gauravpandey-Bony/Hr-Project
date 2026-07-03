@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { BarChart3, Sparkles } from "lucide-react";
+import { BarChart3, Building2, Sparkles, TrendingUp } from "lucide-react";
 import { BonyLogo } from "@/components/brand/bony-logo";
 import { DemoLoginForm } from "@/components/auth/demo-login-form";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -19,6 +19,27 @@ function LoginFormFallback() {
   );
 }
 
+const HIGHLIGHTS = [
+  {
+    icon: Building2,
+    label: "Multi-plant",
+    value: "12+ units",
+    detail: "37P, Corporate, Fluid 58 & more",
+  },
+  {
+    icon: BarChart3,
+    label: "KRA / KPI",
+    value: "Live tracking",
+    detail: "Department & individual sheets",
+  },
+  {
+    icon: TrendingUp,
+    label: "Performance",
+    value: "Quarterly",
+    detail: "Targets, achieved & scores",
+  },
+] as const;
+
 export default async function LoginPage() {
   const [currentUser, company] = await Promise.all([
     getCurrentUser(),
@@ -26,43 +47,53 @@ export default async function LoginPage() {
   ]);
 
   return (
-    <div className="mesh-bg flex min-h-screen">
-      {/* Brand panel */}
-      <aside className="relative hidden w-[44%] overflow-hidden bg-sidebar text-sidebar-foreground lg:flex lg:flex-col">
-        <div className="absolute inset-0 bg-[linear-gradient(160deg,hsl(var(--sidebar))_0%,hsl(224_47%_4%)_50%,hsl(162_72%_20%/0.15)_100%)]" />
-        <div className="absolute -right-20 top-20 h-80 w-80 rounded-full bg-primary/20 blur-3xl" />
-        <div className="absolute -bottom-24 -left-24 h-72 w-72 rounded-full bg-emerald-500/10 blur-3xl" />
+    <div className="login-mesh flex min-h-screen">
+      {/* Brand panel — light Redo-style hero */}
+      <aside className="relative hidden w-[46%] overflow-hidden border-r border-border/60 lg:flex lg:flex-col">
+        <div className="pointer-events-none absolute -right-24 top-16 h-96 w-96 rounded-full bg-primary/10 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-32 left-8 h-80 w-80 rounded-full bg-emerald-400/10 blur-3xl" />
 
         <div className="relative flex flex-1 flex-col justify-between p-10 xl:p-14">
           <Link href="/" className="flex items-center gap-3">
             <BonyLogo size="lg" variant="full" priority />
             <div>
-              <p className="text-lg font-bold tracking-tight">{company.productName}</p>
-              <p className="text-sm text-sidebar-foreground/50">{company.name}</p>
+              <p className="text-lg font-bold tracking-tight text-foreground">
+                {company.productName}
+              </p>
+              <p className="text-sm text-muted-foreground">{company.name}</p>
             </div>
           </Link>
 
-          <div className="max-w-md space-y-6">
-            <h1 className="text-4xl font-bold tracking-tight xl:text-[2.75rem] xl:leading-tight">
-              Performance tracking, reimagined.
-            </h1>
-            <p className="text-base leading-relaxed text-sidebar-foreground/65">
-              Department master and HR workflows — one modern workspace for{" "}
-              {company.name}.
-            </p>
-            <ul className="space-y-3 text-sm text-sidebar-foreground/75">
-              <li className="flex items-center gap-3">
-                <BarChart3 className="h-5 w-5 shrink-0 text-primary" />
-                Department master & org structure
-              </li>
-              <li className="flex items-center gap-3">
-                <Sparkles className="h-5 w-5 shrink-0 text-primary" />
-                Reviews, goals & HR modules
-              </li>
-            </ul>
+          <div className="max-w-lg space-y-8">
+            <div className="space-y-4">
+              <p className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-primary">
+                <Sparkles className="h-3.5 w-3.5" />
+                Bony performance platform
+              </p>
+              <h1 className="text-balance text-4xl font-bold tracking-tight text-foreground xl:text-[2.85rem] xl:leading-[1.12]">
+                KPI tracking built for every plant.
+              </h1>
+              <p className="text-base leading-relaxed text-muted-foreground">
+                Department master, employee KRA sheets, and quarterly reports — one
+                modern workspace for {company.name}.
+              </p>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3">
+              {HIGHLIGHTS.map(({ icon: Icon, label, value, detail }) => (
+                <div key={label} className="stat-pill">
+                  <Icon className="mb-2 h-5 w-5 text-primary" />
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                    {label}
+                  </p>
+                  <p className="mt-0.5 text-sm font-bold text-foreground">{value}</p>
+                  <p className="mt-1 text-[11px] leading-snug text-muted-foreground">{detail}</p>
+                </div>
+              ))}
+            </div>
           </div>
 
-          <p className="text-xs text-sidebar-foreground/40">
+          <p className="text-xs text-muted-foreground/80">
             Sign in with your user ID and password
           </p>
         </div>
@@ -70,7 +101,7 @@ export default async function LoginPage() {
 
       {/* Form panel */}
       <main className="mesh-bg flex flex-1 flex-col">
-        <header className="flex items-center justify-between border-b border-border/50 px-4 py-4 sm:px-8 lg:border-0">
+        <header className="flex items-center justify-between border-b border-border/50 bg-white/60 px-4 py-4 backdrop-blur-sm sm:px-8 lg:border-0 lg:bg-transparent">
           <Link href="/" className="flex items-center gap-2 lg:hidden">
             <BonyLogo size="sm" />
             <span className="font-semibold text-foreground">{company.productName}</span>
@@ -84,16 +115,27 @@ export default async function LoginPage() {
         </header>
 
         <div className="flex flex-1 flex-col items-center justify-center px-4 py-10 sm:px-8">
-          <div className="w-full max-w-[540px] rounded-3xl border border-border/60 bg-card/70 p-6 shadow-elevated backdrop-blur-xl sm:p-8">
-            {currentUser && (
-              <LoginSessionBanner
-                name={currentUser.name}
-                role={currentUser.role}
-              />
-            )}
-            <Suspense fallback={<LoginFormFallback />}>
-              <DemoLoginForm />
-            </Suspense>
+          <div className="w-full max-w-[480px] animate-fade-up">
+            <div className="mb-8 text-center lg:text-left">
+              <h2 className="text-2xl font-bold tracking-tight text-foreground">
+                Welcome back
+              </h2>
+              <p className="mt-1.5 text-sm text-muted-foreground">
+                Sign in to your {company.productName} workspace
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-border/70 bg-card p-6 shadow-elevated sm:p-8">
+              {currentUser && (
+                <LoginSessionBanner
+                  name={currentUser.name}
+                  role={currentUser.role}
+                />
+              )}
+              <Suspense fallback={<LoginFormFallback />}>
+                <DemoLoginForm />
+              </Suspense>
+            </div>
           </div>
         </div>
       </main>

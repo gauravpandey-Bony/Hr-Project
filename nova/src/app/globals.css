@@ -4,7 +4,7 @@
 
 @layer base {
   :root {
-    --background: 220 33% 98%;
+    --background: 210 40% 99%;
     --foreground: 224 47% 11%;
     --card: 0 0% 100%;
     --card-foreground: 224 47% 11%;
@@ -12,26 +12,27 @@
     --popover-foreground: 224 47% 11%;
     --primary: 162 72% 38%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 220 27% 96%;
+    --secondary: 210 32% 96%;
     --secondary-foreground: 224 47% 11%;
-    --muted: 220 27% 96%;
-    --muted-foreground: 220 9% 46%;
-    --accent: 220 27% 94%;
-    --accent-foreground: 224 47% 11%;
+    --muted: 210 28% 96%;
+    --muted-foreground: 220 9% 42%;
+    --accent: 162 45% 95%;
+    --accent-foreground: 162 72% 28%;
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
     --success: 152 69% 40%;
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
-    --border: 220 20% 90%;
-    --input: 220 20% 90%;
+    --border: 220 18% 91%;
+    --input: 220 18% 91%;
     --ring: 162 72% 38%;
-    --radius: 0.75rem;
-    --sidebar: 224 47% 7%;
-    --sidebar-foreground: 210 40% 96%;
-    --sidebar-border: 224 32% 14%;
-    --sidebar-accent: 162 72% 45%;
+    --radius: 0.875rem;
+    /* Light sidebar — Redo-style clean shell, Bony green accents */
+    --sidebar: 0 0% 100%;
+    --sidebar-foreground: 224 47% 11%;
+    --sidebar-border: 220 18% 92%;
+    --sidebar-accent: 162 72% 38%;
     --sidebar-accent-foreground: 0 0% 100%;
   }
 
@@ -163,18 +164,31 @@
   .mesh-bg {
     background-color: hsl(var(--background));
     background-image:
-      radial-gradient(at 0% 0%, hsl(162 72% 38% / 0.08) 0, transparent 50%),
-      radial-gradient(at 100% 0%, hsl(224 47% 11% / 0.04) 0, transparent 45%),
-      radial-gradient(at 100% 100%, hsl(162 72% 38% / 0.06) 0, transparent 50%);
+      radial-gradient(at 0% 0%, hsl(162 72% 38% / 0.07) 0, transparent 52%),
+      radial-gradient(at 100% 0%, hsl(210 40% 96% / 1) 0, transparent 45%),
+      radial-gradient(at 80% 100%, hsl(162 72% 38% / 0.05) 0, transparent 50%),
+      radial-gradient(at 0% 100%, hsl(220 20% 96% / 0.8) 0, transparent 40%);
+  }
+
+  .login-mesh {
+    background-color: hsl(0 0% 100%);
+    background-image:
+      radial-gradient(ellipse 80% 60% at 10% 20%, hsl(162 72% 38% / 0.09) 0, transparent 55%),
+      radial-gradient(ellipse 60% 50% at 90% 80%, hsl(162 55% 45% / 0.06) 0, transparent 50%),
+      radial-gradient(circle at 50% 0%, hsl(210 40% 98%) 0, transparent 70%);
   }
 
   .nav-pill-active {
-    @apply relative bg-white/10 text-sidebar-foreground shadow-sm ring-1 ring-white/10;
+    @apply relative bg-primary/10 font-semibold text-foreground shadow-sm ring-1 ring-primary/15;
   }
 
   .nav-pill-active::before {
     content: "";
-    @apply absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-primary;
+    @apply absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-primary;
+  }
+
+  .stat-pill {
+    @apply rounded-2xl border border-border/70 bg-card/90 px-4 py-3 shadow-soft backdrop-blur-sm;
   }
 }
 

@@ -102,7 +102,7 @@ export function Sidebar({
           nested && !collapsed && "ml-1",
           active
             ? "nav-pill-active pl-4"
-            : "text-sidebar-foreground/55 hover:bg-white/[0.06] hover:text-sidebar-foreground",
+            : "text-muted-foreground hover:bg-muted/80 hover:text-foreground",
           collapsed && "justify-center px-2 pl-2"
         )}
         aria-current={active ? "page" : undefined}
@@ -111,7 +111,7 @@ export function Sidebar({
           <Icon
             className={cn(
               "h-4 w-4 shrink-0 transition-colors",
-              active ? "text-primary" : "text-sidebar-foreground/45 group-hover:text-sidebar-foreground/80"
+              active ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
             )}
           />
         )}
@@ -119,7 +119,7 @@ export function Sidebar({
           <span className="min-w-0 flex-1 truncate">
             <span className="block truncate">{label}</span>
             {isUnitPicker && selectedUnit && (
-              <span className="block truncate text-[10px] font-normal text-sidebar-foreground/40">
+              <span className="block truncate text-[10px] font-normal text-muted-foreground">
                 Switch unit
               </span>
             )}
@@ -145,8 +145,7 @@ export function Sidebar({
   return (
     <aside
       className={cn(
-        "fixed inset-y-0 left-0 z-50 flex h-full flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-all duration-300 lg:static lg:z-auto",
-        "bg-[linear-gradient(180deg,hsl(var(--sidebar))_0%,hsl(224_47%_5%)_100%)]",
+        "fixed inset-y-0 left-0 z-50 flex h-full flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground shadow-soft transition-all duration-300 lg:static lg:z-auto",
         collapsed ? "w-[4.5rem]" : "w-[17rem]",
         mobileOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full lg:translate-x-0"
       )}
@@ -163,7 +162,7 @@ export function Sidebar({
             <p className="truncate text-sm font-bold leading-tight tracking-tight">
               {company.productName}
             </p>
-            <p className="truncate text-[11px] text-sidebar-foreground/45">
+            <p className="truncate text-[11px] text-muted-foreground">
               {selectedUnit && userRole === "ADMIN"
                 ? selectedUnit.name
                 : `${company.brandName} · ${company.shortName}`}
@@ -175,7 +174,7 @@ export function Sidebar({
       <ScrollArea className="flex-1 px-2.5 py-4">
         <nav className="space-y-1" aria-label="Main navigation">
           {!collapsed && (
-            <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.14em] text-sidebar-foreground/35">
+            <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground/70">
               KPI tracking
             </p>
           )}
@@ -199,7 +198,7 @@ export function Sidebar({
                 <button
                   type="button"
                   onClick={() => setHrOpen(!hrOpen)}
-                  className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-[10px] font-bold uppercase tracking-[0.14em] text-sidebar-foreground/35 transition hover:text-sidebar-foreground/60"
+                  className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground/70 transition hover:text-foreground"
                   aria-expanded={hrOpen}
                 >
                   <span className="flex items-center gap-2">
@@ -245,9 +244,9 @@ export function Sidebar({
         )}
       >
         {!collapsed && (
-          <div className="flex items-center gap-2 rounded-xl bg-white/[0.04] px-3 py-2.5 ring-1 ring-white/5">
+          <div className="flex items-center gap-2 rounded-xl border border-border/60 bg-muted/50 px-3 py-2.5">
             <Sparkles className="h-4 w-4 shrink-0 text-primary" />
-            <p className="text-[11px] leading-snug text-sidebar-foreground/50">
+            <p className="text-[11px] leading-snug text-muted-foreground">
               {selectedUnit && userRole === "ADMIN"
                 ? `Workspace · ${selectedUnit.name}`
                 : `KPI workspace for ${company.shortName}`}
@@ -259,7 +258,7 @@ export function Sidebar({
             variant="ghost"
             size="icon"
             className={cn(
-              "hidden h-9 w-9 text-sidebar-foreground/50 hover:bg-white/[0.06] hover:text-sidebar-foreground lg:inline-flex",
+              "hidden h-9 w-9 text-muted-foreground hover:bg-muted hover:text-foreground lg:inline-flex",
               !collapsed && "ml-auto"
             )}
             onClick={onToggleCollapse}

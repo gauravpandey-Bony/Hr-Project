@@ -10,7 +10,7 @@ export function Card({
   return (
     <div
       className={cn(
-        "rounded-2xl border border-border/80 bg-card/95 p-5 text-card-foreground shadow-soft backdrop-blur-sm",
+        "rounded-2xl border border-border/60 bg-card p-5 text-card-foreground shadow-soft transition-shadow duration-200 hover:shadow-elevated",
         className
       )}
     >
