@@ -1,7 +1,7 @@
 import * as XLSX from "xlsx";
 import type { EmployeeImportRow } from "./import";
 import { normalizeDepartmentMasterName } from "./department-master-sync";
-import { resolvePlantFromWorkingLocation } from "./employee-plant-location";
+import { resolvePlantAssignment } from "./employee-plant-location";
 
 function titleCaseName(name: string): string {
   return name
@@ -50,6 +50,26 @@ function formatStaffDetailsDoj(raw: unknown): string | undefined {
   }
 
   return s;
+}
+
+function parseIncrementPercent(raw: unknown): number | null | undefined {
+  if (raw === "" || raw == null) return undefined;
+  if (typeof raw === "number" && Number.isFinite(raw)) {
+    return raw > 1 ? raw / 100 : raw;
+  }
+  const s = String(raw).trim().replace(/%/g, "");
+  if (!s) return undefined;
+  const n = Number(s);
+  if (!Number.isFinite(n)) return undefined;
+  return n > 1 ? n / 100 : n;
+}
+
+function parseCtc(raw: unknown): string | undefined {
+  if (raw === "" || raw == null) return undefined;
+  const n = typeof raw === "number" ? raw : Number(String(raw).replace(/[,₹]/g, "").trim());
+  if (Number.isFinite(n) && n > 0) return String(Math.round(n));
+  const s = String(raw).trim();
+  return s || undefined;
 }
 
 function normHeader(h: string): string {
@@ -145,9 +165,13 @@ export function parseStaffDetailsRoster(buffer: ArrayBuffer): {
   const iName = col(["name"]);
   const iDesig = col(["designation"]);
   const iDept = col(["department"]);
-  const iLoc = col(["workinglocation", "location"]);
+  const iLoc = col(["workinglocation"]);
+  const iPlantLoc = col(["plantlocation"]);
   const iDoj = col(["doj"]);
   const iReporting = col(["reporting", "manager"]);
+  const iCtc = col(["ctc"]);
+  const iLastInc = col(["lastincrement"]);
+  const iIncDue = col(["incrementdue", "incrementdueon"]);
 
   if (iName < 0 || iDept < 0) {
     return { rows: [], errors: ["Missing NAME or DEPARTMENT column"] };
@@ -164,7 +188,12 @@ export function parseStaffDetailsRoster(buffer: ArrayBuffer): {
     if (!rawName || !rawDept) continue;
 
     const rawLocation = iLoc >= 0 ? String(line[iLoc] ?? "").trim() : "";
-    const { plantUnitKey, location } = resolvePlantFromWorkingLocation(rawLocation);
+    const plantLocationLabel =
+      iPlantLoc >= 0 ? String(line[iPlantLoc] ?? "").trim() : "";
+    const { plantUnitKey, location } = resolvePlantAssignment(
+      rawLocation,
+      plantLocationLabel || undefined
+    );
     const ecn = iCode >= 0 ? formatEcn(line[iCode]) : "";
     const name = titleCaseName(rawName);
     const department = normalizeDepartmentMasterName(rawDept);
@@ -179,10 +208,16 @@ export function parseStaffDetailsRoster(buffer: ArrayBuffer): {
       department,
       location,
       rawLocation: rawLocation || undefined,
+      plantLocationLabel: plantLocationLabel || undefined,
       plantUnitKey,
       doj: iDoj >= 0 ? formatStaffDetailsDoj(line[iDoj]) : undefined,
       ecn: ecn || undefined,
       managerEcn: reportingCode || undefined,
+      lastCtc: iCtc >= 0 ? parseCtc(line[iCtc]) : undefined,
+      lastIncrementPercent:
+        iLastInc >= 0 ? parseIncrementPercent(line[iLastInc]) : undefined,
+      lastPromotionDate:
+        iIncDue >= 0 ? formatStaffDetailsDoj(line[iIncDue]) : undefined,
       sortOrder: rows.length + 1,
       isActive: true,
     });

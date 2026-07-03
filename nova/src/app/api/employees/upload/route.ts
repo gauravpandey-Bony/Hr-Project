@@ -20,7 +20,7 @@ import {
   parseDepartmentOverrides,
 } from "@/lib/masters/preview-kra-upload";
 import { syncKraWorkbook } from "@/lib/masters/sync-kra-workbook";
-import { resolvePlantFromWorkingLocation, summarizePlantAssignments } from "@/lib/masters/employee-plant-location";
+import { resolvePlantAssignment, summarizePlantAssignments } from "@/lib/masters/employee-plant-location";
 import { assignDepartmentKpisToEmployee } from "@/lib/kpi/assign-department-kpis";
 import { prepareStaffDetailsRows } from "@/lib/masters/staff-details-import";
 import { isStaffDetailsBuffer } from "@/lib/masters/staff-details-roster";
@@ -184,9 +184,7 @@ export async function POST(request: Request) {
 
   for (const row of rows) {
     const deptName = normalizeDepartmentMasterName(row.department);
-    const plantAssignment = resolvePlantFromWorkingLocation(
-      row.location ?? row.rawLocation
-    );
+    const plantAssignment = resolvePlantAssignment(row.rawLocation, row.plantLocationLabel);
     const plantUnitKey = row.plantUnitKey ?? plantAssignment.plantUnitKey;
     const location = row.location ?? plantAssignment.location;
 
@@ -236,6 +234,9 @@ export async function POST(request: Request) {
       doj: row.doj ?? null,
       ecn: row.ecn ?? null,
       managerName: row.managerName ?? null,
+      lastCtc: row.lastCtc ?? null,
+      lastIncrementPercent: row.lastIncrementPercent ?? null,
+      lastPromotionDate: row.lastPromotionDate ?? null,
       sortOrder: row.sortOrder ?? 0,
       isActive: row.isActive ?? true,
     };

@@ -15,7 +15,7 @@ import { employeeMasterWhereForPlant, plantDataScope } from "../src/lib/unit-wor
 import { assignDepartmentKpisToEmployee } from "../src/lib/kpi/assign-department-kpis";
 
 const ORG_SLUG = "bony-polymers";
-const DEFAULT_FILE = "/Users/rampal/Desktop/Staff Details edp (1).xlsx";
+const DEFAULT_FILE = "/Users/rampal/Desktop/Staff Details edp (2).xlsx";
 
 async function main() {
   const filePath = process.argv[2] ?? DEFAULT_FILE;
@@ -108,6 +108,9 @@ async function main() {
       doj: row.doj ?? null,
       ecn: row.ecn ?? null,
       managerName: row.managerName ?? null,
+      lastCtc: row.lastCtc ?? null,
+      lastIncrementPercent: row.lastIncrementPercent ?? null,
+      lastPromotionDate: row.lastPromotionDate ?? null,
       sortOrder: row.sortOrder ?? 0,
       isActive: true,
     };

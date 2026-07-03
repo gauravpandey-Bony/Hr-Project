@@ -25,6 +25,11 @@ export type EmployeeImportRow = {
   ecn?: string;
   managerName?: string;
   managerEcn?: string;
+  /** HR sheet "Plant Location" shortcut label (Bony-37P, Saket-1, etc.) */
+  plantLocationLabel?: string;
+  lastCtc?: string;
+  lastIncrementPercent?: number | null;
+  lastPromotionDate?: string;
   sortOrder?: number;
   isActive?: boolean;
 };
