@@ -342,7 +342,7 @@ export function AiChat({
                   novaCapturing
                     ? "animate-pulse bg-red-400"
                     : micListening
-                      ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]"
+                      ? "bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.8)]"
                       : micDead
                         ? "animate-pulse bg-amber-400"
                         : "bg-white/40"
@@ -365,7 +365,7 @@ export function AiChat({
                 onClick={toggleHeyNova}
                 className={cn(
                   "h-8 gap-1.5 rounded-lg px-2 text-xs font-semibold text-white/90 hover:bg-white/15",
-                  heyNova && micReady && "bg-white/20 ring-1 ring-emerald-300/60"
+                  heyNova && micReady && "bg-white/20 ring-1 ring-blue-300/60"
                 )}
               >
                 <Radio className={cn("h-3.5 w-3.5", heyNova && micReady && "text-emerald-200")} />
@@ -430,7 +430,7 @@ export function AiChat({
                 className={cn(
                   "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
                   m.role === "user"
-                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300"
+                    ? "bg-primary/10 text-primary dark:bg-primary/20 dark:text-blue-300"
                     : "bg-violet-100 text-violet-700 dark:bg-violet-900/50 dark:text-violet-300"
                 )}
               >
@@ -440,7 +440,7 @@ export function AiChat({
                 className={cn(
                   "rounded-2xl px-4 py-3 text-base",
                   m.role === "user"
-                    ? "max-w-[85%] bg-emerald-600 text-white"
+                    ? "max-w-[85%] bg-primary text-primary-foreground"
                     : hasDashboard
                       ? "min-w-0 max-w-full flex-1 bg-transparent p-0 ring-0"
                       : "max-w-[85%] bg-muted text-foreground ring-1 ring-border"
@@ -498,7 +498,7 @@ export function AiChat({
                   "h-11 w-11 shrink-0 rounded-xl border-border",
                   heyNova &&
                     micReady &&
-                    "border-emerald-500/50 bg-emerald-500/10 text-emerald-600 ring-2 ring-emerald-500/30 dark:text-emerald-400",
+                    "border-primary/50 bg-primary/10 text-primary ring-2 ring-primary/30",
                   novaCapturing &&
                     "border-violet-500/50 bg-violet-500/10 text-violet-600 ring-2 ring-violet-500/30 dark:text-violet-400"
                 )}
@@ -562,7 +562,7 @@ export function AiChat({
           </p>
         )}
         {heyNova && micReady && micListening && voicePhase !== "awakened" && !voiceError && (
-          <p className="mt-1 text-center text-sm text-emerald-600 dark:text-emerald-400">
+          <p className="mt-1 text-center text-sm text-primary">
             ● Sun rahi hoon — bolo <strong>&quot;Hey Maya&quot;</strong> ya <strong>&quot;Maya, report…&quot;</strong>
           </p>
         )}

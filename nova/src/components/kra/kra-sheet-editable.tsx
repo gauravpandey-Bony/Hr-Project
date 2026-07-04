@@ -250,9 +250,9 @@ export function KraSheetEditable({
 
   return (
     <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-md">
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border bg-gradient-to-r from-slate-950 via-slate-900 to-emerald-950 px-5 py-5 text-white">
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border bg-gradient-to-r from-slate-950 via-slate-900 to-blue-950 px-5 py-5 text-white">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-emerald-300/90">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-blue-300/90">
             {COMPANY.kraMasterSheetLabel}
             <span className="ml-2 rounded-md bg-amber-500/25 px-2 py-0.5 text-amber-100">
               Edit mode · Save = report update
@@ -265,7 +265,7 @@ export function KraSheetEditable({
           type="button"
           onClick={addRow}
           disabled={adding}
-          className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-emerald-900/30 transition hover:bg-emerald-400 disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/30 transition hover:bg-primary/90 disabled:opacity-50"
         >
           {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
           Add KPI row
@@ -319,7 +319,7 @@ export function KraSheetEditable({
                     type="button"
                     onClick={() => saveRow(kpi)}
                     disabled={busy}
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
                   >
                     {busy ? (
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />

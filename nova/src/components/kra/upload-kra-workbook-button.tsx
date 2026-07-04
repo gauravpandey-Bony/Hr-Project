@@ -21,7 +21,7 @@ export function UploadKraWorkbookButton({
 
   const variantClass =
     variant === "hero"
-      ? "inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-5 py-2.5 text-sm font-semibold text-white shadow-md hover:bg-emerald-400"
+      ? "inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-md hover:bg-primary/90"
       : variant === "hero-outline"
         ? "inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white hover:bg-white/20"
         : undefined;

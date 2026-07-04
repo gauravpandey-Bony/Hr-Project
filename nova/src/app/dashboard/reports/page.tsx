@@ -60,14 +60,14 @@ export default async function ReportsPage({
   return (
     <div className="reports-grid-bg space-y-8 pb-10">
       <div
-        className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950 px-8 py-12 text-white shadow-2xl animate-fade-up"
+        className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 px-8 py-12 text-white shadow-2xl animate-fade-up"
       >
-        <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-emerald-400/25 blur-3xl" />
+        <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-blue-400/25 blur-3xl" />
         <div className="relative flex flex-wrap items-end justify-between gap-8">
           <div className="max-w-2xl">
             <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 py-1.5 text-xs font-medium backdrop-blur-md">
-              <BarChart3 className="h-3.5 w-3.5 text-emerald-300" />
-              <span className="text-emerald-100">Performance intelligence</span>
+              <BarChart3 className="h-3.5 w-3.5 text-blue-300" />
+              <span className="text-blue-100">Performance intelligence</span>
             </div>
             <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">KPI Reports</h1>
             <p className="mt-3 text-lg text-slate-300/90 text-balance">
@@ -81,7 +81,7 @@ export default async function ReportsPage({
           <div className="flex flex-wrap gap-3">
             <Link
               href={`/dashboard/reports/quarterly${unitQuery}`}
-              className="inline-flex items-center gap-2 rounded-xl border border-emerald-400/40 bg-emerald-600/20 px-5 py-3 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-600/30"
+              className="inline-flex items-center gap-2 rounded-xl border border-blue-400/40 bg-blue-600/20 px-5 py-3 text-sm font-semibold text-blue-100 transition hover:bg-blue-600/30"
             >
               <BarChart3 className="h-4 w-4" />
               Quarterly KRA report
@@ -128,7 +128,7 @@ export default async function ReportsPage({
           <p className="mt-5 text-lg font-medium text-slate-700">No KPI data yet</p>
           <Link
             href={workspace.unitId ? appendUnitQueryForAdmin("/dashboard/kpis/create", workspace.unitId) : "/dashboard/kpis/create"}
-            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md hover:bg-emerald-700"
+            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-md hover:bg-primary/90"
           >
             Create your first KPI
           </Link>

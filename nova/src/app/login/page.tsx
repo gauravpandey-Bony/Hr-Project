@@ -51,7 +51,7 @@ export default async function LoginPage() {
       {/* Brand panel — light Redo-style hero */}
       <aside className="relative hidden w-[46%] overflow-hidden border-r border-border/60 lg:flex lg:flex-col">
         <div className="pointer-events-none absolute -right-24 top-16 h-96 w-96 rounded-full bg-primary/10 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-32 left-8 h-80 w-80 rounded-full bg-emerald-400/10 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-32 left-8 h-80 w-80 rounded-full bg-blue-400/10 blur-3xl" />
 
         <div className="relative flex flex-1 flex-col justify-between p-10 xl:p-14">
           <Link href="/" className="flex items-center gap-3">

@@ -50,8 +50,8 @@ export function QuarterlyReportClient({
             className={cn(
               "rounded-xl border px-4 py-2 text-sm font-medium transition",
               quarter === q.id
-                ? "border-emerald-600 bg-emerald-600 text-white shadow-md"
-                : "border-border bg-card hover:border-emerald-400/60"
+                ? "border-primary bg-primary text-primary-foreground shadow-md"
+                : "border-border bg-card hover:border-primary/40"
             )}
           >
             {q.label}

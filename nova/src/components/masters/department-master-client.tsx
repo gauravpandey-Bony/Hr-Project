@@ -145,11 +145,11 @@ export function DepartmentMasterClient({
 
   return (
     <div className="space-y-6">
-      <div className="relative overflow-hidden rounded-3xl border border-border/50 bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950 px-6 py-8 text-white shadow-xl sm:px-8">
+      <div className="relative overflow-hidden rounded-3xl border border-border/50 bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 px-6 py-8 text-white shadow-xl sm:px-8">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-medium">
-              <Building2 className="h-3.5 w-3.5 text-emerald-300" />
+              <Building2 className="h-3.5 w-3.5 text-blue-300" />
               {COMPANY.shortName}
             </div>
             <h1 className="text-3xl font-bold">Department Master</h1>
@@ -185,7 +185,7 @@ export function DepartmentMasterClient({
                 type="button"
                 onClick={addRow}
                 disabled={adding}
-                className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-400 disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
               >
                 {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
                 Add department
@@ -228,7 +228,7 @@ export function DepartmentMasterClient({
                           type="button"
                           onClick={() => save(row.id)}
                           disabled={savingId === row.id}
-                          className="rounded-md p-1.5 text-emerald-600 hover:bg-emerald-500/10"
+                          className="rounded-md p-1.5 text-primary hover:bg-primary/10"
                           title="Save"
                         >
                           {savingId === row.id ? (

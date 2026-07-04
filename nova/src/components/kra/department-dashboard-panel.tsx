@@ -61,7 +61,7 @@ export function DepartmentDashboardPanel({
               className={cn(
                 "rounded-lg px-3 py-1.5 text-xs font-medium transition",
                 quarter === q.id
-                  ? "bg-emerald-600 text-white shadow"
+                  ? "bg-primary text-primary-foreground shadow"
                   : "text-muted-foreground hover:bg-background"
               )}
             >

@@ -13,15 +13,15 @@ export function KpiLibraryHero({
   offTarget: number;
 }) {
   return (
-    <div className="relative overflow-hidden rounded-3xl border border-border/50 bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950 px-6 py-8 text-white shadow-xl sm:px-8 sm:py-10">
-      <div className="absolute -right-16 -top-16 h-56 w-56 rounded-full bg-emerald-400/20 blur-3xl" />
-      <div className="absolute -bottom-12 -left-12 h-40 w-40 rounded-full bg-violet-500/15 blur-3xl" />
+    <div className="relative overflow-hidden rounded-3xl border border-border/50 bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 px-6 py-8 text-white shadow-xl sm:px-8 sm:py-10">
+      <div className="absolute -right-16 -top-16 h-56 w-56 rounded-full bg-blue-400/20 blur-3xl" />
+      <div className="absolute -bottom-12 -left-12 h-40 w-40 rounded-full bg-sky-500/15 blur-3xl" />
 
       <div className="relative flex flex-wrap items-end justify-between gap-6">
         <div className="max-w-xl">
           <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-medium backdrop-blur-md">
-            <Library className="h-3.5 w-3.5 text-emerald-300" />
-            <span className="text-emerald-100">{COMPANY.shortName}</span>
+            <Library className="h-3.5 w-3.5 text-blue-300" />
+            <span className="text-blue-100">{COMPANY.shortName}</span>
           </div>
           <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">KPI Library</h1>
           <p className="mt-2 text-sm text-slate-300/90 sm:text-base">

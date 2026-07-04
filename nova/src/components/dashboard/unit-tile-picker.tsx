@@ -151,8 +151,8 @@ export function UnitTilePicker({ isAdmin }: { isAdmin: boolean }) {
 
   return (
     <div className="reports-grid-bg space-y-8 pb-10">
-      <div className="relative overflow-hidden rounded-[1.75rem] border border-white/10 bg-gradient-to-br from-slate-950 via-[#0f172a] to-emerald-950 px-8 py-10 text-white shadow-elevated animate-fade-up">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(16,185,129,0.15),transparent_55%)]" />
+      <div className="relative overflow-hidden rounded-[1.75rem] border border-white/10 bg-gradient-to-br from-slate-950 via-[#0f172a] to-blue-950 px-8 py-10 text-white shadow-elevated animate-fade-up">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(37,99,235,0.15),transparent_55%)]" />
         <div className="relative max-w-2xl">
           <p className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 py-1.5 text-xs font-medium backdrop-blur-md">
             <BonyLogo size="xs" className="ring-white/20" />

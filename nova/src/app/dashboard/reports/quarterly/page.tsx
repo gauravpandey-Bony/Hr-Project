@@ -63,11 +63,11 @@ export default async function QuarterlyReportPage({
 
   return (
     <div className="reports-grid-bg space-y-8 pb-10">
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950 px-8 py-10 text-white shadow-2xl">
-        <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-emerald-400/20 blur-3xl" />
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 px-8 py-10 text-white shadow-2xl">
+        <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-blue-400/20 blur-3xl" />
         <div className="relative">
           <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 py-1.5 text-xs font-medium backdrop-blur-md">
-            <CalendarRange className="h-3.5 w-3.5 text-emerald-300" />
+            <CalendarRange className="h-3.5 w-3.5 text-blue-300" />
             <span>{company.shortName}</span>
           </div>
           <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">

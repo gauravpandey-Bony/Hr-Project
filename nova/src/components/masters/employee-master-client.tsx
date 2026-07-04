@@ -337,7 +337,7 @@ export function EmployeeMasterClient({
               <Link
                 href={kraBaseHref}
                 title="KRA / KPI master sheet"
-                className="rounded-md p-1.5 text-emerald-600 hover:bg-emerald-500/10"
+                className="rounded-md p-1.5 text-primary hover:bg-primary/10"
               >
                 <FileSpreadsheet className="h-4 w-4" />
               </Link>
@@ -352,7 +352,7 @@ export function EmployeeMasterClient({
                 type="button"
                 onClick={() => save(row.id)}
                 disabled={savingId === row.id}
-                className="rounded-md p-1.5 text-emerald-600 hover:bg-emerald-500/10"
+                className="rounded-md p-1.5 text-primary hover:bg-primary/10"
               >
                 {savingId === row.id ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -564,7 +564,7 @@ export function EmployeeMasterClient({
                   type="button"
                   onClick={sync37pRoster}
                   disabled={syncing37p}
-                  className="inline-flex items-center gap-2 rounded-xl border border-emerald-400/40 bg-emerald-500/20 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500/30 disabled:opacity-50"
+                  className="inline-flex items-center gap-2 rounded-xl border border-blue-400/40 bg-blue-500/20 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500/30 disabled:opacity-50"
                 >
                   {syncing37p ? (
                     <Loader2 className="h-4 w-4 animate-spin" />

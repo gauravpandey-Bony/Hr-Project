@@ -133,7 +133,7 @@ export function KraPageClient({
   if (!sheet) {
     return (
       <div className="reports-grid-bg space-y-6 pb-10">
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950 px-8 py-10 text-white shadow-2xl">
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 px-8 py-10 text-white shadow-2xl">
           <div className="relative">
             <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
               {company.kraMasterSheetLabel}
@@ -200,11 +200,11 @@ export function KraPageClient({
 
   return (
     <div className="reports-grid-bg space-y-6 pb-10">
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950 px-8 py-10 text-white shadow-2xl">
-        <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-emerald-400/20 blur-3xl" />
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 px-8 py-10 text-white shadow-2xl">
+        <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-blue-400/20 blur-3xl" />
         <div className="relative">
           <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 py-1.5 text-xs font-medium backdrop-blur-md">
-            <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-300" />
+            <FileSpreadsheet className="h-3.5 w-3.5 text-blue-300" />
             <span>{company.shortName}</span>
           </div>
           <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
@@ -244,8 +244,8 @@ export function KraPageClient({
               className={cn(
                 "rounded-full border px-4 py-2 text-sm font-medium transition",
                 activeSheet === s.id
-                  ? "border-emerald-600 bg-emerald-600 text-white shadow-md"
-                  : "border-border bg-card text-foreground hover:border-emerald-400/60"
+                  ? "border-primary bg-primary text-primary-foreground shadow-md"
+                  : "border-border bg-card text-foreground hover:border-primary/40"
               )}
             >
               {s.label}
@@ -280,7 +280,7 @@ export function KraPageClient({
       )}
 
       <div className="flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-3 text-sm text-muted-foreground">
-        <Building2 className="h-4 w-4 text-emerald-600" />
+        <Building2 className="h-4 w-4 text-primary" />
         <span>
           <strong className="text-foreground">
             {activeEmployee ? activeEmployee.name : sheet.label}

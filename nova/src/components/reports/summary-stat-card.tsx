@@ -132,7 +132,7 @@ export function SummaryStatCard({
           style={{ transform: "translateZ(12px)" }}
         >
           <div
-            className="h-full rounded-full bg-gradient-to-r from-primary via-emerald-500 to-teal-500 transition-all duration-1000"
+            className="h-full rounded-full bg-gradient-to-r from-primary via-blue-500 to-blue-600 transition-all duration-1000"
             style={{ width: `${Math.min(100, progress)}%` }}
           />
         </div>

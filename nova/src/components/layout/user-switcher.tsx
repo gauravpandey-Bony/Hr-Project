@@ -80,7 +80,7 @@ export function UserSwitcher({
           )}
           aria-label="User menu"
         >
-          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-primary to-emerald-600 text-[11px] font-bold text-white shadow-sm">
+          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-primary to-blue-700 text-[11px] font-bold text-white shadow-sm">
             {currentName
               .split(/\s+/)
               .map((w) => w[0])

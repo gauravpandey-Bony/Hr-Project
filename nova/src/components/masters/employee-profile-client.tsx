@@ -256,7 +256,7 @@ export function EmployeeProfileClient({
                     type="button"
                     onClick={save}
                     disabled={saving}
-                    className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-400 disabled:opacity-60"
+                    className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
                   >
                     {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                     Save
@@ -453,7 +453,7 @@ export function EmployeeProfileClient({
                 href={kraHref}
                 className="inline-flex items-center gap-2 rounded-xl border border-border px-3 py-2.5 text-sm font-medium hover:bg-muted/50"
               >
-                <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+                <FileSpreadsheet className="h-4 w-4 text-primary" />
                 KRA / KPI sheet
               </Link>
               <Link
