@@ -44,7 +44,7 @@ export function DashboardHeader({
       >
         <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground transition group-hover:text-foreground" />
         <div className="flex h-10 w-full items-center rounded-xl border border-border/80 bg-muted/40 pl-10 pr-14 text-sm text-muted-foreground shadow-inner-soft transition-all group-hover:border-primary/20 group-hover:bg-muted/60">
-          Search or jump to…
+          Search name, emp code, dept, designation, location…
         </div>
         <kbd className="pointer-events-none absolute right-2.5 top-1/2 hidden -translate-y-1/2 items-center gap-0.5 rounded-lg border border-border/80 bg-background/80 px-2 py-1 font-mono text-[10px] font-medium text-muted-foreground shadow-sm sm:flex">
           <span className="text-xs">⌘</span>K
