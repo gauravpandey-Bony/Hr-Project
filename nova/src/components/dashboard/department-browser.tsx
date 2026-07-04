@@ -6,6 +6,14 @@ import { Filter, Loader2, Users, X } from "lucide-react";
 import { Card3D } from "@/components/ui/card-3d";
 import { cn } from "@/lib/utils";
 import { useOrgUnits } from "@/components/providers/org-units-provider";
+import {
+  DEFAULT_PAGE_SIZE,
+  ListPagination,
+  pageSlice,
+} from "@/components/ui/list-pagination";
+
+const DEPT_CARD_PAGE_SIZE = 24;
+const EMP_PAGE_SIZE = DEFAULT_PAGE_SIZE;
 
 type DeptRow = {
   id: string;
@@ -101,6 +109,9 @@ export function DepartmentBrowser() {
   const [deptEmployees, setDeptEmployees] = useState<DeptEmployee[]>([]);
   const [loadingDepts, setLoadingDepts] = useState(true);
   const [loadingEmployees, setLoadingEmployees] = useState(false);
+  const [deptPage, setDeptPage] = useState(0);
+  const [empPage, setEmpPage] = useState(0);
+  const [deptSearch, setDeptSearch] = useState("");
 
   const companyOptions = useMemo(() => {
     const opts: { value: string; label: string }[] = [
@@ -134,8 +145,25 @@ export function DepartmentBrowser() {
         kept.push({ ...d });
       }
     }
-    return kept.sort((a, b) => a.name.localeCompare(b.name));
-  }, [departments]);
+    const q = deptSearch.trim().toLowerCase();
+    const sorted = kept.sort((a, b) => a.name.localeCompare(b.name));
+    if (!q) return sorted;
+    return sorted.filter(
+      (d) =>
+        d.name.toLowerCase().includes(q) ||
+        (d.headName?.toLowerCase().includes(q) ?? false)
+    );
+  }, [departments, deptSearch]);
+
+  const pageDepartments = useMemo(
+    () => pageSlice(visibleDepartments, deptPage, DEPT_CARD_PAGE_SIZE),
+    [visibleDepartments, deptPage]
+  );
+
+  const pageEmployees = useMemo(
+    () => pageSlice(deptEmployees, empPage, EMP_PAGE_SIZE),
+    [deptEmployees, empPage]
+  );
 
   const loadDepartments = useCallback(async () => {
     setLoadingDepts(true);
@@ -201,16 +229,18 @@ export function DepartmentBrowser() {
     }
   }, [selectedDept, loadEmployees]);
 
+  function handleCompanyChange(value: string) {
+    setCompanyFilter(value);
+    setSelectedDept(null);
+    setDeptPage(0);
+  }
+
   function handleDeptClick(dept: DeptRow) {
     setSelectedDept((prev) => {
       if (prev?.name === dept.name) return null;
       return dept;
     });
-  }
-
-  function handleCompanyChange(value: string) {
-    setCompanyFilter(value);
-    setSelectedDept(null);
+    setEmpPage(0);
   }
 
   const employeesByPlant = useMemo(() => {
@@ -228,21 +258,33 @@ export function DepartmentBrowser() {
         <h2 className="text-sm font-semibold uppercase tracking-widest text-emerald-800/70">
           Departments
         </h2>
-        <label className="flex items-center gap-2 rounded-full border border-emerald-200/80 bg-card px-3 py-1.5 text-xs shadow-soft">
-          <Filter className="h-3.5 w-3.5 text-emerald-700" />
-          <span className="font-medium text-emerald-800/70">Company</span>
-          <select
-            value={companyFilter}
-            onChange={(e) => handleCompanyChange(e.target.value)}
-            className="max-w-[200px] truncate border-0 bg-transparent text-xs font-semibold text-foreground outline-none sm:max-w-[260px]"
-          >
-            {companyOptions.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            type="search"
+            value={deptSearch}
+            onChange={(e) => {
+              setDeptSearch(e.target.value);
+              setDeptPage(0);
+            }}
+            placeholder="Search department…"
+            className="min-w-[160px] rounded-full border border-emerald-200/80 bg-card px-3 py-1.5 text-xs outline-none focus:border-emerald-500"
+          />
+          <label className="flex items-center gap-2 rounded-full border border-emerald-200/80 bg-card px-3 py-1.5 text-xs shadow-soft">
+            <Filter className="h-3.5 w-3.5 text-emerald-700" />
+            <span className="font-medium text-emerald-800/70">Company</span>
+            <select
+              value={companyFilter}
+              onChange={(e) => handleCompanyChange(e.target.value)}
+              className="max-w-[200px] truncate border-0 bg-transparent text-xs font-semibold text-foreground outline-none sm:max-w-[260px]"
+            >
+              {companyOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
       </div>
 
       {loadingDepts ? (
@@ -257,16 +299,25 @@ export function DepartmentBrowser() {
             : "No departments found."}
         </p>
       ) : (
-        <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-          {visibleDepartments.map((dept) => (
-            <DeptTile
-              key={`${dept.name}-${dept.id}`}
-              dept={dept}
-              active={selectedDept?.name === dept.name}
-              onSelect={() => handleDeptClick(dept)}
-            />
-          ))}
-        </div>
+        <>
+          <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+            {pageDepartments.map((dept) => (
+              <DeptTile
+                key={`${dept.name}-${dept.id}`}
+                dept={dept}
+                active={selectedDept?.name === dept.name}
+                onSelect={() => handleDeptClick(dept)}
+              />
+            ))}
+          </div>
+          <ListPagination
+            page={deptPage}
+            pageSize={DEPT_CARD_PAGE_SIZE}
+            total={visibleDepartments.length}
+            onPageChange={setDeptPage}
+            label="departments"
+          />
+        </>
       )}
 
       {selectedDept && (
@@ -330,7 +381,7 @@ export function DepartmentBrowser() {
                     </tr>
                   </thead>
                   <tbody>
-                    {deptEmployees.map((emp) => (
+                    {pageEmployees.map((emp) => (
                       <tr
                         key={emp.id}
                         className="border-b border-border/40 transition hover:bg-muted/40"
@@ -363,8 +414,14 @@ export function DepartmentBrowser() {
                 </table>
               </div>
 
-              <div className="border-t border-border/60 px-4 py-2 text-xs text-muted-foreground sm:px-5">
-                {deptEmployees.length} employee{deptEmployees.length === 1 ? "" : "s"}
+              <div className="border-t border-border/60 px-4 py-2 sm:px-5">
+                <ListPagination
+                  page={empPage}
+                  pageSize={EMP_PAGE_SIZE}
+                  total={deptEmployees.length}
+                  onPageChange={setEmpPage}
+                  label="employees"
+                />
               </div>
             </>
           )}

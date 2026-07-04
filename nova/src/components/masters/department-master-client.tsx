@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Trash2, Save, Loader2, Building2, Upload, Download } from "lucide-react";
 import { UploadMasterModal } from "./upload-master-modal";
@@ -25,6 +25,11 @@ import {
   MASTER_HERO_BTN_SECONDARY,
   MASTER_HERO_BTN_PRIMARY,
 } from "./masters-table-styles";
+import {
+  DEFAULT_PAGE_SIZE,
+  ListPagination,
+  pageSlice,
+} from "@/components/ui/list-pagination";
 
 type DeptRow = DepartmentMaster;
 
@@ -65,6 +70,33 @@ export function DepartmentMasterClient({
   const [uploadOpen, setUploadOpen] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(0);
+
+  const filteredRows = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter((row) => {
+      const d = drafts[row.id];
+      const hay = [
+        row.name,
+        row.headName,
+        row.location,
+        d?.name,
+        d?.headName,
+        d?.location,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return hay.includes(q);
+    });
+  }, [rows, drafts, search]);
+
+  const pageRows = useMemo(
+    () => pageSlice(filteredRows, page, DEFAULT_PAGE_SIZE),
+    [filteredRows, page]
+  );
 
   async function downloadSheet() {
     setDownloading(true);
@@ -209,6 +241,26 @@ export function DepartmentMasterClient({
         </p>
       )}
 
+      <div className="flex flex-wrap items-center gap-3">
+        <input
+          type="search"
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPage(0);
+          }}
+          placeholder="Search department, head, location…"
+          className="min-w-[220px] flex-1 rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/30"
+        />
+      </div>
+
+      <ListPagination
+        page={page}
+        total={filteredRows.length}
+        onPageChange={setPage}
+        label="departments"
+      />
+
       <StickyTableShell maxHeight="min(75vh, 900px)">
         <table className={MASTER_TABLE_CLASS}>
           <TableHeader className="sticky top-0 z-10 bg-card/95 backdrop-blur-md">
@@ -221,11 +273,22 @@ export function DepartmentMasterClient({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {rows.map((row, idx) => {
+            {pageRows.length === 0 && (
+              <TableRow>
+                <TableCell
+                  colSpan={isAdmin ? 5 : 4}
+                  className="px-4 py-10 text-center text-sm text-muted-foreground"
+                >
+                  No departments match your search.
+                </TableCell>
+              </TableRow>
+            )}
+            {pageRows.map((row, idx) => {
               const d = drafts[row.id] ?? toDraft(row);
+              const rowNumber = page * DEFAULT_PAGE_SIZE + idx + 1;
               return (
                 <TableRow key={row.id}>
-                  <TableCell className={`${MASTER_CELL} text-muted-foreground`}>{idx + 1}</TableCell>
+                  <TableCell className={`${MASTER_CELL} text-muted-foreground`}>{rowNumber}</TableCell>
                   {isAdmin && (
                     <TableCell className={MASTER_CELL}>
                       <div className="flex gap-1">
@@ -292,6 +355,13 @@ export function DepartmentMasterClient({
           </TableBody>
         </table>
       </StickyTableShell>
+
+      <ListPagination
+        page={page}
+        total={filteredRows.length}
+        onPageChange={setPage}
+        label="departments"
+      />
 
       <UploadMasterModal
         open={uploadOpen}

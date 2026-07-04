@@ -28,6 +28,7 @@ import {
   User,
   Users,
 } from "lucide-react";
+import { ListPagination, pageSlice } from "@/components/ui/list-pagination";
 
 const QUARTERS: { id: FiscalQuarter; label: string; months: string }[] = [
   { id: "q1", label: "Q1", months: "Apr – Jun" },
@@ -215,11 +216,9 @@ function EmployeeSummaryTable({ rows }: { rows: EmployeePerformanceRow[] }) {
     return [...list].sort((a, b) => a.employeeName.localeCompare(b.employeeName));
   }, [rows, departmentFilter]);
 
-  const pageCount = Math.max(1, Math.ceil(filteredRows.length / EMPLOYEE_PAGE_SIZE));
-  const safePage = Math.min(page, pageCount - 1);
-  const pageRows = filteredRows.slice(
-    safePage * EMPLOYEE_PAGE_SIZE,
-    safePage * EMPLOYEE_PAGE_SIZE + EMPLOYEE_PAGE_SIZE
+  const pageRows = useMemo(
+    () => pageSlice(filteredRows, page, EMPLOYEE_PAGE_SIZE),
+    [filteredRows, page]
   );
 
   function toggleEmployee(name: string) {
@@ -329,40 +328,16 @@ function EmployeeSummaryTable({ rows }: { rows: EmployeePerformanceRow[] }) {
         </table>
       </div>
 
-      {pageCount > 1 && (
-        <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-          <p className="text-xs text-muted-foreground">
-            Page {safePage + 1} of {pageCount} · showing{" "}
-            {safePage * EMPLOYEE_PAGE_SIZE + 1}–
-            {Math.min((safePage + 1) * EMPLOYEE_PAGE_SIZE, filteredRows.length)} of{" "}
-            {filteredRows.length}
-          </p>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              disabled={safePage <= 0}
-              onClick={() => {
-                setPage((p) => Math.max(0, p - 1));
-                setExpanded(null);
-              }}
-              className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted disabled:opacity-40"
-            >
-              Previous
-            </button>
-            <button
-              type="button"
-              disabled={safePage >= pageCount - 1}
-              onClick={() => {
-                setPage((p) => Math.min(pageCount - 1, p + 1));
-                setExpanded(null);
-              }}
-              className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted disabled:opacity-40"
-            >
-              Next
-            </button>
-          </div>
-        </div>
-      )}
+      <ListPagination
+        page={page}
+        pageSize={EMPLOYEE_PAGE_SIZE}
+        total={filteredRows.length}
+        onPageChange={(p) => {
+          setPage(p);
+          setExpanded(null);
+        }}
+        label="employees"
+      />
     </div>
   );
 }

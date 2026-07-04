@@ -47,6 +47,12 @@ import {
   MASTER_HERO_BTN_SECONDARY,
   MASTER_HERO_BTN_PRIMARY,
 } from "./masters-table-styles";
+import {
+  ListPagination,
+  pageSlice,
+} from "@/components/ui/list-pagination";
+
+const DEPT_PAGE_SIZE = 3;
 
 type Draft = {
   name: string;
@@ -108,10 +114,86 @@ export function EmployeeMasterClient({
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expandedTeams, setExpandedTeams] = useState<Set<string>>(() => new Set());
+  const [search, setSearch] = useState("");
+  const [deptFilter, setDeptFilter] = useState("all");
+  const [page, setPage] = useState(0);
 
   const grouped = useMemo(
     () => groupEmployeesByDepartment(rows, departments),
     [rows, departments]
+  );
+
+  const filteredGrouped = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const matchEmp = (e: EmployeeMaster) => {
+      if (!q) return true;
+      const d = drafts[e.id];
+      const hay = [
+        e.name,
+        e.ecn,
+        e.designation,
+        e.department,
+        e.location,
+        e.managerName,
+        d?.name,
+        d?.ecn,
+        d?.designation,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return hay.includes(q);
+    };
+
+    return grouped
+      .filter((g) => deptFilter === "all" || g.departmentId === deptFilter)
+      .map((g) => {
+        const sections = g.sections
+          .map((section) => {
+            if (section.type === "manager-team") {
+              const managerMatches = section.managerRow
+                ? matchEmp(section.managerRow)
+                : false;
+              const reports = section.reports.filter(
+                (r) => r.id !== section.managerRow?.id && matchEmp(r)
+              );
+              if (!managerMatches && !reports.length) return null;
+              return {
+                ...section,
+                // Keep manager row for team context when any report matches.
+                managerRow: section.managerRow,
+                reports: [
+                  ...(managerMatches && section.managerRow
+                    ? [section.managerRow]
+                    : []),
+                  ...reports,
+                ],
+              };
+            }
+            const employees = section.employees.filter(matchEmp);
+            if (!employees.length) return null;
+            return { ...section, employees };
+          })
+          .filter(Boolean) as typeof g.sections;
+        if (!sections.length) return null;
+        const totalCount = sections.reduce((n, s) => {
+          if (s.type === "manager-team") {
+            return (
+              n +
+              (s.managerRow ? 1 : 0) +
+              s.reports.filter((r) => r.id !== s.managerRow?.id).length
+            );
+          }
+          return n + s.employees.length;
+        }, 0);
+        return { ...g, sections, totalCount };
+      })
+      .filter(Boolean) as typeof grouped;
+  }, [grouped, deptFilter, search, drafts]);
+
+  const pageGroups = useMemo(
+    () => pageSlice(filteredGrouped, page, DEPT_PAGE_SIZE),
+    [filteredGrouped, page]
   );
 
   const employeeNameOptions = useMemo(
@@ -491,6 +573,47 @@ export function EmployeeMasterClient({
         </p>
       )}
 
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border/80 bg-card/80 p-3 shadow-soft">
+        <input
+          type="search"
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPage(0);
+          }}
+          placeholder="Search name, ECN, designation…"
+          className="min-w-[200px] flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/30"
+        />
+        <label className="flex items-center gap-2 text-xs">
+          <span className="font-semibold uppercase tracking-wide text-muted-foreground">
+            Department
+          </span>
+          <select
+            value={deptFilter}
+            onChange={(e) => {
+              setDeptFilter(e.target.value);
+              setPage(0);
+            }}
+            className="min-w-[160px] rounded-lg border border-border bg-background px-3 py-2 text-sm"
+          >
+            <option value="all">All departments</option>
+            {grouped.map((g) => (
+              <option key={g.departmentId} value={g.departmentId}>
+                {g.departmentName} ({g.totalCount})
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      <ListPagination
+        page={page}
+        pageSize={DEPT_PAGE_SIZE}
+        total={filteredGrouped.length}
+        onPageChange={setPage}
+        label="departments"
+      />
+
       <StickyTableShell maxHeight="min(75vh, 900px)">
         <table className={MASTER_TABLE_CLASS}>
           <TableHeader className="sticky top-0 z-10 bg-card/95 backdrop-blur-md">
@@ -511,7 +634,17 @@ export function EmployeeMasterClient({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {grouped.map((deptGroup) => (
+            {pageGroups.length === 0 && (
+              <TableRow>
+                <TableCell
+                  colSpan={isAdmin ? 9 : 8}
+                  className="px-4 py-10 text-center text-sm text-muted-foreground"
+                >
+                  No employees match your search.
+                </TableCell>
+              </TableRow>
+            )}
+            {pageGroups.map((deptGroup) => (
               <Fragment key={`dept-${deptGroup.departmentId}`}>
                 <TableRow className="bg-primary/10 hover:bg-primary/10">
                   <TableCell
@@ -587,6 +720,14 @@ export function EmployeeMasterClient({
           </TableBody>
         </table>
       </StickyTableShell>
+
+      <ListPagination
+        page={page}
+        pageSize={DEPT_PAGE_SIZE}
+        total={filteredGrouped.length}
+        onPageChange={setPage}
+        label="departments"
+      />
 
       <UploadMasterModal
         open={uploadOpen}
