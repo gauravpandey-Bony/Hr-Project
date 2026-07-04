@@ -518,6 +518,10 @@ export function EmployeeMasterClient({
                     );
                     const expanded = expandedTeams.has(teamKey);
                     const teamSize = section.reports.length;
+                    const managerId = section.managerRow?.id;
+                    const reportRows = section.reports.filter(
+                      (r) => r.id !== managerId
+                    );
 
                     return (
                       <Fragment key={`team-${teamKey}`}>
@@ -546,7 +550,7 @@ export function EmployeeMasterClient({
                           </TableCell>
                         </TableRow>
                         {expanded &&
-                          section.reports.map((report) =>
+                          reportRows.map((report) =>
                             renderEmployeeRow(report, ++rowCounter, {
                               indent: true,
                             })

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { dedupeEmployeeMastersByEcn } from "@/lib/masters/dedupe-employees";
 import { sync37pFromBuffer, sync37pFromDefaultFile } from "@/lib/masters/sync-37p";
 
 export const runtime = "nodejs";
@@ -27,6 +28,7 @@ export async function POST(request: Request) {
     const result = file
       ? await sync37pFromBuffer(db, user.organizationId, await file.arrayBuffer())
       : await sync37pFromDefaultFile(db, user.organizationId);
+    await dedupeEmployeeMastersByEcn(db, user.organizationId);
 
     if (result.errors.length && result.employeeCount === 0) {
       return NextResponse.json(

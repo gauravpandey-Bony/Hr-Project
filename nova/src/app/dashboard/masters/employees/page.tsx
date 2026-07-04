@@ -10,6 +10,7 @@ import {
   requireAdminWorkspace,
 } from "@/lib/unit-workspace.server";
 import { EmployeeMasterClient } from "@/components/masters/employee-master-client";
+import { dedupeEmployeeMasterRows } from "@/lib/employee-master-grouping";
 import { filterRealKraEmployees } from "@/lib/masters/logistics-kra-junk";
 import { sanitizeKraDesignation } from "@/lib/masters/kra-workbook";
 
@@ -32,7 +33,7 @@ export default async function EmployeeMasterPage({
 
   const [employees, departments] = await Promise.all([
     db.employeeMaster.findMany({
-      where: employeeWhere,
+      where: { ...employeeWhere, isActive: true },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     }),
     db.departmentMaster.findMany({
@@ -43,12 +44,16 @@ export default async function EmployeeMasterPage({
     }),
   ]);
 
+  const rows = dedupeEmployeeMasterRows(filterRealKraEmployees(employees)).map(
+    (e) => ({
+      ...e,
+      designation: sanitizeKraDesignation(e.designation) ?? null,
+    })
+  );
+
   return (
     <EmployeeMasterClient
-      initialRows={filterRealKraEmployees(employees).map((e) => ({
-        ...e,
-        designation: sanitizeKraDesignation(e.designation) ?? null,
-      }))}
+      initialRows={rows}
       departments={departments}
       isAdmin={user.role === "ADMIN"}
       unitId={workspace.unitId}

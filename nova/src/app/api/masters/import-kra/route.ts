@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { dedupeEmployeeMastersByEcn } from "@/lib/masters/dedupe-employees";
 import { syncKraFromDefaultFile } from "@/lib/masters/sync-kra-workbook";
 
 export const runtime = "nodejs";
@@ -20,6 +21,7 @@ export async function POST() {
       undefined,
       user.id
     );
+    await dedupeEmployeeMastersByEcn(db, user.organizationId);
 
     if (
       result.errors.length &&
