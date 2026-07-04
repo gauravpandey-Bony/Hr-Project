@@ -132,12 +132,25 @@ export function EmployeeMasterClient({
     }
   }
 
+  async function readJsonResponse(res: Response) {
+    const text = await res.text();
+    try {
+      return JSON.parse(text) as { error?: string; message?: string };
+    } catch {
+      throw new Error(
+        res.ok
+          ? "Invalid server response"
+          : `Sync failed (HTTP ${res.status}). Try again or check server logs.`
+      );
+    }
+  }
+
   async function syncKraWorkbook() {
     setSyncingKra(true);
     setError(null);
     try {
       const res = await fetch("/api/masters/import-kra", { method: "POST" });
-      const data = await res.json();
+      const data = await readJsonResponse(res);
       if (!res.ok) throw new Error(data.error ?? "KRA import failed");
       router.refresh();
     } catch (e) {
@@ -152,7 +165,7 @@ export function EmployeeMasterClient({
     setError(null);
     try {
       const res = await fetch("/api/masters/import-37p", { method: "POST" });
-      const data = await res.json();
+      const data = await readJsonResponse(res);
       if (!res.ok) throw new Error(data.error ?? "Import failed");
       router.refresh();
     } catch (e) {
@@ -313,45 +326,39 @@ export function EmployeeMasterClient({
   function renderEmployeeRow(
     row: EmployeeMaster,
     rowIndex: number,
-    opts?: { indent?: boolean; underManager?: string }
+    opts?: { indent?: boolean }
   ) {
     const d = drafts[row.id] ?? toDraft(row);
     return (
       <TableRow
         key={row.id}
-        className={opts?.indent ? "bg-muted/20" : undefined}
+        className={opts?.indent ? "bg-muted/15" : undefined}
       >
         <TableCell className={`${MASTER_CELL} text-muted-foreground`}>
           {rowIndex}
         </TableCell>
         {isAdmin && (
           <TableCell className={MASTER_CELL}>
-            <div className="flex gap-1">
+            <div className="flex items-center gap-0.5">
               <Link
                 href={profileHref(row.id)}
-                title="Profile — details & edit"
+                title="Profile & performance"
                 className="rounded-md p-1.5 text-sky-600 hover:bg-sky-500/10"
               >
                 <UserCircle className="h-4 w-4" />
               </Link>
               <Link
                 href={profileHref(row.id)}
-                title="Employee KRA / KPI performance report"
+                title="KRA / KPI report"
                 className="rounded-md p-1.5 text-violet-600 hover:bg-violet-500/10"
               >
                 <BarChart3 className="h-4 w-4" />
-              </Link>
-              <Link
-                href={kraBaseHref}
-                title="Plant KRA / KPI master sheet"
-                className="rounded-md p-1.5 text-primary hover:bg-primary/10"
-              >
-                <FileSpreadsheet className="h-4 w-4" />
               </Link>
               <button
                 type="button"
                 onClick={() => save(row.id)}
                 disabled={savingId === row.id}
+                title="Save"
                 className="rounded-md p-1.5 text-primary hover:bg-primary/10"
               >
                 {savingId === row.id ? (
@@ -363,6 +370,7 @@ export function EmployeeMasterClient({
               <button
                 type="button"
                 onClick={() => remove(row.id, d.name)}
+                title="Delete"
                 className="rounded-md p-1.5 text-rose-600 hover:bg-rose-500/10"
               >
                 <Trash2 className="h-4 w-4" />
@@ -371,12 +379,7 @@ export function EmployeeMasterClient({
           </TableCell>
         )}
         <TableCell className={MASTER_CELL}>
-          <div className={opts?.indent ? "pl-6" : undefined}>
-            {opts?.underManager && (
-              <p className="mb-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
-                Reports to {opts.underManager}
-              </p>
-            )}
+          <div className={opts?.indent ? "pl-5" : undefined}>
             {isAdmin ? (
               <input
                 className={masterCellInput("min-w-[200px]")}
@@ -480,37 +483,6 @@ export function EmployeeMasterClient({
             </span>
           )}
         </TableCell>
-        <TableCell className={MASTER_CELL}>
-          {isAdmin ? (
-            <input
-              className={masterCellInput("min-w-[56px]")}
-              value={d.sortOrder}
-              onChange={(e) => patch(row.id, { sortOrder: e.target.value })}
-            />
-          ) : (
-            row.sortOrder
-          )}
-        </TableCell>
-        <TableCell className={MASTER_CELL}>
-          {isAdmin ? (
-            <input
-              type="checkbox"
-              checked={d.isActive}
-              disabled={savingId === row.id}
-              title="Active — shows under reporting manager team"
-              onChange={(e) => {
-                const isActive = e.target.checked;
-                patch(row.id, { isActive });
-                void saveActive(row.id, isActive, d.name.trim() || row.name);
-              }}
-              className="h-4 w-4 rounded"
-            />
-          ) : row.isActive ? (
-            "Yes"
-          ) : (
-            "No"
-          )}
-        </TableCell>
       </TableRow>
     );
   }
@@ -528,7 +500,7 @@ export function EmployeeMasterClient({
             </div>
             <h1 className="text-3xl font-bold">Employee Master</h1>
             <p className="mt-1 text-sm text-slate-300">
-              Grouped by department & reporting manager — {rows.length} records
+              {rows.length} employees · grouped by department & manager
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -608,43 +580,42 @@ export function EmployeeMasterClient({
         </p>
       )}
 
-      <p className="text-xs text-muted-foreground">
-        Employees are grouped by <strong>department</strong>. Tick <strong>Active</strong> to show an
-        employee under their <strong>reporting manager</strong> team. Pick reporting manager from
-        Employee Master names. Changing reporting manager asks twice for confirmation. Use profile
-        icon for KRA / KPI view & update.
-      </p>
-
       <StickyTableShell maxHeight="min(75vh, 900px)">
         <table className={MASTER_TABLE_CLASS}>
           <TableHeader className="sticky top-0 z-10 bg-card/95 backdrop-blur-md">
             <TableRow className="hover:bg-transparent">
-              <TableHead className="w-10 shrink-0">#</TableHead>
-              {isAdmin && <TableHead className="w-[120px] shrink-0">Actions</TableHead>}
-              <TableHead className="min-w-[220px]">Name</TableHead>
-              <TableHead className="min-w-[200px]">Designation</TableHead>
-              <TableHead className="min-w-[240px]">Department</TableHead>
-              <TableHead className="min-w-[160px]">Location</TableHead>
-              <TableHead className="min-w-[110px]">DOJ</TableHead>
-              <TableHead className="min-w-[120px]">ECN</TableHead>
-              <TableHead className="min-w-[200px]">Reporting Manager</TableHead>
-              <TableHead className="min-w-[64px]">Order</TableHead>
-              <TableHead className="min-w-[56px]">Active</TableHead>
+              <TableHead className="w-10 shrink-0 font-bold text-foreground">#</TableHead>
+              {isAdmin && (
+                <TableHead className="w-[110px] shrink-0 font-bold text-foreground">
+                  Actions
+                </TableHead>
+              )}
+              <TableHead className="min-w-[200px] font-bold text-foreground">Name</TableHead>
+              <TableHead className="min-w-[180px] font-bold text-foreground">
+                Designation
+              </TableHead>
+              <TableHead className="min-w-[200px] font-bold text-foreground">
+                Department
+              </TableHead>
+              <TableHead className="min-w-[150px] font-bold text-foreground">Location</TableHead>
+              <TableHead className="min-w-[100px] font-bold text-foreground">DOJ</TableHead>
+              <TableHead className="min-w-[100px] font-bold text-foreground">ECN</TableHead>
+              <TableHead className="min-w-[180px] font-bold text-foreground">
+                Reporting Manager
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {grouped.map((deptGroup) => (
               <Fragment key={`dept-${deptGroup.departmentId}`}>
-                <TableRow
-                  className="bg-indigo-500/10 hover:bg-indigo-500/10"
-                >
+                <TableRow className="bg-primary/10 hover:bg-primary/10">
                   <TableCell
-                    colSpan={isAdmin ? 11 : 10}
-                    className="py-2 text-sm font-semibold text-indigo-900 dark:text-indigo-100"
+                    colSpan={isAdmin ? 9 : 8}
+                    className="py-2.5 text-sm font-semibold text-foreground"
                   >
                     {deptGroup.departmentName}
-                    <span className="ml-2 font-normal text-muted-foreground">
-                      ({deptGroup.totalCount} employee{deptGroup.totalCount === 1 ? "" : "s"})
+                    <span className="ml-2 rounded-full bg-background/80 px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                      {deptGroup.totalCount}
                     </span>
                   </TableCell>
                 </TableRow>
@@ -656,37 +627,30 @@ export function EmployeeMasterClient({
                       section.managerName
                     );
                     const expanded = expandedTeams.has(teamKey);
-                    const reportCount = section.reports.length;
+                    const teamSize = section.reports.length;
 
                     return (
                       <Fragment key={`team-${teamKey}`}>
                         {section.managerRow &&
-                          renderEmployeeRow(section.managerRow, ++rowCounter, {
-                            underManager: undefined,
-                          })}
-                        <TableRow
-                          key={`team-${teamKey}`}
-                          className="bg-muted/30 hover:bg-muted/40"
-                        >
-                          <TableCell className={MASTER_CELL} />
-                          {isAdmin && <TableCell className={MASTER_CELL} />}
+                          renderEmployeeRow(section.managerRow, ++rowCounter)}
+                        <TableRow className="bg-muted/40 hover:bg-muted/50">
                           <TableCell
                             colSpan={isAdmin ? 9 : 8}
-                            className={`${MASTER_CELL} py-2`}
+                            className="py-1.5 pl-4"
                           >
                             <button
                               type="button"
                               onClick={() => toggleTeam(teamKey)}
-                              className="inline-flex items-center gap-2 text-sm font-medium text-foreground"
+                              className="inline-flex items-center gap-2 rounded-lg px-2 py-1 text-sm font-medium text-foreground transition hover:bg-background/60"
                             >
                               {expanded ? (
-                                <ChevronDown className="h-4 w-4" />
+                                <ChevronDown className="h-4 w-4 text-muted-foreground" />
                               ) : (
-                                <ChevronRight className="h-4 w-4" />
+                                <ChevronRight className="h-4 w-4 text-muted-foreground" />
                               )}
-                              Team under {section.managerName}
-                              <span className="text-muted-foreground">
-                                ({reportCount} active report{reportCount === 1 ? "" : "s"})
+                              <span>Team under {section.managerName}</span>
+                              <span className="rounded-full bg-background px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                                {teamSize}
                               </span>
                             </button>
                           </TableCell>
@@ -695,7 +659,6 @@ export function EmployeeMasterClient({
                           section.reports.map((report) =>
                             renderEmployeeRow(report, ++rowCounter, {
                               indent: true,
-                              underManager: section.managerName,
                             })
                           )}
                       </Fragment>
