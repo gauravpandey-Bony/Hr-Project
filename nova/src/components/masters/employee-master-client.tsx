@@ -99,8 +99,6 @@ export function EmployeeMasterClient({
   const [savingId, setSavingId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
-  const [syncing37p, setSyncing37p] = useState(false);
-  const [syncingKra, setSyncingKra] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expandedTeams, setExpandedTeams] = useState<Set<string>>(() => new Set());
@@ -126,49 +124,6 @@ export function EmployeeMasterClient({
       setError(e instanceof Error ? e.message : "Download failed");
     } finally {
       setDownloading(false);
-    }
-  }
-
-  async function readJsonResponse(res: Response) {
-    const text = await res.text();
-    try {
-      return JSON.parse(text) as { error?: string; message?: string };
-    } catch {
-      throw new Error(
-        res.ok
-          ? "Invalid server response"
-          : `Sync failed (HTTP ${res.status}). Try again or check server logs.`
-      );
-    }
-  }
-
-  async function syncKraWorkbook() {
-    setSyncingKra(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/masters/import-kra", { method: "POST" });
-      const data = await readJsonResponse(res);
-      if (!res.ok) throw new Error(data.error ?? "KRA import failed");
-      router.refresh();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "KRA import failed");
-    } finally {
-      setSyncingKra(false);
-    }
-  }
-
-  async function sync37pRoster() {
-    setSyncing37p(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/masters/import-37p", { method: "POST" });
-      const data = await readJsonResponse(res);
-      if (!res.ok) throw new Error(data.error ?? "Import failed");
-      router.refresh();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "37P import failed");
-    } finally {
-      setSyncing37p(false);
     }
   }
 
@@ -486,32 +441,6 @@ export function EmployeeMasterClient({
             </button>
             {isAdmin && (
               <>
-                <button
-                  type="button"
-                  onClick={syncKraWorkbook}
-                  disabled={syncingKra}
-                  className="inline-flex items-center gap-2 rounded-xl border border-violet-400/40 bg-violet-500/20 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-500/30 disabled:opacity-50"
-                >
-                  {syncingKra ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Upload className="h-4 w-4" />
-                  )}
-                  Sync IT KRA sheets
-                </button>
-                <button
-                  type="button"
-                  onClick={sync37pRoster}
-                  disabled={syncing37p}
-                  className="inline-flex items-center gap-2 rounded-xl border border-blue-400/40 bg-blue-500/20 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500/30 disabled:opacity-50"
-                >
-                  {syncing37p ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Users className="h-4 w-4" />
-                  )}
-                  Sync 37P roster
-                </button>
                 <button
                   type="button"
                   onClick={() => setUploadOpen(true)}
