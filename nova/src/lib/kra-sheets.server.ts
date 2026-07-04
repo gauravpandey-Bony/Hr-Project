@@ -47,6 +47,41 @@ function slugDept(name: string): string {
   );
 }
 
+function pushSheetIfNew(
+  sheets: KraSheetFromDb[],
+  seen: Set<string>,
+  name: string,
+  meta?: Partial<KraSheetFromDb["meta"]>
+): void {
+  if (isPlantHeadRoleDepartment(name)) return;
+  if (isHiddenKraDepartment(name)) return;
+  const displayName = formatDepartmentDisplayName(name);
+  if (isHiddenKraDepartment(displayName)) return;
+  const id = slugDept(displayName);
+  if (seen.has(id)) return;
+  // Collapse equivalent department labels (e.g. "QA" / "Quality Assurance")
+  for (const existing of sheets) {
+    if (departmentsAreEquivalent(existing.department, displayName)) return;
+  }
+  seen.add(id);
+  sheets.push({
+    id,
+    label: displayName,
+    department: displayName,
+    meta: {
+      kpiLevel: meta?.kpiLevel ?? "DEPARTMENT",
+      department: displayName,
+      category: meta?.category ?? displayName,
+      showPerspective: meta?.showPerspective ?? true,
+    },
+  });
+}
+
+/**
+ * One KRA sheet tab per active department in the plant/unit.
+ * Includes Department Master rows even when they have no staff yet, plus any
+ * staff/KPI departments missing from master.
+ */
 export async function fetchKraSheets(
   organizationId: string,
   scope?: PlantDataScope | null
@@ -55,10 +90,10 @@ export async function fetchKraSheets(
     ? { ...departmentMasterWhereForPlant(organizationId, scope), isActive: true }
     : { organizationId, isActive: true };
 
-  const [departments, scopedEmployees] = await Promise.all([
+  const [departments, scopedEmployees, plantKpis] = await Promise.all([
     db.departmentMaster.findMany({
       where: deptWhere,
-      orderBy: { sortOrder: "asc" },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     }),
     scope
       ? db.employeeMaster.findMany({
@@ -69,7 +104,20 @@ export async function fetchKraSheets(
           },
           select: { department: true, departmentId: true },
         })
-      : Promise.resolve([]),
+      : db.employeeMaster.findMany({
+          where: { organizationId, isActive: true },
+          select: { department: true, departmentId: true },
+        }),
+    scope
+      ? db.kpi.findMany({
+          where: {
+            organizationId,
+            isActive: true,
+            ...kpiWhereForPlantScope(scope),
+          },
+          select: { department: true },
+        })
+      : Promise.resolve([] as { department: string | null }[]),
   ]);
 
   const linkedDeptIds = [
@@ -84,130 +132,34 @@ export async function fetchKraSheets(
       : [];
   const deptNameById = new Map(linkedDepartments.map((d) => [d.id, d.name]));
 
-  const deptNamesFromStaff = new Set<string>();
+  const seen = new Set<string>();
+  const sheets: KraSheetFromDb[] = [];
+
+  // 1) Every active Department Master row for this unit
+  for (const d of departments) {
+    pushSheetIfNew(sheets, seen, d.name, {
+      kpiLevel: (d.kpiLevel as KraSheetFromDb["meta"]["kpiLevel"]) ?? "DEPARTMENT",
+      category: d.category ?? undefined,
+      showPerspective: d.showPerspective,
+    });
+  }
+
+  // 2) Departments present on staff but missing from master
   for (const emp of scopedEmployees) {
     const raw =
       emp.department?.trim() ||
       (emp.departmentId ? deptNameById.get(emp.departmentId)?.trim() : undefined);
-    if (raw) deptNamesFromStaff.add(raw);
+    if (raw) pushSheetIfNew(sheets, seen, raw, { kpiLevel: "INDIVIDUAL" });
   }
 
-  const deptByName = new Map(
-    departments.map((d) => [formatDepartmentDisplayName(d.name), d])
-  );
-
-  const withSheetId = departments.filter(
-    (d) => d.kraSheetId && d.kpiLevel !== "INDIVIDUAL"
-  );
-
-  let source =
-    withSheetId.length > 0
-      ? withSheetId
-      : departments.filter((d) => d.kpiLevel !== "INDIVIDUAL");
-
-  for (const name of deptNamesFromStaff) {
-    if (isPlantHeadRoleDepartment(name)) continue;
-    if (isHiddenKraDepartment(name)) continue;
-    const displayName = formatDepartmentDisplayName(name);
-    const hasEquivalent = [...deptByName.keys()].some((existing) =>
-      departmentsAreEquivalent(existing, displayName)
-    );
-    if (!hasEquivalent) {
-      source = [
-        ...source,
-        {
-          id: `virtual-${slugDept(name)}`,
-          organizationId,
-          name,
-          headName: null,
-          location: scope?.plantUnitKey ?? null,
-          kraSheetId: slugDept(name),
-          kpiLevel: "INDIVIDUAL",
-          category: name,
-          showPerspective: true,
-          sortOrder: 100,
-          isActive: true,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-      ];
-    }
+  // 3) Departments present on plant KPIs but missing above
+  for (const k of plantKpis) {
+    const dept = k.department?.trim();
+    if (dept) pushSheetIfNew(sheets, seen, dept, { kpiLevel: "INDIVIDUAL" });
   }
 
-  const seen = new Set<string>();
-  const sheets: KraSheetFromDb[] = [];
-
-  for (const d of source) {
-    if (isPlantHeadRoleDepartment(d.name)) continue;
-    if (isHiddenKraDepartment(d.name)) continue;
-    const displayName = formatDepartmentDisplayName(d.name);
-    const id = slugDept(displayName);
-    if (seen.has(id)) continue;
-    seen.add(id);
-    sheets.push({
-      id,
-      label: displayName,
-      department: displayName,
-      meta: {
-        kpiLevel: d.kpiLevel ?? "DEPARTMENT",
-        department: displayName,
-        category: d.category ?? displayName,
-        showPerspective: d.showPerspective,
-      },
-    });
-  }
-
-  if (sheets.length === 0 && deptNamesFromStaff.size > 0) {
-    for (const name of [...deptNamesFromStaff].sort()) {
-      if (isPlantHeadRoleDepartment(name)) continue;
-      if (isHiddenKraDepartment(name)) continue;
-      const displayName = formatDepartmentDisplayName(name);
-      const id = slugDept(displayName);
-      if (seen.has(id)) continue;
-      seen.add(id);
-      sheets.push({
-        id,
-        label: displayName,
-        department: displayName,
-        meta: {
-          kpiLevel: "INDIVIDUAL",
-          department: displayName,
-          category: displayName,
-          showPerspective: true,
-        },
-      });
-    }
-  }
-
+  sheets.sort((a, b) => a.label.localeCompare(b.label));
   attachProductionSubSheets(sheets);
-
-  if (scope && scopedEmployees.length > 0) {
-    const employeeDisplayDepts = new Set<string>();
-    for (const emp of scopedEmployees) {
-      const raw =
-        emp.department?.trim() ||
-        (emp.departmentId ? deptNameById.get(emp.departmentId)?.trim() : undefined);
-      if (raw) employeeDisplayDepts.add(formatDepartmentDisplayName(raw));
-    }
-
-    const plantKpis = await db.kpi.findMany({
-      where: {
-        organizationId,
-        isActive: true,
-        ...kpiWhereForPlantScope(scope),
-      },
-      select: { department: true },
-    });
-    for (const k of plantKpis) {
-      const dept = k.department?.trim();
-      if (dept) employeeDisplayDepts.add(formatDepartmentDisplayName(dept));
-    }
-
-    return sheets.filter((s) =>
-      [...employeeDisplayDepts].some((ed) => departmentsAreEquivalent(ed, s.department))
-    );
-  }
-
   return sheets;
 }
 

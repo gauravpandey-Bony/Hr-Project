@@ -115,13 +115,17 @@ export function KraPageClient({
   const [quarter, setQuarter] = useState<FiscalQuarter>("q1");
   const appliedInitialEmployee = useRef(Boolean(initialTarget));
 
-  const visibleSheets = useMemo(
-    () =>
-      sheets.filter(
-        (s) => employeesForDepartment(employeesByDepartment, s.department).length > 0
-      ),
-    [sheets, employeesByDepartment]
-  );
+  const isEmployeeRole = userRole === "EMPLOYEE";
+  const isManagerRole = userRole === "MANAGER";
+
+  // Admins/managers see every department sheet for the unit (even with 0 staff).
+  // Employees only see departments they belong to.
+  const visibleSheets = useMemo(() => {
+    if (!isEmployeeRole) return sheets;
+    return sheets.filter(
+      (s) => employeesForDepartment(employeesByDepartment, s.department).length > 0
+    );
+  }, [sheets, employeesByDepartment, isEmployeeRole]);
 
   const sheet =
     visibleSheets.find((s) => s.id === activeSheet) ??
@@ -129,9 +133,6 @@ export function KraPageClient({
     visibleSheets[0];
   const activeSubSheet =
     sheet?.subSheets?.find((s) => s.id === activeSubSheetId) ?? sheet?.subSheets?.[0] ?? null;
-
-  const isEmployeeRole = userRole === "EMPLOYEE";
-  const isManagerRole = userRole === "MANAGER";
 
   const deptEmployeesRaw = sheet
     ? employeesForDepartment(employeesByDepartment, sheet.department)
