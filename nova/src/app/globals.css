@@ -73,8 +73,30 @@
   }
 
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply bg-background text-foreground antialiased capitalize;
     font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1;
+  }
+
+  /* Keep technical / identity values as typed (not title-cased) */
+  input[type="email"],
+  input[type="password"],
+  input[type="url"],
+  input[type="tel"],
+  input[type="number"],
+  input[type="search"],
+  input[type="date"],
+  input[type="time"],
+  input[type="datetime-local"],
+  input[type="month"],
+  input[type="week"],
+  code,
+  pre,
+  kbd,
+  samp,
+  .font-mono,
+  .normal-case,
+  [data-no-capitalize] {
+    text-transform: none;
   }
 
   input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]):not([type="color"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="range"]),
