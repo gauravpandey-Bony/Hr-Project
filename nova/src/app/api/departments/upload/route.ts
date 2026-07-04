@@ -6,6 +6,8 @@ import {
   dedupeDepartmentMasters,
   upsertDepartmentMaster,
 } from "@/lib/masters/department-master-sync";
+import { resolveWorkspace } from "@/lib/unit-workspace.server";
+import { importLocationForPlantUnitKey } from "@/lib/org-units";
 
 export async function POST(request: Request) {
   const user = await getCurrentUser();
@@ -19,7 +21,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
   }
 
-  const plantUnitKey = String(formData.get("plantUnitKey") ?? "").trim() || null;
+  const unitSlug = String(formData.get("unit") ?? "").trim() || null;
+  let plantUnitKey = String(formData.get("plantUnitKey") ?? "").trim() || null;
+  if (!plantUnitKey) {
+    const workspace = await resolveWorkspace(user, unitSlug);
+    plantUnitKey = workspace.plantUnitKey;
+  }
+  const defaultLocation = plantUnitKey
+    ? importLocationForPlantUnitKey(plantUnitKey)
+    : "Bony Polymers";
+
   const { rows: parsedRows, errors } = await parseUploadFile(file, "departments");
   const rows = parsedRows as DepartmentImportRow[];
   if (!rows.length) {
@@ -39,7 +50,7 @@ export async function POST(request: Request) {
       {
         name: row.name,
         headName: row.headName ?? null,
-        location: row.location ?? "Bony Polymers",
+        location: row.location ?? defaultLocation,
         plantUnitKey,
         kraSheetId: row.kraSheetId ?? null,
         sortOrder: row.sortOrder ?? 0,

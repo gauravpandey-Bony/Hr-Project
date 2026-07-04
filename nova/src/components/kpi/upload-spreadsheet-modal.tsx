@@ -19,12 +19,14 @@ export function UploadSpreadsheetModal({
   open,
   onClose,
   unitId,
+  plantUnitKey,
   category,
   query,
 }: {
   open: boolean;
   onClose: () => void;
   unitId?: string;
+  plantUnitKey?: string | null;
   category?: string;
   query?: string;
 }) {
@@ -44,6 +46,13 @@ export function UploadSpreadsheetModal({
 
     const formData = new FormData();
     formData.append("file", file);
+    // Bind upload to the current plant so data stays visible after reload.
+    if (plantUnitKey?.trim()) {
+      formData.append("plantUnitKey", plantUnitKey.trim());
+    }
+    if (unitId?.trim()) {
+      formData.append("unit", unitId.trim());
+    }
 
     const isExcel = /\.xlsx?$/i.test(file.name);
     const endpoint = isExcel ? "/api/masters/import-plant-kra" : "/api/kpis/upload";

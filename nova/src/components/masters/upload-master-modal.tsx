@@ -98,6 +98,10 @@ export function UploadMasterModal({
   function buildFormData(confirmOverwrite: boolean, includeDepartmentOverrides: boolean) {
     const formData = new FormData();
     formData.append("file", file!);
+    // Keep uploads on the selected plant so data remains after page reload.
+    if (unitId?.trim()) {
+      formData.append("unit", unitId.trim());
+    }
     if (confirmOverwrite) {
       formData.append("confirmOverwrite", "true");
     }

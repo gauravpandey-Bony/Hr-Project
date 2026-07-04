@@ -25,6 +25,8 @@ import { assignDepartmentKpisToEmployee } from "@/lib/kpi/assign-department-kpis
 import { prepareStaffDetailsRows } from "@/lib/masters/staff-details-import";
 import { isStaffDetailsBuffer } from "@/lib/masters/staff-details-roster";
 import { listPlantUnitScopes } from "@/lib/masters/plant-unit-scopes";
+import { resolveWorkspace } from "@/lib/unit-workspace.server";
+import { importLocationForPlantUnitKey } from "@/lib/org-units";
 
 export async function POST(request: Request) {
   const user = await getCurrentUser();
@@ -38,14 +40,32 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
   }
 
+  const unitSlug = String(formData.get("unit") ?? "").trim() || null;
+  let plantUnitKey = String(formData.get("plantUnitKey") ?? "").trim() || null;
+  if (!plantUnitKey) {
+    const workspace = await resolveWorkspace(user, unitSlug);
+    plantUnitKey = workspace.plantUnitKey;
+  }
+
   const buffer = await file.arrayBuffer();
   const confirmOverwrite = formData.get("confirmOverwrite") === "true";
   const skipDepartmentCheck = formData.get("skipDepartmentCheck") === "true";
   const departmentOverrides = parseDepartmentOverrides(formData.get("departmentOverrides"));
 
   if (isKraEmployeeWorkbook(buffer)) {
+    if (!plantUnitKey) {
+      return NextResponse.json(
+        {
+          error:
+            "Select a plant/unit before uploading so employees and KPIs are saved to the correct plant.",
+        },
+        { status: 400 }
+      );
+    }
     const parsed = parseKraWorkbook(buffer, file.name);
     const syncOptions = {
+      plantUnitKey,
+      location: importLocationForPlantUnitKey(plantUnitKey),
       sourceFileName: file.name,
       departmentOverrides,
       preParsed: parsed,
@@ -56,7 +76,11 @@ export async function POST(request: Request) {
         db,
         user.organizationId,
         buffer,
-        { sourceFileName: file.name },
+        {
+          plantUnitKey,
+          location: importLocationForPlantUnitKey(plantUnitKey),
+          sourceFileName: file.name,
+        },
         parsed
       );
       if (deptPreview.needsDepartmentPick) {

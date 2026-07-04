@@ -25,12 +25,14 @@ export function KpiToolbar({
   query,
   resultCount,
   unitId,
+  plantUnitKey,
 }: {
   isAdmin: boolean;
   currentCategory?: string;
   query?: string;
   resultCount?: number;
   unitId?: string;
+  plantUnitKey?: string | null;
 }) {
   const [uploadOpen, setUploadOpen] = useState(false);
   const [kraUploadOpen, setKraUploadOpen] = useState(false);
@@ -120,10 +122,15 @@ export function KpiToolbar({
         open={uploadOpen}
         onClose={() => setUploadOpen(false)}
         unitId={unitId}
+        plantUnitKey={plantUnitKey}
         category={currentCategory}
         query={query}
       />
-      <UploadKraWorkbookModal open={kraUploadOpen} onClose={() => setKraUploadOpen(false)} />
+      <UploadKraWorkbookModal
+        open={kraUploadOpen}
+        onClose={() => setKraUploadOpen(false)}
+        plantUnitKey={plantUnitKey}
+      />
       <ConnectAppModal open={connectOpen} onClose={() => setConnectOpen(false)} />
     </>
   );

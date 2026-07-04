@@ -69,6 +69,7 @@ export default async function KpisPage({
         query={q}
         resultCount={kpis.length}
         unitId={workspace.unitId ?? undefined}
+        plantUnitKey={workspace.plantUnitKey}
       />
 
       {kpis.length === 0 ? (

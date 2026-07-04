@@ -8,6 +8,7 @@ import { findEmployeeEcnConflicts } from "@/lib/masters/preview-employee-upload"
 import { syncKraWorkbook } from "@/lib/masters/sync-kra-workbook";
 import { syncPlantKraWorkbook } from "@/lib/masters/sync-plant-kra-workbook";
 import { importLocationForPlantUnitKey } from "@/lib/org-units";
+import { resolveWorkspace } from "@/lib/unit-workspace.server";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -38,10 +39,20 @@ export async function POST(request: Request) {
     const confirmOverwrite = formData.get("confirmOverwrite") === "true";
     const skipDepartmentCheck = formData.get("skipDepartmentCheck") === "true";
     const departmentOverrides = parseDepartmentOverrides(formData.get("departmentOverrides"));
-    const plantUnitKey = String(formData.get("plantUnitKey") ?? "").trim() || null;
-    const importLocation = plantUnitKey
-      ? importLocationForPlantUnitKey(plantUnitKey)
-      : null;
+    const unitSlug = String(formData.get("unit") ?? "").trim() || null;
+    let plantUnitKey = String(formData.get("plantUnitKey") ?? "").trim() || null;
+    // Fall back to the admin's selected unit so uploads stay plant-scoped after reload.
+    if (!plantUnitKey) {
+      const workspace = await resolveWorkspace(user, unitSlug);
+      plantUnitKey = workspace.plantUnitKey;
+    }
+    if (!plantUnitKey) {
+      return importError(
+        "Select a plant/unit before uploading so data is saved to the correct plant.",
+        400
+      );
+    }
+    const importLocation = importLocationForPlantUnitKey(plantUnitKey);
 
     const parsed = parseKraWorkbook(buffer, file.name);
     const employeeKra = parsed.employees.length > 0;
