@@ -209,6 +209,7 @@ export default async function KraPage({
       canFillKra={isAdmin || isManager}
       plantUnit={workspace.plantUnitKey ?? "Bony Polymers"}
       unitName={workspace.unit?.name}
+      unitId={workspace.unitId}
       initialEmployeeId={focusEmployee?.id ?? focusEmployeeId}
     />
   );

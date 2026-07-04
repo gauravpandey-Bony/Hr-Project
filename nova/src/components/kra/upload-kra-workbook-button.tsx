@@ -11,11 +11,13 @@ export function UploadKraWorkbookButton({
   variant = "default",
   label = "Upload Excel",
   plantUnitKey,
+  unitId,
 }: {
   className?: string;
   variant?: "default" | "outline" | "hero" | "hero-outline";
   label?: string;
   plantUnitKey?: string | null;
+  unitId?: string | null;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -25,6 +27,15 @@ export function UploadKraWorkbookButton({
       : variant === "hero-outline"
         ? "inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white hover:bg-white/20"
         : undefined;
+
+  const modal = (
+    <UploadKraWorkbookModal
+      open={open}
+      onClose={() => setOpen(false)}
+      plantUnitKey={plantUnitKey}
+      unitId={unitId}
+    />
+  );
 
   if (variant === "hero" || variant === "hero-outline") {
     return (
@@ -37,11 +48,7 @@ export function UploadKraWorkbookButton({
           <Upload className="h-4 w-4" />
           {label}
         </button>
-        <UploadKraWorkbookModal
-          open={open}
-          onClose={() => setOpen(false)}
-          plantUnitKey={plantUnitKey}
-        />
+        {modal}
       </>
     );
   }
@@ -57,11 +64,7 @@ export function UploadKraWorkbookButton({
         <Upload className="h-4 w-4" />
         {label}
       </Button>
-      <UploadKraWorkbookModal
-        open={open}
-        onClose={() => setOpen(false)}
-        plantUnitKey={plantUnitKey}
-      />
+      {modal}
     </>
   );
 }

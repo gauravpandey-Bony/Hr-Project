@@ -28,10 +28,13 @@ export function UploadKraWorkbookModal({
   open,
   onClose,
   plantUnitKey,
+  unitId,
 }: {
   open: boolean;
   onClose: () => void;
   plantUnitKey?: string | null;
+  /** Unit slug for post-upload navigation (e.g. bony-37p). */
+  unitId?: string | null;
 }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -68,11 +71,47 @@ export function UploadKraWorkbookModal({
     onClose();
   }
 
+  function successHref() {
+    return unitId?.trim()
+      ? `/dashboard/kra?unit=${encodeURIComponent(unitId.trim())}`
+      : "/dashboard/kra";
+  }
+
+  function showSuccessAndClose(msg: string) {
+    handleClose();
+    const href = successHref();
+    toast.custom(
+      (t) => (
+        <button
+          type="button"
+          onClick={() => {
+            toast.dismiss(t);
+            router.push(href);
+          }}
+          className="w-[min(100vw-2rem,24rem)] rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-left shadow-lg transition hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950 dark:hover:bg-emerald-900"
+        >
+          <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-100">
+            Upload successful
+          </p>
+          <p className="mt-0.5 text-xs text-emerald-800 dark:text-emerald-200">{msg}</p>
+          <p className="mt-1.5 text-xs font-semibold text-emerald-700 underline dark:text-emerald-300">
+            Click to open updated KRA / KPI data →
+          </p>
+        </button>
+      ),
+      { duration: 12_000 }
+    );
+    router.refresh();
+  }
+
   function buildFormData(confirmOverwrite: boolean, includeDepartmentOverrides: boolean) {
     const formData = new FormData();
     formData.append("file", file!);
     if (plantUnitKey?.trim()) {
       formData.append("plantUnitKey", plantUnitKey.trim());
+    }
+    if (unitId?.trim()) {
+      formData.append("unit", unitId.trim());
     }
     if (confirmOverwrite) {
       formData.append("confirmOverwrite", "true");
@@ -129,11 +168,7 @@ export function UploadKraWorkbookModal({
         const msg =
           (data.message as string) ??
           `Imported ${(data.kpisCreated as number) ?? 0} KPIs with ${(data.entriesCreated as number) ?? 0} entries.`;
-        setResult(msg);
-        resetFlow();
-        setStep("file");
-        toast.success(msg);
-        router.refresh();
+        showSuccessAndClose(msg);
       } else {
         const errMsg = (data.error as string) ?? "Upload failed";
         setError(errMsg);

@@ -77,6 +77,7 @@ export function KraPageClient({
   canFillKra = false,
   plantUnit = "Bony Polymers",
   unitName,
+  unitId,
   initialEmployeeId = null,
 }: {
   allKpis: KpiWithEntries[];
@@ -91,6 +92,7 @@ export function KraPageClient({
   canFillKra?: boolean;
   plantUnit?: string;
   unitName?: string;
+  unitId?: string | null;
   initialEmployeeId?: string | null;
 }) {
   const initialTarget = useMemo(
@@ -231,7 +233,12 @@ export function KraPageClient({
             </p>
             {isAdmin && (
               <div className="mt-6">
-                <UploadKraWorkbookButton variant="hero" label="Upload Excel Sheet" plantUnitKey={plantUnit} />
+                <UploadKraWorkbookButton
+                  variant="hero"
+                  label="Upload Excel Sheet"
+                  plantUnitKey={plantUnit}
+                  unitId={unitId}
+                />
               </div>
             )}
           </div>
@@ -310,7 +317,12 @@ export function KraPageClient({
                 <Pencil className="h-4 w-4" />
                 Upload Excel to import employee KRA sheets
               </p>
-              <UploadKraWorkbookButton variant="hero-outline" label="Upload Excel" plantUnitKey={plantUnit} />
+              <UploadKraWorkbookButton
+                variant="hero-outline"
+                label="Upload Excel"
+                plantUnitKey={plantUnit}
+                unitId={unitId}
+              />
             </div>
           )}
         </div>

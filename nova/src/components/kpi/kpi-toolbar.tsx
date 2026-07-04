@@ -130,6 +130,7 @@ export function KpiToolbar({
         open={kraUploadOpen}
         onClose={() => setKraUploadOpen(false)}
         plantUnitKey={plantUnitKey}
+        unitId={unitId}
       />
       <ConnectAppModal open={connectOpen} onClose={() => setConnectOpen(false)} />
     </>

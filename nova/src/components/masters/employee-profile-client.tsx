@@ -327,6 +327,7 @@ export function EmployeeProfileClient({
                 variant="outline"
                 label="Upload corrected KRA file"
                 plantUnitKey={plantUnitKey}
+                unitId={kraUnitId || unitId}
                 className="border-amber-400 bg-white text-amber-950 hover:bg-amber-100"
               />
             )}

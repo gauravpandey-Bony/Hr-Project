@@ -66,8 +66,38 @@ export function UploadSpreadsheetModal({
         ? (data.message ??
           `Imported ${data.kpisCreated ?? 0} KPIs with ${data.entriesCreated ?? 0} entries.`)
         : `Imported ${data.kpisCreated} new KPI(s) and ${data.entriesCreated} data entries from ${data.rowsProcessed} rows.`;
-      setResult(msg);
-      toast.success(msg);
+      onClose();
+      setFile(null);
+      setResult(null);
+      setError(null);
+      const href = unitId?.trim()
+        ? isExcel
+          ? `/dashboard/kra?unit=${encodeURIComponent(unitId.trim())}`
+          : `/dashboard/kpis?unit=${encodeURIComponent(unitId.trim())}`
+        : isExcel
+          ? "/dashboard/kra"
+          : "/dashboard/kpis";
+      toast.custom(
+        (t) => (
+          <button
+            type="button"
+            onClick={() => {
+              toast.dismiss(t);
+              router.push(href);
+            }}
+            className="w-[min(100vw-2rem,24rem)] rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-left shadow-lg transition hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950 dark:hover:bg-emerald-900"
+          >
+            <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-100">
+              Upload successful
+            </p>
+            <p className="mt-0.5 text-xs text-emerald-800 dark:text-emerald-200">{msg}</p>
+            <p className="mt-1.5 text-xs font-semibold text-emerald-700 underline dark:text-emerald-300">
+              Click to open updated data →
+            </p>
+          </button>
+        ),
+        { duration: 12_000 }
+      );
       router.refresh();
     } else {
       const errMsg = data.error ?? "Upload failed";

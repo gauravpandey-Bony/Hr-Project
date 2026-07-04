@@ -196,6 +196,7 @@ export default async function UnitDashboardPage({
                   variant="hero-outline"
                   label="Upload Excel"
                   plantUnitKey={unit.plantUnitKey}
+                  unitId={params.unitId}
                 />
                 <GenerateKpiPromptButton isAdmin />
                 <Link href={createHref} className={DASHBOARD_HERO_BTN_PRIMARY}>
@@ -252,6 +253,7 @@ export default async function UnitDashboardPage({
                 variant="hero"
                 label="Upload Excel Sheet"
                 plantUnitKey={unit.plantUnitKey}
+                unitId={params.unitId}
               />
               <GenerateKpiPromptButton isAdmin />
               <Link
