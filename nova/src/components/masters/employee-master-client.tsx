@@ -39,6 +39,7 @@ import {
   masterCellInput,
   MASTER_TABLE_CLASS,
   MASTER_CELL,
+  MASTER_HEAD,
 } from "./masters-table-styles";
 
 type Draft = {
@@ -311,71 +312,69 @@ export function EmployeeMasterClient({
               <Link
                 href={profileHref(row.id)}
                 title="Profile & performance"
-                className="rounded-md p-1.5 text-sky-600 hover:bg-sky-500/10"
+                className="rounded p-1 text-sky-600 hover:bg-sky-500/10"
               >
-                <UserCircle className="h-4 w-4" />
+                <UserCircle className="h-3.5 w-3.5" />
               </Link>
               <Link
                 href={profileHref(row.id)}
                 title="KRA / KPI report"
-                className="rounded-md p-1.5 text-violet-600 hover:bg-violet-500/10"
+                className="rounded p-1 text-violet-600 hover:bg-violet-500/10"
               >
-                <BarChart3 className="h-4 w-4" />
+                <BarChart3 className="h-3.5 w-3.5" />
               </Link>
               <button
                 type="button"
                 onClick={() => save(row.id)}
                 disabled={savingId === row.id}
                 title="Save"
-                className="rounded-md p-1.5 text-primary hover:bg-primary/10"
+                className="rounded p-1 text-primary hover:bg-primary/10"
               >
                 {savingId === row.id ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 ) : (
-                  <Save className="h-4 w-4" />
+                  <Save className="h-3.5 w-3.5" />
                 )}
               </button>
               <button
                 type="button"
                 onClick={() => remove(row.id, d.name)}
                 title="Delete"
-                className="rounded-md p-1.5 text-rose-600 hover:bg-rose-500/10"
+                className="rounded p-1 text-rose-600 hover:bg-rose-500/10"
               >
-                <Trash2 className="h-4 w-4" />
+                <Trash2 className="h-3.5 w-3.5" />
               </button>
             </div>
           </TableCell>
         )}
         <TableCell className={MASTER_CELL}>
-          <div className={opts?.indent ? "pl-5" : undefined}>
+          <div className={opts?.indent ? "pl-4" : undefined}>
             {isAdmin ? (
               <input
-                className={masterCellInput("min-w-[200px]")}
+                className={masterCellInput("min-w-[140px]")}
                 value={d.name}
                 onChange={(e) => patch(row.id, { name: e.target.value })}
               />
             ) : (
-              <span className="block max-w-none font-medium leading-snug">{row.name}</span>
+              <span className="font-medium">{row.name}</span>
             )}
           </div>
         </TableCell>
         <TableCell className={MASTER_CELL}>
           {isAdmin ? (
             <input
-              className={masterCellInput("min-w-[180px]")}
+              className={masterCellInput("min-w-[120px]")}
               value={d.designation}
               onChange={(e) => patch(row.id, { designation: e.target.value })}
             />
           ) : (
-            <span className="block leading-snug">
-              {sanitizeKraDesignation(row.designation) ?? "—"}
-            </span>
+            <span>{sanitizeKraDesignation(row.designation) ?? "—"}</span>
           )}
         </TableCell>
         <TableCell className={MASTER_CELL}>
           {isAdmin ? (
             <select
-              className={masterCellInput("min-w-[220px] max-w-none")}
+              className={masterCellInput("min-w-[130px]")}
               value={d.departmentId}
               onChange={(e) => patch(row.id, { departmentId: e.target.value })}
             >
@@ -387,46 +386,46 @@ export function EmployeeMasterClient({
               ))}
             </select>
           ) : (
-            <span className="block leading-snug">{row.department ?? "—"}</span>
-          )}
-        </TableCell>
-        <TableCell className={MASTER_CELL}>
-          {isAdmin ? (
-            <input
-              className={masterCellInput("min-w-[140px]")}
-              value={d.location}
-              onChange={(e) => patch(row.id, { location: e.target.value })}
-            />
-          ) : (
-            <span className="block leading-snug">{row.location ?? "—"}</span>
-          )}
-        </TableCell>
-        <TableCell className={MASTER_CELL}>
-          {isAdmin ? (
-            <input
-              className={masterCellInput("min-w-[100px]")}
-              value={d.doj}
-              onChange={(e) => patch(row.id, { doj: e.target.value })}
-            />
-          ) : (
-            <span className="block leading-snug">{row.doj ?? "—"}</span>
+            <span>{row.department ?? "—"}</span>
           )}
         </TableCell>
         <TableCell className={MASTER_CELL}>
           {isAdmin ? (
             <input
               className={masterCellInput("min-w-[110px]")}
+              value={d.location}
+              onChange={(e) => patch(row.id, { location: e.target.value })}
+            />
+          ) : (
+            <span>{row.location ?? "—"}</span>
+          )}
+        </TableCell>
+        <TableCell className={MASTER_CELL}>
+          {isAdmin ? (
+            <input
+              className={masterCellInput("w-[5.5rem] min-w-0")}
+              value={d.doj}
+              onChange={(e) => patch(row.id, { doj: e.target.value })}
+            />
+          ) : (
+            <span>{row.doj ?? "—"}</span>
+          )}
+        </TableCell>
+        <TableCell className={MASTER_CELL}>
+          {isAdmin ? (
+            <input
+              className={masterCellInput("w-[4.5rem] min-w-0 font-mono")}
               value={d.ecn}
               onChange={(e) => patch(row.id, { ecn: e.target.value })}
             />
           ) : (
-            <span className="block font-mono text-xs leading-snug">{row.ecn ?? "—"}</span>
+            <span className="font-mono">{row.ecn ?? "—"}</span>
           )}
         </TableCell>
         <TableCell className={MASTER_CELL}>
           {isAdmin ? (
             <select
-              className={masterCellInput("min-w-[180px] max-w-none")}
+              className={masterCellInput("min-w-[130px]")}
               value={
                 resolveReportingManagerName(d.managerName, rows) || d.managerName
               }
@@ -552,25 +551,19 @@ export function EmployeeMasterClient({
         <table className={MASTER_TABLE_CLASS}>
           <TableHeader className="sticky top-0 z-10 bg-card/95 backdrop-blur-md">
             <TableRow className="hover:bg-transparent">
-              <TableHead className="w-10 shrink-0 font-bold text-foreground">#</TableHead>
+              <TableHead className={`${MASTER_HEAD} w-8 shrink-0`}>#</TableHead>
               {isAdmin && (
-                <TableHead className="w-[110px] shrink-0 font-bold text-foreground">
+                <TableHead className={`${MASTER_HEAD} w-[88px] shrink-0`}>
                   Actions
                 </TableHead>
               )}
-              <TableHead className="min-w-[200px] font-bold text-foreground">Name</TableHead>
-              <TableHead className="min-w-[180px] font-bold text-foreground">
-                Designation
-              </TableHead>
-              <TableHead className="min-w-[200px] font-bold text-foreground">
-                Department
-              </TableHead>
-              <TableHead className="min-w-[150px] font-bold text-foreground">Location</TableHead>
-              <TableHead className="min-w-[100px] font-bold text-foreground">DOJ</TableHead>
-              <TableHead className="min-w-[100px] font-bold text-foreground">ECN</TableHead>
-              <TableHead className="min-w-[180px] font-bold text-foreground">
-                Reporting Manager
-              </TableHead>
+              <TableHead className={MASTER_HEAD}>Name</TableHead>
+              <TableHead className={MASTER_HEAD}>Designation</TableHead>
+              <TableHead className={MASTER_HEAD}>Department</TableHead>
+              <TableHead className={MASTER_HEAD}>Location</TableHead>
+              <TableHead className={`${MASTER_HEAD} w-[5.5rem]`}>DOJ</TableHead>
+              <TableHead className={`${MASTER_HEAD} w-[4.5rem]`}>ECN</TableHead>
+              <TableHead className={MASTER_HEAD}>Reporting Manager</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
