@@ -16,6 +16,11 @@ import { persistAdminUnitId } from "@/lib/admin-unit";
 import { COMPANY } from "@/lib/company";
 import { useOrgUnits } from "@/components/providers/org-units-provider";
 import { DepartmentBrowser } from "@/components/dashboard/department-browser";
+import {
+  DASHBOARD_HERO,
+  DASHBOARD_HERO_BADGE,
+  DASHBOARD_HERO_SUBTITLE,
+} from "@/components/masters/masters-table-styles";
 
 function UnitTile({
   unit,
@@ -151,17 +156,18 @@ export function UnitTilePicker({ isAdmin }: { isAdmin: boolean }) {
 
   return (
     <div className="reports-grid-bg space-y-8 pb-10">
-      <div className="relative overflow-hidden rounded-[1.75rem] border border-white/10 bg-gradient-to-br from-slate-950 via-[#0f172a] to-blue-950 px-8 py-10 text-white shadow-elevated animate-fade-up">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(37,99,235,0.15),transparent_55%)]" />
+      <div className={DASHBOARD_HERO}>
+        <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-white/10 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-20 -left-12 h-44 w-44 rounded-full bg-cyan-300/20 blur-3xl" />
         <div className="relative max-w-2xl">
-          <p className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 py-1.5 text-xs font-medium backdrop-blur-md">
+          <p className={DASHBOARD_HERO_BADGE}>
             <BonyLogo size="xs" className="ring-white/20" />
             {COMPANY.productName}
           </p>
           <h1 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">
             Select your unit
           </h1>
-          <p className="mt-3 text-base text-slate-300/90">{PLATFORM_NOTE}</p>
+          <p className={DASHBOARD_HERO_SUBTITLE}>{PLATFORM_NOTE}</p>
         </div>
       </div>
 
@@ -170,7 +176,7 @@ export function UnitTilePicker({ isAdmin }: { isAdmin: boolean }) {
           <button
             type="button"
             onClick={() => setActiveGroup(null)}
-            className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-card px-4 py-2 text-sm font-medium text-foreground shadow-soft transition hover:border-primary/30 hover:text-primary"
+            className="inline-flex items-center gap-2 rounded-full border border-emerald-200/80 bg-card px-4 py-2 text-sm font-medium text-foreground shadow-soft transition hover:border-emerald-400/50 hover:text-emerald-700"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to all units
@@ -214,7 +220,7 @@ export function UnitTilePicker({ isAdmin }: { isAdmin: boolean }) {
       ) : (
         <>
           <div>
-            <h2 className="mb-4 text-sm font-semibold uppercase tracking-widest text-muted-foreground">
+            <h2 className="mb-4 text-sm font-semibold uppercase tracking-widest text-emerald-800/70">
               Company groups
             </h2>
             <div className="grid gap-5 sm:grid-cols-2">
@@ -230,7 +236,7 @@ export function UnitTilePicker({ isAdmin }: { isAdmin: boolean }) {
           </div>
 
           <div>
-            <h2 className="mb-4 text-sm font-semibold uppercase tracking-widest text-muted-foreground">
+            <h2 className="mb-4 text-sm font-semibold uppercase tracking-widest text-emerald-800/70">
               Other units
             </h2>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">

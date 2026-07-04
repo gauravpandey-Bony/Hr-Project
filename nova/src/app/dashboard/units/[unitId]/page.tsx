@@ -32,6 +32,13 @@ import {
   Sparkles,
   Target,
 } from "lucide-react";
+import {
+  DASHBOARD_HERO,
+  DASHBOARD_HERO_BADGE,
+  DASHBOARD_HERO_SUBTITLE,
+  DASHBOARD_HERO_BTN_PRIMARY,
+  DASHBOARD_HERO_BTN_SECONDARY,
+} from "@/components/masters/masters-table-styles";
 
 const QUARTERS: FiscalQuarter[] = ["q1", "q2", "q3", "q4"];
 
@@ -137,30 +144,29 @@ export default async function UnitDashboardPage({
 
   return (
     <div className="reports-grid-bg space-y-8 pb-10">
-      <div className="relative overflow-hidden rounded-[1.75rem] border border-white/10 bg-gradient-to-br from-slate-950 via-[#0f172a] to-blue-950 px-8 py-10 text-white shadow-elevated ring-1 ring-black/5 animate-fade-up">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(37,99,235,0.15),transparent_55%)]" />
-        <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-blue-400/15 blur-3xl" />
-        <div className="absolute -bottom-16 -left-16 h-48 w-48 rounded-full bg-sky-500/10 blur-3xl" />
+      <div className={DASHBOARD_HERO}>
+        <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-16 -left-16 h-48 w-48 rounded-full bg-cyan-300/20 blur-3xl" />
 
         <div className="relative flex flex-wrap items-end justify-between gap-6">
           <div className="max-w-2xl">
             {canAccessUnitPicker(user.role) && (
               <Link
                 href={UNIT_PICKER_PATH}
-                className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-medium text-blue-100 backdrop-blur-md transition hover:bg-white/15"
+                className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/15 px-3 py-1.5 text-xs font-medium text-emerald-50 backdrop-blur-md transition hover:bg-white/25"
               >
                 <ArrowLeft className="h-3.5 w-3.5" />
                 All units
               </Link>
             )}
-            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 py-1.5 text-xs font-medium backdrop-blur-md">
-              <LayoutDashboard className="h-3.5 w-3.5 text-blue-300" />
-              <span className="text-blue-100">{unit.name}</span>
+            <div className={`${DASHBOARD_HERO_BADGE} mb-3`}>
+              <LayoutDashboard className="h-3.5 w-3.5 text-emerald-100" />
+              <span className="text-emerald-50">{unit.name}</span>
             </div>
             <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
               {isEmployeeRole(user.role) ? "My KPI Dashboard" : "Plant Command Center"}
             </h1>
-            <p className="mt-3 text-lg text-slate-300/90 text-balance">
+            <p className={`${DASHBOARD_HERO_SUBTITLE} text-lg`}>
               {isEmployeeRole(user.role)
                 ? `Your assigned KPIs at ${unit.name}.`
                 : `${unit.name} — plant health, departments & business KPIs at a glance.`}
@@ -168,26 +174,17 @@ export default async function UnitDashboardPage({
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <Link
-              href={trackHref}
-              className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-semibold backdrop-blur-md transition hover:bg-white/20"
-            >
+            <Link href={trackHref} className={DASHBOARD_HERO_BTN_SECONDARY}>
               <PenLine className="h-4 w-4" />
               Update data
             </Link>
             {!isEmployeeRole(user.role) && (
               <>
-                <Link
-                  href={reportsHref}
-                  className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-semibold backdrop-blur-md transition hover:bg-white/20"
-                >
+                <Link href={reportsHref} className={DASHBOARD_HERO_BTN_SECONDARY}>
                   <BarChart3 className="h-4 w-4" />
                   Reports
                 </Link>
-                <Link
-                  href={aiHref}
-                  className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/25 transition hover:bg-primary/90"
-                >
+                <Link href={aiHref} className={DASHBOARD_HERO_BTN_PRIMARY}>
                   <Sparkles className="h-4 w-4" />
                   Maya AI
                 </Link>
@@ -201,10 +198,7 @@ export default async function UnitDashboardPage({
                   plantUnitKey={unit.plantUnitKey}
                 />
                 <GenerateKpiPromptButton isAdmin />
-                <Link
-                  href={createHref}
-                  className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/30 transition hover:bg-primary/90"
-                >
+                <Link href={createHref} className={DASHBOARD_HERO_BTN_PRIMARY}>
                   <Plus className="h-4 w-4" />
                   Add KPI
                 </Link>

@@ -60,7 +60,9 @@ function DeptTile({
       onClick={onSelect}
       className={cn(
         "w-full overflow-hidden border-0 bg-transparent p-0 text-left shadow-none",
-        active ? "ring-2 ring-primary ring-offset-2" : "ring-1 ring-black/5"
+        active
+          ? "ring-2 ring-emerald-600 ring-offset-2"
+          : "ring-1 ring-black/5"
       )}
     >
       <div
@@ -230,12 +232,12 @@ export function DepartmentBrowser() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
+        <h2 className="text-sm font-semibold uppercase tracking-widest text-emerald-800/70">
           Departments
         </h2>
-        <label className="flex items-center gap-2 rounded-full border border-border/70 bg-card px-3 py-1.5 text-xs shadow-soft">
-          <Filter className="h-3.5 w-3.5 text-muted-foreground" />
-          <span className="font-medium text-muted-foreground">Company</span>
+        <label className="flex items-center gap-2 rounded-full border border-emerald-200/80 bg-card px-3 py-1.5 text-xs shadow-soft">
+          <Filter className="h-3.5 w-3.5 text-emerald-700" />
+          <span className="font-medium text-emerald-800/70">Company</span>
           <select
             value={companyFilter}
             onChange={(e) => handleCompanyChange(e.target.value)}
@@ -277,10 +279,10 @@ export function DepartmentBrowser() {
 
       {selectedDept && (
         <div className="animate-fade-up overflow-hidden rounded-2xl border border-border/80 bg-card shadow-soft">
-          <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border/60 bg-muted/30 px-4 py-3 sm:px-5">
+          <div className="flex flex-wrap items-start justify-between gap-3 border-b border-emerald-100 bg-emerald-50/50 px-4 py-3 sm:px-5 dark:border-emerald-900/40 dark:bg-emerald-950/30">
             <div>
               <p className="flex items-center gap-2 text-base font-semibold text-foreground">
-                <Users className="h-4 w-4 text-primary" />
+                <Users className="h-4 w-4 text-emerald-700" />
                 {selectedDept.name}
               </p>
               <p className="mt-0.5 text-xs text-muted-foreground">
@@ -315,7 +317,7 @@ export function DepartmentBrowser() {
                   {employeesByPlant.map(([plant, count]) => (
                     <span
                       key={plant}
-                      className="rounded-full border border-primary/20 bg-primary/5 px-2.5 py-0.5 text-[11px] font-medium text-foreground"
+                      className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-medium text-foreground dark:border-emerald-800 dark:bg-emerald-950/40"
                     >
                       {plant}{" "}
                       <span className="text-muted-foreground">({count})</span>
