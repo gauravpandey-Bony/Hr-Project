@@ -11,6 +11,8 @@ import {
   formatProfileDoj,
 } from "@/lib/employee-profile.server";
 
+export const dynamic = "force-dynamic";
+
 export default async function EmployeeProfilePage({
   params,
   searchParams,
@@ -48,6 +50,7 @@ export default async function EmployeeProfilePage({
 
   return (
     <EmployeeProfileClient
+      key={profile.employee.id}
       employee={profile.employee}
       departments={departments}
       kpis={profile.kpis}

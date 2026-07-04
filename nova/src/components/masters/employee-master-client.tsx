@@ -329,24 +329,24 @@ export function EmployeeMasterClient({
             <div className="flex gap-1">
               <Link
                 href={profileHref(row.id)}
-                title="Profile — KRA / KPI view & update"
+                title="Profile — details & edit"
                 className="rounded-md p-1.5 text-sky-600 hover:bg-sky-500/10"
               >
                 <UserCircle className="h-4 w-4" />
               </Link>
               <Link
-                href={kraBaseHref}
-                title="KRA / KPI master sheet"
-                className="rounded-md p-1.5 text-primary hover:bg-primary/10"
-              >
-                <FileSpreadsheet className="h-4 w-4" />
-              </Link>
-              <Link
-                href={`/dashboard/reports/quarterly${unitId ? `?unit=${encodeURIComponent(unitId)}` : ""}`}
-                title="Quarterly KPI report"
+                href={profileHref(row.id)}
+                title="Employee KRA / KPI performance report"
                 className="rounded-md p-1.5 text-violet-600 hover:bg-violet-500/10"
               >
                 <BarChart3 className="h-4 w-4" />
+              </Link>
+              <Link
+                href={kraBaseHref}
+                title="Plant KRA / KPI master sheet"
+                className="rounded-md p-1.5 text-primary hover:bg-primary/10"
+              >
+                <FileSpreadsheet className="h-4 w-4" />
               </Link>
               <button
                 type="button"

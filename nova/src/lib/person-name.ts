@@ -27,5 +27,14 @@ export function personNamesMatch(a: string, b: string): boolean {
   const na = normalizePersonName(a);
   const nb = normalizePersonName(b);
   if (!na || !nb) return false;
-  return na === nb || na.includes(nb) || nb.includes(na);
+  if (na === nb) return true;
+
+  // Require at least two name tokens before treating one name as a subset of another.
+  // Avoids "Ram" matching "Raman" / shared surnames matching the wrong employee.
+  const aTokens = na.split(" ").filter(Boolean);
+  const bTokens = nb.split(" ").filter(Boolean);
+  const [shorter, longer] =
+    aTokens.length <= bTokens.length ? [aTokens, bTokens] : [bTokens, aTokens];
+  if (shorter.length < 2) return false;
+  return shorter.every((token) => longer.includes(token));
 }

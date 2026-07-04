@@ -22,13 +22,25 @@ export async function fetchEmployeeProfile(
 
   const nameVariants = personNameVariants(employee.name);
 
-  const linkedUser = await db.user.findFirst({
+  const linkedUserCandidates = await db.user.findMany({
     where: {
       organizationId,
       OR: nameVariants.map((name) => ({ name })),
     },
-    select: { id: true, email: true, role: true, name: true, title: true, department: true, hrisExternalId: true, managerId: true },
+    select: {
+      id: true,
+      email: true,
+      role: true,
+      name: true,
+      title: true,
+      department: true,
+      hrisExternalId: true,
+      managerId: true,
+    },
   });
+  const linkedUser =
+    linkedUserCandidates.find((u) => personNamesMatch(u.name, employee.name)) ??
+    null;
 
   const kpiCandidates = await db.kpi.findMany({
     where: {
@@ -65,9 +77,8 @@ export async function fetchEmployeeProfile(
     managerName: employee.managerName,
   };
 
-  const resolved = linkedUser
-    ? { kind: "user" as const, user: linkedUser, master }
-    : { kind: "master" as const, master };
+  // Always resolve performance from this employee master row (never another person).
+  const resolved = { kind: "master" as const, master };
 
   let performance: EmployeeDashboardData | null = null;
   try {

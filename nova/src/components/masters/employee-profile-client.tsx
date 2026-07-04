@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { DepartmentMaster, EmployeeMaster, Kpi, User } from "@prisma/client";
@@ -147,6 +147,17 @@ export function EmployeeProfileClient({
     return d;
   });
 
+  // Soft-navigation between employees must reset local form state.
+  useEffect(() => {
+    const d = toDraft(initial);
+    d.managerName =
+      resolveReportingManagerName(d.managerName, allEmployees) || d.managerName;
+    setDraft(d);
+    setEditing(false);
+    // Only re-sync when switching to a different employee record.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: key off employee id
+  }, [initial.id]);
+
   const kraHref = unitId
     ? appendUnitQuery("/dashboard/kra", unitId)
     : "/dashboard/kra";
@@ -282,7 +293,7 @@ export function EmployeeProfileClient({
             <BarChart3 className="h-4 w-4 text-primary" />
             KRA / KPI performance dashboard
           </h2>
-          <EmployeeDashboardBlock data={performance} />
+          <EmployeeDashboardBlock key={initial.id} data={performance} />
         </section>
       )}
 
