@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { appendUnitQuery } from "@/lib/unit-workspace";
+import { appendQueryParams, appendUnitQuery } from "@/lib/unit-workspace";
 import { confirmReportingManagerChange } from "@/lib/employee-master-grouping";
 import { resolveReportingManagerName } from "@/lib/reporting-manager";
 import { EmployeeDashboardBlock } from "@/components/ai/employee-dashboard-block";
@@ -158,12 +158,14 @@ export function EmployeeProfileClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: key off employee id
   }, [initial.id]);
 
-  const kraHref = unitId
-    ? appendUnitQuery("/dashboard/kra", unitId)
-    : "/dashboard/kra";
-  const quarterlyHref = unitId
-    ? appendUnitQuery("/dashboard/reports/quarterly", unitId)
-    : "/dashboard/reports/quarterly";
+  const kraHref = appendQueryParams("/dashboard/kra", {
+    unit: unitId,
+    employee: initial.id,
+  });
+  const quarterlyHref = appendQueryParams("/dashboard/reports/quarterly", {
+    unit: unitId,
+    employee: initial.name,
+  });
   const backHref = unitId
     ? appendUnitQuery("/dashboard/masters/employees", unitId)
     : "/dashboard/masters/employees";

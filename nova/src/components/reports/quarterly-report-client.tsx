@@ -21,13 +21,22 @@ export function QuarterlyReportClient({
   rowsByQuarter,
   employees,
   isEmployeeView,
+  initialEmployeeFilter = null,
 }: {
   rowsByQuarter: Record<FiscalQuarter, QuarterlyReportRow[]>;
   employees: string[];
   isEmployeeView: boolean;
+  initialEmployeeFilter?: string | null;
 }) {
   const [quarter, setQuarter] = useState<FiscalQuarter>("q1");
-  const [employeeFilter, setEmployeeFilter] = useState<string>("all");
+  const [employeeFilter, setEmployeeFilter] = useState<string>(() => {
+    const wanted = initialEmployeeFilter?.trim();
+    if (!wanted) return "all";
+    const match = employees.find(
+      (name) => name.toLowerCase() === wanted.toLowerCase()
+    );
+    return match ?? wanted;
+  });
 
   const baseRows = rowsByQuarter[quarter] ?? [];
   const rows = useMemo(() => {

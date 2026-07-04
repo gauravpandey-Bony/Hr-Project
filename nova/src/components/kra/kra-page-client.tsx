@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { RatingScaleCard } from "@/components/kra/kra-sheet";
 import { KraSheetEditable } from "@/components/kra/kra-sheet-editable";
 import { LogisticKraSheetEditable } from "@/components/kra/logistic-kra-sheet-editable";
@@ -11,6 +11,7 @@ import type { KraEmployeeRow, KraSheetFromDb } from "@/lib/kra-sheets.server";
 import { kpisForSheet } from "@/lib/kra-sheets";
 import { buildDepartmentDashboard } from "@/lib/kra/department-dashboard";
 import type { FiscalQuarter } from "@/lib/kpi-quarters";
+import { departmentsAreEquivalent } from "@/lib/masters/department-master-sync";
 import { personNamesMatch } from "@/lib/person-name";
 import { cn } from "@/lib/utils";
 import { ArrowLeft, Building2, FileSpreadsheet, Pencil, Users } from "lucide-react";
@@ -20,6 +21,34 @@ import { UploadKraWorkbookButton } from "@/components/kra/upload-kra-workbook-bu
 type KpiWithEntries = Kpi & { entries: KpiEntry[] };
 
 const EMPTY_EMPLOYEES: KraEmployeeRow[] = [];
+
+function employeesForDepartment(
+  employeesByDepartment: Record<string, KraEmployeeRow[]>,
+  department: string
+): KraEmployeeRow[] {
+  const direct = employeesByDepartment[department];
+  if (direct?.length) return direct;
+  for (const [dept, emps] of Object.entries(employeesByDepartment)) {
+    if (departmentsAreEquivalent(dept, department)) return emps;
+  }
+  return EMPTY_EMPLOYEES;
+}
+
+function findEmployeeSheet(
+  employeeId: string,
+  employeesByDepartment: Record<string, KraEmployeeRow[]>,
+  sheets: KraSheetFromDb[]
+): { sheetId: string; employeeId: string } | null {
+  for (const [department, employees] of Object.entries(employeesByDepartment)) {
+    const emp = employees.find((e) => e.id === employeeId);
+    if (!emp) continue;
+    const sheet =
+      sheets.find((s) => departmentsAreEquivalent(s.department, department)) ??
+      sheets.find((s) => s.department === department);
+    if (sheet) return { sheetId: sheet.id, employeeId: emp.id };
+  }
+  return null;
+}
 
 export function KraPageClient({
   allKpis,
@@ -34,6 +63,7 @@ export function KraPageClient({
   canFillKra = false,
   plantUnit = "Bony Polymers",
   unitName,
+  initialEmployeeId = null,
 }: {
   allKpis: KpiWithEntries[];
   sheets: KraSheetFromDb[];
@@ -47,23 +77,42 @@ export function KraPageClient({
   canFillKra?: boolean;
   plantUnit?: string;
   unitName?: string;
+  initialEmployeeId?: string | null;
 }) {
-  const [activeSheet, setActiveSheet] = useState<string>(
-    sheets.find((s) => s.id === "production")?.id ?? sheets[0]?.id ?? "production"
+  const initialTarget = useMemo(
+    () =>
+      initialEmployeeId
+        ? findEmployeeSheet(initialEmployeeId, employeesByDepartment, sheets)
+        : null,
+    [initialEmployeeId, employeesByDepartment, sheets]
   );
-  const [activeEmployeeId, setActiveEmployeeId] = useState<string | null>(null);
+
+  const [activeSheet, setActiveSheet] = useState<string>(
+    () =>
+      initialTarget?.sheetId ??
+      sheets.find((s) => s.id === "production")?.id ??
+      sheets[0]?.id ??
+      "production"
+  );
+  const [activeEmployeeId, setActiveEmployeeId] = useState<string | null>(
+    () => initialTarget?.employeeId ?? null
+  );
   const [activeSubSheetId, setActiveSubSheetId] = useState<string | null>(null);
   const [quarter, setQuarter] = useState<FiscalQuarter>("q1");
+  const appliedInitialEmployee = useRef(Boolean(initialTarget));
 
   const visibleSheets = useMemo(
     () =>
       sheets.filter(
-        (s) => (employeesByDepartment[s.department] ?? EMPTY_EMPLOYEES).length > 0
+        (s) => employeesForDepartment(employeesByDepartment, s.department).length > 0
       ),
     [sheets, employeesByDepartment]
   );
 
-  const sheet = visibleSheets.find((s) => s.id === activeSheet) ?? visibleSheets[0];
+  const sheet =
+    visibleSheets.find((s) => s.id === activeSheet) ??
+    sheets.find((s) => s.id === activeSheet) ??
+    visibleSheets[0];
   const activeSubSheet =
     sheet?.subSheets?.find((s) => s.id === activeSubSheetId) ?? sheet?.subSheets?.[0] ?? null;
 
@@ -71,7 +120,7 @@ export function KraPageClient({
   const isManagerRole = userRole === "MANAGER";
 
   const deptEmployeesRaw = sheet
-    ? (employeesByDepartment[sheet.department] ?? EMPTY_EMPLOYEES)
+    ? employeesForDepartment(employeesByDepartment, sheet.department)
     : EMPTY_EMPLOYEES;
 
   const deptEmployees = useMemo(() => {
@@ -84,18 +133,32 @@ export function KraPageClient({
   }, [deptEmployeesRaw, isAdmin, isManagerRole, viewerName]);
 
   useEffect(() => {
-    if (isEmployeeRole && visibleSheets.length > 0) {
+    if (!initialEmployeeId || appliedInitialEmployee.current) return;
+    const target = findEmployeeSheet(
+      initialEmployeeId,
+      employeesByDepartment,
+      sheets
+    );
+    if (!target) return;
+    appliedInitialEmployee.current = true;
+    setActiveSheet(target.sheetId);
+    setActiveEmployeeId(target.employeeId);
+  }, [initialEmployeeId, employeesByDepartment, sheets]);
+
+  useEffect(() => {
+    if (isEmployeeRole && visibleSheets.length > 0 && !initialEmployeeId) {
       const deptWithEmployee = visibleSheets[0];
       if (deptWithEmployee) setActiveSheet(deptWithEmployee.id);
     }
-  }, [isEmployeeRole, visibleSheets]);
+  }, [isEmployeeRole, visibleSheets, initialEmployeeId]);
 
   useEffect(() => {
     if (visibleSheets.length === 0) return;
-    if (!visibleSheets.some((s) => s.id === activeSheet)) {
-      setActiveSheet(visibleSheets[0]!.id);
-    }
-  }, [visibleSheets, activeSheet]);
+    if (visibleSheets.some((s) => s.id === activeSheet)) return;
+    // Keep deep-linked employee sheet even if department key matching is delayed
+    if (activeEmployeeId && sheets.some((s) => s.id === activeSheet)) return;
+    setActiveSheet(visibleSheets[0]!.id);
+  }, [visibleSheets, activeSheet, sheets, activeEmployeeId]);
 
   useEffect(() => {
     setActiveSubSheetId(sheet?.subSheets?.[0]?.id ?? null);
@@ -106,7 +169,12 @@ export function KraPageClient({
       setActiveEmployeeId(deptEmployees[0].id);
       return;
     }
-    setActiveEmployeeId(null);
+    // Keep the selected employee when they belong to the active department;
+    // only clear when switching to a department that does not include them.
+    setActiveEmployeeId((prev) => {
+      if (prev && deptEmployees.some((e) => e.id === prev)) return prev;
+      return null;
+    });
   }, [sheet?.department, isEmployeeRole, deptEmployees]);
 
   const activeEmployee = useMemo(

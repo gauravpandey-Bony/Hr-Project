@@ -26,6 +26,7 @@ import {
 } from "@/lib/employee-master-grouping";
 import { resolveReportingManagerName } from "@/lib/reporting-manager";
 import { sanitizeKraDesignation } from "@/lib/masters/kra-workbook";
+import { appendQueryParams } from "@/lib/unit-workspace";
 import { StickyTableShell } from "@/components/ui/sticky-table-shell";
 import {
   TableBody,
@@ -242,9 +243,16 @@ export function EmployeeMasterClient({
   }
 
   function profileHref(id: string) {
-    return unitId
-      ? `/dashboard/masters/employees/${id}?unit=${encodeURIComponent(unitId)}`
-      : `/dashboard/masters/employees/${id}`;
+    return appendQueryParams(`/dashboard/masters/employees/${id}`, {
+      unit: unitId,
+    });
+  }
+
+  function kraHref(id: string) {
+    return appendQueryParams("/dashboard/kra", {
+      unit: unitId,
+      employee: id,
+    });
   }
 
   function renderEmployeeRow(
@@ -272,8 +280,8 @@ export function EmployeeMasterClient({
                 <UserCircle className="h-3.5 w-3.5" />
               </Link>
               <Link
-                href={profileHref(row.id)}
-                title="KRA / KPI report"
+                href={kraHref(row.id)}
+                title="KRA / KPI sheet"
                 className="rounded p-1 text-violet-600 hover:bg-violet-500/10"
               >
                 <BarChart3 className="h-3.5 w-3.5" />

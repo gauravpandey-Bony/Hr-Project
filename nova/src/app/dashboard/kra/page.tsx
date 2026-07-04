@@ -20,12 +20,12 @@ import type { UserRole } from "@prisma/client";
 export default async function KraPage({
   searchParams,
 }: {
-  searchParams: Promise<{ unit?: string }>;
+  searchParams: Promise<{ unit?: string; employee?: string }>;
 }) {
   const user = await getCurrentUser();
   if (!user) return null;
 
-  const { unit: unitId } = await searchParams;
+  const { unit: unitId, employee: employeeParam } = await searchParams;
   const workspace = await resolveWorkspace(user, unitId);
   if (user.role === "ADMIN") {
     requireAdminWorkspace(user, workspace);
@@ -79,6 +79,7 @@ export default async function KraPage({
       canFillKra={isAdmin || isManager}
       plantUnit={workspace.plantUnitKey ?? "Bony Polymers"}
       unitName={workspace.unit?.name}
+      initialEmployeeId={employeeParam?.trim() || null}
     />
   );
 }

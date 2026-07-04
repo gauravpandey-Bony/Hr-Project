@@ -13,12 +13,12 @@ const QUARTERS: FiscalQuarter[] = ["q1", "q2", "q3", "q4"];
 export default async function QuarterlyReportPage({
   searchParams,
 }: {
-  searchParams: Promise<{ unit?: string }>;
+  searchParams: Promise<{ unit?: string; employee?: string }>;
 }) {
   const user = await getCurrentUser();
   if (!user) return null;
 
-  const { unit: unitId } = await searchParams;
+  const { unit: unitId, employee: employeeParam } = await searchParams;
   const workspace = await resolveWorkspace(user, unitId);
   if (user.role === "ADMIN") {
     requireAdminWorkspace(user, workspace);
@@ -85,6 +85,9 @@ export default async function QuarterlyReportPage({
         rowsByQuarter={rowsByQuarter}
         employees={employees}
         isEmployeeView={isEmployeeView}
+        initialEmployeeFilter={
+          isEmployeeView ? null : employeeParam?.trim() || null
+        }
       />
     </div>
   );

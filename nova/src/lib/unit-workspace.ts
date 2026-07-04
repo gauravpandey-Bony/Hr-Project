@@ -111,3 +111,16 @@ export function appendUnitQuery(path: string, unitId: string): string {
   url.searchParams.set("unit", unitId);
   return `${url.pathname}${url.search}`;
 }
+
+/** Append query params (skips empty values). Preserves existing path query string. */
+export function appendQueryParams(
+  path: string,
+  params: Record<string, string | null | undefined>
+): string {
+  const url = new URL(path, "http://local");
+  for (const [key, value] of Object.entries(params)) {
+    const v = value?.trim();
+    if (v) url.searchParams.set(key, v);
+  }
+  return `${url.pathname}${url.search}`;
+}
