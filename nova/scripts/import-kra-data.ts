@@ -23,6 +23,11 @@ const PLANT_KRA_IMPORTS: PlantKraImport[] = [
     files: ["Costing & MIS KRA KPI 26-27.xlsx", "New KRA KPI 2026.xlsx"],
   },
   {
+    dataDir: "data/bony-corporate-kra",
+    plantUnitKey: "Bony Corporate",
+    location: "Bony Corporate Faridabad",
+  },
+  {
     dataDir: "data/bony-fluid-58-kra",
     plantUnitKey: "Bony Fluid 58",
     location: "Bony Fluid 58",
@@ -31,6 +36,16 @@ const PLANT_KRA_IMPORTS: PlantKraImport[] = [
     dataDir: "data/saket-unit1-kra",
     plantUnitKey: "Saket Fabs Sheet Metal",
     location: "Saket Fabs Prithla",
+  },
+  {
+    dataDir: "data/saket-unit2-kra",
+    plantUnitKey: "Saket Fabs Coating",
+    location: "Saket Fabs Coating",
+  },
+  {
+    dataDir: "data/prime-india-kra",
+    plantUnitKey: "Prime India",
+    location: "Prime India",
   },
   {
     dataDir: "data/logistics-kra",

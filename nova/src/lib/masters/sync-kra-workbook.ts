@@ -21,10 +21,12 @@ import { purgeLogisticsJunkData } from "./logistics-kra-junk";
 import {
   dedupeDepartmentMasters,
   deactivateEmptyDepartments,
+  departmentsAreEquivalent,
   findMatchingDepartmentInList,
   upsertDepartmentMaster,
 } from "./department-master-sync";
 import { resolvePlantFromWorkingLocation } from "./employee-plant-location";
+import { personNamesMatch } from "@/lib/person-name";
 
 export type SyncKraWorkbookOptions = {
   plantUnitKey?: string | null;
@@ -117,29 +119,72 @@ async function upsertEmployees(
   let created = 0;
   let updated = 0;
 
+  const plantLocation = defaultLocation?.trim()
+    ? resolvePlantFromWorkingLocation(defaultLocation).location
+    : null;
+  const plantKey = plantLocation
+    ? resolvePlantFromWorkingLocation(plantLocation).plantUnitKey
+    : null;
+
+  // Load master once so we map by ECN / name without creating plant duplicates.
+  const masterRows = await db.employeeMaster.findMany({
+    where: { organizationId, isActive: true },
+  });
+  const byEcn = new Map(
+    masterRows
+      .filter((e) => e.ecn?.trim())
+      .map((e) => [e.ecn!.trim(), e] as const)
+  );
+
+  function findExisting(row: KraWorkbookEmployee) {
+    const ecnKey = isValidKraEcn(row.ecn) ? row.ecn!.trim() : null;
+    if (ecnKey && byEcn.has(ecnKey)) return byEcn.get(ecnKey)!;
+
+    const nameMatches = masterRows.filter((e) => personNamesMatch(e.name, row.name));
+    if (!nameMatches.length) return null;
+
+    if (plantKey) {
+      const atPlant = nameMatches.filter(
+        (e) =>
+          resolvePlantFromWorkingLocation(e.location).plantUnitKey === plantKey
+      );
+      if (atPlant.length === 1) return atPlant[0];
+      if (atPlant.length > 1) {
+        const sameDept = atPlant.find((e) =>
+          departmentsAreEquivalent(e.department ?? "", row.department ?? "")
+        );
+        return sameDept ?? atPlant[0];
+      }
+    }
+
+    const sameDept = nameMatches.find((e) =>
+      departmentsAreEquivalent(e.department ?? "", row.department ?? "")
+    );
+    return sameDept ?? nameMatches[0];
+  }
+
   for (const row of employees) {
-    const loc = defaultLocation?.trim() || "";
+    const loc = plantLocation || "";
     const departmentId =
       deptByName.get(`${row.department}::${loc}`) ??
       deptByName.get(row.department) ??
       null;
     const ecnKey = isValidKraEcn(row.ecn) ? row.ecn!.trim() : null;
-    const existing = ecnKey
-      ? await db.employeeMaster.findFirst({
-          where: { organizationId, ecn: ecnKey },
-        })
-      : await db.employeeMaster.findFirst({
-          where: { organizationId, name: row.name, department: row.department },
-        });
+    const existing = findExisting(row);
 
     const deptName = normalizeKraDepartment(row.department ?? row.departmentRaw ?? "").masterName;
-    const rawLocation =
-      row.location?.trim() || defaultLocation?.trim() || existing?.location || null;
-    const location = rawLocation
-      ? resolvePlantFromWorkingLocation(rawLocation).location
-      : null;
+    // Plant import always assigns the plant location; never leave staff on wrong plant.
+    const location =
+      plantLocation ??
+      (row.location?.trim()
+        ? resolvePlantFromWorkingLocation(row.location).location
+        : existing?.location
+          ? resolvePlantFromWorkingLocation(existing.location).location
+          : null);
+
     const data = {
-      name: row.name,
+      // Keep master display name when we matched an existing employee.
+      name: existing?.name ?? row.name,
       designation:
         sanitizeKraDesignation(row.designation) ??
         sanitizeKraDesignation(existing?.designation) ??
@@ -155,12 +200,20 @@ async function upsertEmployees(
     };
 
     if (existing) {
-      await db.employeeMaster.update({ where: { id: existing.id }, data });
+      const updatedRow = await db.employeeMaster.update({
+        where: { id: existing.id },
+        data,
+      });
+      const idx = masterRows.findIndex((e) => e.id === existing.id);
+      if (idx >= 0) masterRows[idx] = updatedRow;
+      if (updatedRow.ecn?.trim()) byEcn.set(updatedRow.ecn.trim(), updatedRow);
       updated++;
     } else {
-      await db.employeeMaster.create({
+      const createdRow = await db.employeeMaster.create({
         data: { organizationId, ...data },
       });
+      masterRows.push(createdRow);
+      if (createdRow.ecn?.trim()) byEcn.set(createdRow.ecn.trim(), createdRow);
       created++;
     }
   }
