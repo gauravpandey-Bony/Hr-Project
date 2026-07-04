@@ -14,14 +14,12 @@ import {
   UserCircle,
   ChevronDown,
   ChevronRight,
-  FileSpreadsheet,
 } from "lucide-react";
 import Link from "next/link";
 import { UploadMasterModal } from "./upload-master-modal";
 import { toast } from "sonner";
 import { COMPANY } from "@/lib/company";
 import { downloadFromApi } from "@/lib/download-from-api";
-import { appendUnitQuery } from "@/lib/unit-workspace";
 import {
   confirmReportingManagerChange,
   groupEmployeesByDepartment,
@@ -116,8 +114,6 @@ export function EmployeeMasterClient({
     [rows]
   );
 
-  const kraBaseHref = unitId ? appendUnitQuery("/dashboard/kra", unitId) : "/dashboard/kra";
-
   async function downloadSheet() {
     setDownloading(true);
     setError(null);
@@ -203,34 +199,6 @@ export function EmployeeMasterClient({
       else next.add(key);
       return next;
     });
-  }
-
-  async function saveActive(id: string, isActive: boolean, displayName: string) {
-    setSavingId(id);
-    setError(null);
-    try {
-      const res = await fetch(`/api/employees/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isActive }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Save failed");
-      toast.success(
-        isActive
-          ? `${displayName} — active, shown under reporting manager`
-          : `${displayName} — inactive, hidden from manager team`
-      );
-      router.refresh();
-    } catch (e) {
-      setDrafts((prev) => ({
-        ...prev,
-        [id]: { ...prev[id], isActive: !isActive },
-      }));
-      setError(e instanceof Error ? e.message : "Active save failed");
-    } finally {
-      setSavingId(null);
-    }
   }
 
   async function save(id: string) {
