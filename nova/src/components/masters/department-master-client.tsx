@@ -19,6 +19,11 @@ import {
   masterCellInput,
   MASTER_TABLE_CLASS,
   MASTER_CELL,
+  MASTER_HERO,
+  MASTER_HERO_BADGE,
+  MASTER_HERO_SUBTITLE,
+  MASTER_HERO_BTN_SECONDARY,
+  MASTER_HERO_BTN_PRIMARY,
 } from "./masters-table-styles";
 
 type DeptRow = DepartmentMaster;
@@ -145,15 +150,17 @@ export function DepartmentMasterClient({
 
   return (
     <div className="space-y-6">
-      <div className="relative overflow-hidden rounded-3xl border border-border/50 bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 px-6 py-8 text-white shadow-xl sm:px-8">
-        <div className="flex flex-wrap items-end justify-between gap-4">
+      <div className={MASTER_HERO}>
+        <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-20 -left-10 h-40 w-40 rounded-full bg-cyan-300/20 blur-3xl" />
+        <div className="relative flex flex-wrap items-end justify-between gap-4">
           <div>
-            <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-medium">
-              <Building2 className="h-3.5 w-3.5 text-blue-300" />
+            <div className={MASTER_HERO_BADGE}>
+              <Building2 className="h-3.5 w-3.5 text-emerald-100" />
               {COMPANY.shortName}
             </div>
-            <h1 className="text-3xl font-bold">Department Master</h1>
-            <p className="mt-1 text-sm text-slate-300">
+            <h1 className="text-3xl font-bold tracking-tight">Department Master</h1>
+            <p className={MASTER_HERO_SUBTITLE}>
               Plant departments — {rows.length} records
             </p>
           </div>
@@ -162,7 +169,7 @@ export function DepartmentMasterClient({
               type="button"
               onClick={downloadSheet}
               disabled={downloading || rows.length === 0}
-              className="inline-flex items-center gap-2 rounded-xl border border-sky-400/40 bg-sky-500/20 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-500/30 disabled:opacity-50"
+              className={MASTER_HERO_BTN_SECONDARY}
             >
               {downloading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -176,7 +183,7 @@ export function DepartmentMasterClient({
               <button
                 type="button"
                 onClick={() => setUploadOpen(true)}
-                className="inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-4 py-2 text-sm font-semibold text-white hover:bg-white/20"
+                className={MASTER_HERO_BTN_SECONDARY}
               >
                 <Upload className="h-4 w-4" />
                 Upload Excel
@@ -185,7 +192,7 @@ export function DepartmentMasterClient({
                 type="button"
                 onClick={addRow}
                 disabled={adding}
-                className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                className={MASTER_HERO_BTN_PRIMARY}
               >
                 {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
                 Add department
