@@ -1,13 +1,14 @@
 import "server-only";
 
+import { cache } from "react";
 import { db } from "@/lib/db";
 import { COMPANY as COMPANY_DEFAULTS } from "@/lib/company";
 
 export type CompanyContext = typeof COMPANY_DEFAULTS;
 
-export async function getCompanyContext(
+export const getCompanyContext = cache(async (
   organizationId?: string | null
-): Promise<CompanyContext> {
+): Promise<CompanyContext> => {
   if (!organizationId) return COMPANY_DEFAULTS;
 
   const org = await db.organization.findUnique({
@@ -33,7 +34,7 @@ export async function getCompanyContext(
     plantHeadLabel: COMPANY_DEFAULTS.plantHeadLabel,
     orgChartDoc: COMPANY_DEFAULTS.orgChartDoc,
   };
-}
+});
 
 /** First organization in DB — for login/marketing pages before auth. */
 export async function getDefaultCompanyContext(): Promise<CompanyContext> {

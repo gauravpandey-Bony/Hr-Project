@@ -25,7 +25,7 @@ import {
 import { useOrgUnit, useOrgUnits } from "@/components/providers/org-units-provider";
 import { useAdminSelectedUnit } from "@/hooks/use-admin-unit";
 import type { UserRole } from "@prisma/client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -68,6 +68,11 @@ export function Sidebar({
       pathname.includes("/calibration") ||
       pathname.includes("/compensation")
   );
+  const [pendingHref, setPendingHref] = useState<string | null>(null);
+
+  useEffect(() => {
+    setPendingHref(null);
+  }, [pathname]);
 
   const NavLink = ({
     href,
@@ -92,20 +97,27 @@ export function Sidebar({
         (!isUnitDashboardNav &&
           itemPath !== "/dashboard" &&
           pathname.startsWith(itemPath));
+    const pending = pendingHref === href;
 
     const link = (
       <Link
         href={href}
-        onClick={onNavigate}
+        prefetch
+        onClick={() => {
+          if (!active) setPendingHref(href);
+          onNavigate?.();
+        }}
         className={cn(
-          "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
+          "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150",
           nested && !collapsed && "ml-1",
           active
             ? "nav-pill-active pl-4"
             : "text-muted-foreground hover:bg-muted/80 hover:text-foreground",
+          pending && !active && "bg-muted/70 text-foreground",
           collapsed && "justify-center px-2 pl-2"
         )}
         aria-current={active ? "page" : undefined}
+        aria-busy={pending || undefined}
       >
         {Icon && (
           <Icon

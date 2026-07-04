@@ -11,7 +11,6 @@ import { DepartmentMasterClient } from "@/components/masters/department-master-c
 import {
   departmentsAreEquivalent,
   formatDepartmentDisplayName,
-  reconcileDepartmentAssignmentsForPlant,
   staffedDepartmentNamesFromEmployees,
 } from "@/lib/masters/department-master-sync";
 import { filterRealKraEmployees } from "@/lib/masters/logistics-kra-junk";
@@ -29,13 +28,8 @@ export default async function DepartmentMasterPage({
   const workspace = await resolveWorkspace(user, unitId);
   requireAdminWorkspace(user, workspace);
 
-  if (workspace.dataScope) {
-    await reconcileDepartmentAssignmentsForPlant(
-      db,
-      user.organizationId,
-      workspace.dataScope
-    );
-  }
+  // Skip heavy reconcile on every navigation — departments load from DB as-is.
+  // Reconcile still runs on staff/KRA import and deploy.
 
   const departments = await db.departmentMaster.findMany({
     where: workspace.dataScope

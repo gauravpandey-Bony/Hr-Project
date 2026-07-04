@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import type { OrgGroupMaster, OrgUnitMaster } from "@prisma/client";
 import { db } from "@/lib/db";
 import {
@@ -235,16 +236,15 @@ async function ensureUnitDataAliases(organizationId: string): Promise<void> {
   });
 }
 
-export async function fetchOrgStructure(organizationId: string): Promise<{
-  groups: OrgGroup[];
-  standaloneUnits: OrgUnit[];
-  allUnits: OrgUnit[];
-}> {
-  await syncOrgUnitsFromDefaults(organizationId);
-  await reconcileDefaultOrgUnits(organizationId);
-  await ensureUnitDataAliases(organizationId);
+function expectedDefaultUnitSlugs(): string[] {
+  return [
+    ...DEFAULT_ORG_GROUPS.flatMap((g) => g.units.map((u) => u.slug)),
+    ...DEFAULT_STANDALONE_UNITS.map((u) => u.slug),
+  ];
+}
 
-  const [groupRows, unitRows] = await Promise.all([
+async function loadOrgStructureRows(organizationId: string) {
+  return Promise.all([
     db.orgGroupMaster.findMany({
       where: { organizationId, isActive: true },
       orderBy: { sortOrder: "asc" },
@@ -255,9 +255,13 @@ export async function fetchOrgStructure(organizationId: string): Promise<{
       include: { group: true },
     }),
   ]);
+}
 
+function mapOrgStructure(
+  groupRows: OrgGroupMaster[],
+  unitRows: (OrgUnitMaster & { group: OrgGroupMaster | null })[]
+) {
   const groupSlugById = new Map(groupRows.map((g) => [g.id, g.slug]));
-
   const unitsByGroupSlug = new Map<string, OrgUnit[]>();
   const standaloneUnits: OrgUnit[] = [];
 
@@ -276,11 +280,44 @@ export async function fetchOrgStructure(organizationId: string): Promise<{
   const groups = groupRows.map((g) =>
     mapGroup(g, unitsByGroupSlug.get(g.slug) ?? [])
   );
-
   const allUnits = [...groups.flatMap((g) => g.units), ...standaloneUnits];
-
   return { groups, standaloneUnits, allUnits };
 }
+
+/**
+ * Fast read path for dashboard layout. Avoids rewriting every org unit on each
+ * navigation — only seeds/reconciles when units are missing.
+ */
+export const fetchOrgStructure = cache(async (organizationId: string) => {
+  let [groupRows, unitRows] = await loadOrgStructureRows(organizationId);
+
+  if (unitRows.length === 0) {
+    await syncOrgUnitsFromDefaults(organizationId);
+    await reconcileDefaultOrgUnits(organizationId);
+    await ensureUnitDataAliases(organizationId);
+    [groupRows, unitRows] = await loadOrgStructureRows(organizationId);
+  } else {
+    const slugSet = new Set(unitRows.map((u) => u.slug));
+    const missingDefault = expectedDefaultUnitSlugs().some((slug) => !slugSet.has(slug));
+    if (missingDefault) {
+      await reconcileDefaultOrgUnits(organizationId);
+      await ensureUnitDataAliases(organizationId);
+      [groupRows, unitRows] = await loadOrgStructureRows(organizationId);
+    } else {
+      const bony37p = unitRows.find((u) => u.slug === "bony-37p");
+      const needsAliases =
+        bony37p &&
+        (parseStringArrayJson(bony37p.locationAliases).length === 0 ||
+          parseStringArrayJson(bony37p.kpiPlantAliases).length === 0);
+      if (needsAliases) {
+        await ensureUnitDataAliases(organizationId);
+        [groupRows, unitRows] = await loadOrgStructureRows(organizationId);
+      }
+    }
+  }
+
+  return mapOrgStructure(groupRows, unitRows);
+});
 
 export async function getOrgUnitBySlug(
   organizationId: string,
