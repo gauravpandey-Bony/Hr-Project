@@ -39,7 +39,19 @@ const WORKING_LOCATION_RULES: PlantRule[] = [
     location: "Bony Corporate Faridabad",
   },
   {
+    // Plant 58 / Fluid 58 aliases (before bare "37P" so "37P & 58" can match 58)
+    test: /fluid\s*58\b|plant\s*58p?\b|\bbf\s*58\b|bony\s*fluid|fluid\s*systems|^58$/i,
+    plantUnitKey: "Bony Fluid 58",
+    location: "Bony Fluid 58",
+  },
+  {
     test: /fluid/i,
+    plantUnitKey: "Bony Fluid 58",
+    location: "Bony Fluid 58",
+  },
+  {
+    // Shared 37P + 58 maintenance staff — KRA lives on Fluid 58
+    test: /37\s*p\s*[&+/]\s*58|58\s*[&+/]\s*37\s*p/i,
     plantUnitKey: "Bony Fluid 58",
     location: "Bony Fluid 58",
   },
@@ -64,9 +76,9 @@ const WORKING_LOCATION_RULES: PlantRule[] = [
     location: "Saket Fabs Prithla",
   },
   {
-    test: /saket/i,
+    test: /saket|plant\s*sf\s*1|sf\s*[-–]?\s*0?1/i,
     plantUnitKey: "Saket Fabs Sheet Metal",
-    location: "Saket Fabs",
+    location: "Saket Fabs Prithla",
   },
   {
     test: /37\s*p|plot\s*no\.?\s*[-–]?\s*37\b/i,

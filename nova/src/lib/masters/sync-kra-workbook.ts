@@ -24,6 +24,7 @@ import {
   findMatchingDepartmentInList,
   upsertDepartmentMaster,
 } from "./department-master-sync";
+import { resolvePlantFromWorkingLocation } from "./employee-plant-location";
 
 export type SyncKraWorkbookOptions = {
   plantUnitKey?: string | null;
@@ -132,6 +133,11 @@ async function upsertEmployees(
         });
 
     const deptName = normalizeKraDepartment(row.department ?? row.departmentRaw ?? "").masterName;
+    const rawLocation =
+      row.location?.trim() || defaultLocation?.trim() || existing?.location || null;
+    const location = rawLocation
+      ? resolvePlantFromWorkingLocation(rawLocation).location
+      : null;
     const data = {
       name: row.name,
       designation:
@@ -140,7 +146,7 @@ async function upsertEmployees(
         null,
       departmentId,
       department: deptName,
-      location: row.location?.trim() || defaultLocation?.trim() || existing?.location || null,
+      location,
       doj: row.doj ?? existing?.doj ?? null,
       ecn: ecnKey ?? existing?.ecn ?? null,
       managerName: row.managerName?.trim() || existing?.managerName || null,
