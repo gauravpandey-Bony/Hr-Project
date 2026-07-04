@@ -115,6 +115,7 @@ model Organization {
   employees          EmployeeMaster[]
   orgGroups          OrgGroupMaster[]
   orgUnits           OrgUnitMaster[]
+  kraImportIssues    KraImportIssue[]
 }
 
 model User {
@@ -511,9 +512,35 @@ model EmployeeMaster {
 
   organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   dept         DepartmentMaster? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  kraImportIssues KraImportIssue[]
 
   @@index([organizationId])
   @@index([departmentId])
+}
+
+/// KRA workbook import problems shown on employee profile / KRA dashboard.
+model KraImportIssue {
+  id             String   @id @default(cuid())
+  organizationId String
+  employeeId     String?
+  employeeName   String
+  plantUnit      String?
+  department     String?
+  sourceFile     String
+  sheetName      String?
+  issueCode      String
+  message        String
+  fixHint        String?
+  isResolved     Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  employee     EmployeeMaster? @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, isResolved])
+  @@index([employeeId])
+  @@index([employeeName])
 }
 
 model OrgGroupMaster {

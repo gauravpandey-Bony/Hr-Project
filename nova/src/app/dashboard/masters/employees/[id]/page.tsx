@@ -69,9 +69,11 @@ export default async function EmployeeProfilePage({
       kpis={profile.kpis}
       linkedUser={profile.linkedUser}
       performance={profile.performance}
+      kraIssues={profile.kraIssues}
       isAdmin={user.role === "ADMIN"}
       unitId={workspace.unitId}
       kraUnitId={employeeUnitId}
+      plantUnitKey={employeePlantKey}
       dojLabel={formatProfileDoj(profile.employee.doj)}
       incrementLabel={formatIncrementPercent(profile.employee.lastIncrementPercent)}
       ctcLabel={formatCtc(profile.employee.lastCtc)}

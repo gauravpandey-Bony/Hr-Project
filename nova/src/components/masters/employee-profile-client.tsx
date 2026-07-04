@@ -23,8 +23,20 @@ import { cn } from "@/lib/utils";
 import { appendQueryParams, appendUnitQuery } from "@/lib/unit-workspace";
 import { confirmReportingManagerChange } from "@/lib/employee-master-grouping";
 import { resolveReportingManagerName } from "@/lib/reporting-manager";
+import { AlertTriangle } from "lucide-react";
 import { EmployeeDashboardBlock } from "@/components/ai/employee-dashboard-block";
 import type { EmployeeDashboardData } from "@/lib/ai/employee-report";
+import { UploadKraWorkbookButton } from "@/components/kra/upload-kra-workbook-button";
+
+type KraIssueRow = {
+  id: string;
+  issueCode: string;
+  message: string;
+  fixHint: string | null;
+  sourceFile: string;
+  sheetName: string | null;
+  plantUnit: string | null;
+};
 
 type KpiBrief = Pick<Kpi, "id" | "name" | "department" | "kraName" | "plantUnit">;
 
@@ -116,9 +128,11 @@ export function EmployeeProfileClient({
   kpis,
   linkedUser,
   performance,
+  kraIssues = [],
   isAdmin,
   unitId,
   kraUnitId,
+  plantUnitKey,
   dojLabel,
   incrementLabel,
   ctcLabel,
@@ -130,10 +144,12 @@ export function EmployeeProfileClient({
   kpis: KpiBrief[];
   linkedUser: Pick<User, "id" | "email" | "role"> | null;
   performance?: EmployeeDashboardData | null;
+  kraIssues?: KraIssueRow[];
   isAdmin: boolean;
   unitId?: string | null;
   /** Plant unit for KRA/report deep links (from employee location). */
   kraUnitId?: string | null;
+  plantUnitKey?: string | null;
   dojLabel: string;
   incrementLabel: string;
   ctcLabel: string;
@@ -293,6 +309,52 @@ export function EmployeeProfileClient({
         </div>
       </div>
 
+      {kraIssues.length > 0 && (
+        <section className="space-y-3 rounded-2xl border border-amber-300/80 bg-amber-50/90 p-4 shadow-sm dark:border-amber-800 dark:bg-amber-950/40 sm:p-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="flex items-center gap-2 text-sm font-semibold text-amber-950 dark:text-amber-100">
+                <AlertTriangle className="h-4 w-4" />
+                KRA / KPI import issue
+              </h2>
+              <p className="mt-1 text-xs text-amber-900/80 dark:text-amber-200/80">
+                This employee&apos;s workbook could not be fully imported. Fix the file format and
+                upload again.
+              </p>
+            </div>
+            {isAdmin && (
+              <UploadKraWorkbookButton
+                variant="outline"
+                label="Upload corrected KRA file"
+                plantUnitKey={plantUnitKey}
+                className="border-amber-400 bg-white text-amber-950 hover:bg-amber-100"
+              />
+            )}
+          </div>
+          <ul className="space-y-3">
+            {kraIssues.map((issue) => (
+              <li
+                key={issue.id}
+                className="rounded-xl border border-amber-200/80 bg-white/80 px-3 py-3 text-sm dark:border-amber-900 dark:bg-amber-950/30"
+              >
+                <p className="font-medium text-foreground">{issue.message}</p>
+                {issue.fixHint && (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    <span className="font-semibold text-foreground">How to fix: </span>
+                    {issue.fixHint}
+                  </p>
+                )}
+                <p className="mt-1.5 text-[11px] text-muted-foreground">
+                  File: {issue.sourceFile}
+                  {issue.sheetName ? ` · Sheet: ${issue.sheetName}` : ""}
+                  {issue.plantUnit ? ` · Plant: ${issue.plantUnit}` : ""}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {performance && (
         <section className="space-y-2">
           <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
@@ -303,7 +365,7 @@ export function EmployeeProfileClient({
         </section>
       )}
 
-      {!performance && kpis.length === 0 && (
+      {!performance && kpis.length === 0 && kraIssues.length === 0 && (
         <section className="rounded-2xl border border-dashed border-border bg-muted/20 px-5 py-6 text-sm text-muted-foreground">
           No KRA / KPI performance data linked for this employee yet.
         </section>

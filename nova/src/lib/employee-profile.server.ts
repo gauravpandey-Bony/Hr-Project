@@ -87,7 +87,20 @@ export async function fetchEmployeeProfile(
     performance = null;
   }
 
-  return { employee, kpis, linkedUser, performance };
+  const kraIssues = await db.kraImportIssue.findMany({
+    where: {
+      organizationId,
+      isResolved: false,
+      OR: [
+        { employeeId: employee.id },
+        ...nameVariants.map((employeeName) => ({ employeeName })),
+      ],
+    },
+    orderBy: { updatedAt: "desc" },
+    take: 10,
+  });
+
+  return { employee, kpis, linkedUser, performance, kraIssues };
 }
 
 export function formatProfileDoj(doj: string | null | undefined): string {

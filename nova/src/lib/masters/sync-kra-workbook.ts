@@ -27,6 +27,7 @@ import {
 } from "./department-master-sync";
 import { resolvePlantFromWorkingLocation } from "./employee-plant-location";
 import { personNamesMatch } from "@/lib/person-name";
+import { parseKraIssueLine } from "./kra-workbook";
 
 export type SyncKraWorkbookOptions = {
   plantUnitKey?: string | null;
@@ -422,9 +423,10 @@ export async function syncKraWorkbook(
 ): Promise<SyncKraWorkbookResult & { parseErrors: string[] }> {
   const plantUnitKey = options?.plantUnitKey ?? null;
   const defaultLocation = options?.location ?? (plantUnitKey || "Bony Polymers");
+  const sourceFile = options?.sourceFileName ?? "unknown.xlsx";
   const { employees, kpis, errors } =
     options?.preParsed ??
-    parseKraWorkbook(buffer, options?.sourceFileName ?? undefined);
+    parseKraWorkbook(buffer, sourceFile);
   applyDepartmentOverrides(employees, kpis, options?.departmentOverrides ?? {});
   await alignEmployeesToMasterDepartments(
     db,
@@ -433,7 +435,22 @@ export async function syncKraWorkbook(
     kpis,
     plantUnitKey
   );
+
+  // Always refresh issues for this source file.
+  await db.kraImportIssue.deleteMany({
+    where: { organizationId, sourceFile },
+  });
+
   if (!employees.length) {
+    await persistKraImportIssues(
+      db,
+      organizationId,
+      sourceFile,
+      plantUnitKey,
+      errors,
+      [],
+      kpis
+    );
     return {
       departmentsCreated: 0,
       departmentsUpdated: 0,
@@ -442,7 +459,9 @@ export async function syncKraWorkbook(
       kpisCreated: 0,
       kpisUpdated: 0,
       entriesCreated: 0,
-      employeeCount: 0,
+      employeeCount: await db.employeeMaster.count({
+        where: { organizationId, isActive: true },
+      }),
       errors,
       parseErrors: errors,
     };
@@ -480,6 +499,16 @@ export async function syncKraWorkbook(
     plantUnitKey
   );
 
+  await persistKraImportIssues(
+    db,
+    organizationId,
+    sourceFile,
+    plantUnitKey,
+    errors,
+    employees,
+    kpis
+  );
+
   const employeeCount = await db.employeeMaster.count({
     where: { organizationId, isActive: true },
   });
@@ -496,6 +525,61 @@ export async function syncKraWorkbook(
     errors,
     parseErrors: errors,
   };
+}
+
+async function persistKraImportIssues(
+  db: PrismaClient,
+  organizationId: string,
+  sourceFile: string,
+  plantUnitKey: string | null,
+  errors: string[],
+  employees: KraWorkbookEmployee[],
+  kpis: KraWorkbookKpi[]
+): Promise<void> {
+  const masters = await db.employeeMaster.findMany({
+    where: { organizationId, isActive: true },
+    select: { id: true, name: true, department: true },
+  });
+
+  for (const line of errors) {
+    const parsed = parseKraIssueLine(line);
+    const employeeName = parsed?.employeeName?.trim() || "Unknown";
+    const sheetName = parsed?.sheetName?.trim() || null;
+    const issueCode = parsed?.code || "PARSE_ERROR";
+    const message =
+      parsed?.message ||
+      line ||
+      "This KRA workbook could not be fully imported.";
+    const fixHint =
+      parsed?.fixHint ||
+      "Upload a standard KRA/KPI Excel for this employee (Name, Department, KPI table with Weightage and Target).";
+
+    // Skip issue if KPIs were successfully imported for this person.
+    const hasKpis = kpis.some((k) => personNamesMatch(k.ownerName, employeeName));
+    if (hasKpis && issueCode !== "CHECKLIST_NOT_KRA") continue;
+
+    const master =
+      masters.find((m) => personNamesMatch(m.name, employeeName)) ??
+      employees
+        .map((e) => masters.find((m) => personNamesMatch(m.name, e.name)))
+        .find(Boolean);
+
+    await db.kraImportIssue.create({
+      data: {
+        organizationId,
+        employeeId: master?.id ?? null,
+        employeeName: master?.name ?? employeeName,
+        plantUnit: plantUnitKey,
+        department: master?.department ?? null,
+        sourceFile,
+        sheetName,
+        issueCode,
+        message,
+        fixHint,
+        isResolved: false,
+      },
+    });
+  }
 }
 
 export async function syncKraFromDefaultFile(
