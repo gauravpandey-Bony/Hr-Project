@@ -195,43 +195,69 @@ function ScorecardSection({
   );
 }
 
+const EMPLOYEE_PAGE_SIZE = 15;
+
 function EmployeeSummaryTable({ rows }: { rows: EmployeePerformanceRow[] }) {
   const [expanded, setExpanded] = useState<string | null>(null);
-  const [employeeFilter, setEmployeeFilter] = useState("all");
   const [departmentFilter, setDepartmentFilter] = useState("all");
+  const [page, setPage] = useState(0);
 
   const departments = useMemo(
     () => [...new Set(rows.map((e) => e.department).filter(Boolean))].sort(),
     [rows]
   );
 
-  const employees = useMemo(
-    () => rows.map((e) => e.employeeName).sort((a, b) => a.localeCompare(b)),
-    [rows]
+  const filteredRows = useMemo(() => {
+    const list =
+      departmentFilter === "all"
+        ? rows
+        : rows.filter((e) => e.department === departmentFilter);
+    return [...list].sort((a, b) => a.employeeName.localeCompare(b.employeeName));
+  }, [rows, departmentFilter]);
+
+  const pageCount = Math.max(1, Math.ceil(filteredRows.length / EMPLOYEE_PAGE_SIZE));
+  const safePage = Math.min(page, pageCount - 1);
+  const pageRows = filteredRows.slice(
+    safePage * EMPLOYEE_PAGE_SIZE,
+    safePage * EMPLOYEE_PAGE_SIZE + EMPLOYEE_PAGE_SIZE
   );
 
-  const allKpis = useMemo(
-    () =>
-      rows.flatMap((e) =>
-        e.breakdown.map((b) => ({
-          ...b,
-          employeeName: e.employeeName,
-          department: e.department,
-        }))
-      ),
-    [rows]
-  );
-
-  const filteredKpis = useMemo(() => {
-    return allKpis.filter((k) => {
-      if (employeeFilter !== "all" && k.employeeName !== employeeFilter) return false;
-      if (departmentFilter !== "all" && k.department !== departmentFilter) return false;
-      return true;
-    });
-  }, [allKpis, employeeFilter, departmentFilter]);
+  function toggleEmployee(name: string) {
+    setExpanded((v) => (v === name ? null : name));
+  }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-xs text-muted-foreground">
+          Click an employee name to view KPI details.{" "}
+          <span className="font-medium text-foreground">
+            {filteredRows.length} employee{filteredRows.length === 1 ? "" : "s"}
+          </span>
+        </p>
+        <label className="flex items-center gap-2 text-xs">
+          <span className="font-semibold uppercase tracking-wide text-muted-foreground">
+            Department
+          </span>
+          <select
+            value={departmentFilter}
+            onChange={(e) => {
+              setDepartmentFilter(e.target.value);
+              setPage(0);
+              setExpanded(null);
+            }}
+            className="min-w-[160px] rounded-lg border border-border bg-card px-3 py-1.5 text-sm"
+          >
+            <option value="all">All departments</option>
+            {departments.map((d) => (
+              <option key={d} value={d}>
+                {d}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
       <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
         <table className="w-full text-left text-sm">
           <thead>
@@ -241,116 +267,108 @@ function EmployeeSummaryTable({ rows }: { rows: EmployeePerformanceRow[] }) {
               <th className="px-4 py-3 text-center">KPIs</th>
               <th className="px-4 py-3 text-center">Scored</th>
               <th className="px-4 py-3 text-center">Score</th>
-              <th className="px-4 py-3" />
             </tr>
           </thead>
           <tbody>
-            {rows.map((e) => (
-              <Fragment key={e.employeeName}>
-                <tr className="border-b border-border/50 hover:bg-muted/20">
-                  <td className="px-4 py-3 font-medium">{e.employeeName}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{e.department}</td>
-                  <td className="px-4 py-3 text-center">{e.kpiCount}</td>
-                  <td className="px-4 py-3 text-center">{e.scoredCount}</td>
-                  <td className="px-4 py-3 text-center">
-                    <ScoreBadge score={e.weightedScore} />
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setExpanded((v) => (v === e.employeeName ? null : e.employeeName))
-                      }
-                      className="text-xs font-medium text-emerald-700 hover:underline"
-                    >
-                      {expanded === e.employeeName ? "Hide KPIs" : "Show KPIs"}
-                    </button>
-                  </td>
-                </tr>
-                {expanded === e.employeeName && (
-                  <tr>
-                    <td colSpan={6} className="bg-muted/10 px-4 py-3">
-                      <p className="mb-2 font-mono text-xs text-violet-900">{e.calculation}</p>
-                      <LevelKpiTable
-                        rows={e.breakdown}
-                        emptyMessage="No KPIs"
-                      />
+            {pageRows.map((e) => {
+              const isOpen = expanded === e.employeeName;
+              return (
+                <Fragment key={e.employeeName}>
+                  <tr
+                    className={cn(
+                      "border-b border-border/50 transition hover:bg-emerald-50/50 dark:hover:bg-emerald-950/20",
+                      isOpen && "bg-emerald-50/40 dark:bg-emerald-950/20"
+                    )}
+                  >
+                    <td className="px-4 py-3">
+                      <button
+                        type="button"
+                        onClick={() => toggleEmployee(e.employeeName)}
+                        className="inline-flex items-center gap-1.5 text-left font-medium text-emerald-800 hover:underline dark:text-emerald-300"
+                      >
+                        {isOpen ? (
+                          <ChevronDown className="h-3.5 w-3.5 shrink-0" />
+                        ) : (
+                          <ChevronRight className="h-3.5 w-3.5 shrink-0" />
+                        )}
+                        {e.employeeName}
+                      </button>
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">{e.department}</td>
+                    <td className="px-4 py-3 text-center">{e.kpiCount}</td>
+                    <td className="px-4 py-3 text-center">{e.scoredCount}</td>
+                    <td className="px-4 py-3 text-center">
+                      <ScoreBadge score={e.weightedScore} />
                     </td>
                   </tr>
-                )}
-              </Fragment>
-            ))}
+                  {isOpen && (
+                    <tr>
+                      <td colSpan={5} className="bg-muted/10 px-4 py-3">
+                        <p className="mb-2 text-xs text-muted-foreground">
+                          KPI details for{" "}
+                          <span className="font-semibold text-foreground">{e.employeeName}</span>
+                        </p>
+                        <p className="mb-2 font-mono text-xs text-violet-900 dark:text-violet-200">
+                          {e.calculation}
+                        </p>
+                        <LevelKpiTable rows={e.breakdown} emptyMessage="No KPIs" />
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
+              );
+            })}
+            {pageRows.length === 0 && (
+              <tr>
+                <td colSpan={5} className="px-4 py-8 text-center text-sm text-muted-foreground">
+                  No employees in this department.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
 
-      <div>
-        <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
-          <h3 className="text-sm font-semibold text-foreground">All employee KPIs (combined)</h3>
-          <div className="flex flex-wrap items-center gap-2">
-            <label className="flex flex-col gap-1">
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                Department
-              </span>
-              <select
-                value={departmentFilter}
-                onChange={(e) => {
-                  setDepartmentFilter(e.target.value);
-                  if (e.target.value !== "all") setEmployeeFilter("all");
-                }}
-                className="min-w-[140px] rounded-lg border border-border bg-card px-3 py-1.5 text-sm"
-              >
-                <option value="all">All departments</option>
-                {departments.map((d) => (
-                  <option key={d} value={d}>
-                    {d}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                Employee
-              </span>
-              <select
-                value={employeeFilter}
-                onChange={(e) => setEmployeeFilter(e.target.value)}
-                className="min-w-[180px] rounded-lg border border-border bg-card px-3 py-1.5 text-sm"
-              >
-                <option value="all">All employees</option>
-                {employees
-                  .filter(
-                    (name) =>
-                      departmentFilter === "all" ||
-                      rows.find((r) => r.employeeName === name)?.department === departmentFilter
-                  )
-                  .map((name) => (
-                    <option key={name} value={name}>
-                      {name}
-                    </option>
-                  ))}
-              </select>
-            </label>
+      {pageCount > 1 && (
+        <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+          <p className="text-xs text-muted-foreground">
+            Page {safePage + 1} of {pageCount} · showing{" "}
+            {safePage * EMPLOYEE_PAGE_SIZE + 1}–
+            {Math.min((safePage + 1) * EMPLOYEE_PAGE_SIZE, filteredRows.length)} of{" "}
+            {filteredRows.length}
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled={safePage <= 0}
+              onClick={() => {
+                setPage((p) => Math.max(0, p - 1));
+                setExpanded(null);
+              }}
+              className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted disabled:opacity-40"
+            >
+              Previous
+            </button>
+            <button
+              type="button"
+              disabled={safePage >= pageCount - 1}
+              onClick={() => {
+                setPage((p) => Math.min(pageCount - 1, p + 1));
+                setExpanded(null);
+              }}
+              className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted disabled:opacity-40"
+            >
+              Next
+            </button>
           </div>
         </div>
-        <p className="mb-2 text-xs text-muted-foreground">
-          Showing {filteredKpis.length} of {allKpis.length} KPI rows
-        </p>
-        <LevelKpiTable
-          rows={filteredKpis}
-          extraColumns={[
-            { header: "Employee", render: (r) => (r as LevelKpiRow & { employeeName: string }).employeeName ?? "—" },
-            { header: "Dept", render: (r) => (r as LevelKpiRow & { department: string }).department ?? "—" },
-          ]}
-          emptyMessage="No KPIs match the selected filters."
-        />
-      </div>
+      )}
     </div>
   );
 }
 
 function DepartmentCard({ dept }: { dept: DepartmentScorecard }) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
       <button
