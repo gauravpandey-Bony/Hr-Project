@@ -218,8 +218,6 @@ export function DepartmentMasterClient({
               <TableHead className="min-w-[200px]">Department</TableHead>
               <TableHead className="min-w-[160px]">Head</TableHead>
               <TableHead className="min-w-[180px]">Location</TableHead>
-              <TableHead className="min-w-[64px]">Order</TableHead>
-              <TableHead className="min-w-[56px]">Active</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -286,31 +284,6 @@ export function DepartmentMasterClient({
                       />
                     ) : (
                       <span className="block leading-snug">{row.location ?? "—"}</span>
-                    )}
-                  </TableCell>
-                  <TableCell className={MASTER_CELL}>
-                    {isAdmin ? (
-                      <input
-                        className={masterCellInput("min-w-[56px]")}
-                        value={d.sortOrder}
-                        onChange={(e) => patch(row.id, { sortOrder: e.target.value })}
-                      />
-                    ) : (
-                      row.sortOrder
-                    )}
-                  </TableCell>
-                  <TableCell className={MASTER_CELL}>
-                    {isAdmin ? (
-                      <input
-                        type="checkbox"
-                        checked={d.isActive}
-                        onChange={(e) => patch(row.id, { isActive: e.target.checked })}
-                        className="h-4 w-4 rounded border-input"
-                      />
-                    ) : row.isActive ? (
-                      "Yes"
-                    ) : (
-                      "No"
                     )}
                   </TableCell>
                 </TableRow>
