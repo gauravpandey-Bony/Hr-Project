@@ -118,6 +118,7 @@ export function EmployeeProfileClient({
   performance,
   isAdmin,
   unitId,
+  kraUnitId,
   dojLabel,
   incrementLabel,
   ctcLabel,
@@ -131,6 +132,8 @@ export function EmployeeProfileClient({
   performance?: EmployeeDashboardData | null;
   isAdmin: boolean;
   unitId?: string | null;
+  /** Plant unit for KRA/report deep links (from employee location). */
+  kraUnitId?: string | null;
   dojLabel: string;
   incrementLabel: string;
   ctcLabel: string;
@@ -158,12 +161,13 @@ export function EmployeeProfileClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: key off employee id
   }, [initial.id]);
 
+  const linkUnit = kraUnitId || unitId;
   const kraHref = appendQueryParams("/dashboard/kra", {
-    unit: unitId,
+    unit: linkUnit,
     employee: initial.id,
   });
   const quarterlyHref = appendQueryParams("/dashboard/reports/quarterly", {
-    unit: unitId,
+    unit: linkUnit,
     employee: initial.name,
   });
   const backHref = unitId

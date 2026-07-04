@@ -44,8 +44,22 @@ function findEmployeeSheet(
     if (!emp) continue;
     const sheet =
       sheets.find((s) => departmentsAreEquivalent(s.department, department)) ??
-      sheets.find((s) => s.department === department);
+      sheets.find((s) => s.department === department) ??
+      sheets.find((s) =>
+        departmentsAreEquivalent(s.department, emp.department ?? "")
+      );
     if (sheet) return { sheetId: sheet.id, employeeId: emp.id };
+  }
+  return null;
+}
+
+function findEmployeeAnywhere(
+  employeeId: string,
+  employeesByDepartment: Record<string, KraEmployeeRow[]>
+): KraEmployeeRow | null {
+  for (const employees of Object.values(employeesByDepartment)) {
+    const emp = employees.find((e) => e.id === employeeId);
+    if (emp) return emp;
   }
   return null;
 }
@@ -133,7 +147,7 @@ export function KraPageClient({
   }, [deptEmployeesRaw, isAdmin, isManagerRole, viewerName]);
 
   useEffect(() => {
-    if (!initialEmployeeId || appliedInitialEmployee.current) return;
+    if (!initialEmployeeId) return;
     const target = findEmployeeSheet(
       initialEmployeeId,
       employeesByDepartment,
@@ -157,30 +171,35 @@ export function KraPageClient({
     if (visibleSheets.some((s) => s.id === activeSheet)) return;
     // Keep deep-linked employee sheet even if department key matching is delayed
     if (activeEmployeeId && sheets.some((s) => s.id === activeSheet)) return;
+    if (initialEmployeeId && activeEmployeeId === initialEmployeeId) return;
     setActiveSheet(visibleSheets[0]!.id);
-  }, [visibleSheets, activeSheet, sheets, activeEmployeeId]);
+  }, [visibleSheets, activeSheet, sheets, activeEmployeeId, initialEmployeeId]);
 
   useEffect(() => {
     setActiveSubSheetId(sheet?.subSheets?.[0]?.id ?? null);
   }, [activeSheet, sheet?.subSheets]);
 
   useEffect(() => {
-    if (isEmployeeRole && deptEmployees.length === 1) {
+    if (isEmployeeRole && deptEmployees.length === 1 && !initialEmployeeId) {
       setActiveEmployeeId(deptEmployees[0].id);
       return;
     }
     // Keep the selected employee when they belong to the active department;
-    // only clear when switching to a department that does not include them.
+    // never drop a deep-linked employee from the profile quick link.
     setActiveEmployeeId((prev) => {
       if (prev && deptEmployees.some((e) => e.id === prev)) return prev;
+      if (prev && initialEmployeeId && prev === initialEmployeeId) return prev;
       return null;
     });
-  }, [sheet?.department, isEmployeeRole, deptEmployees]);
+  }, [sheet?.department, isEmployeeRole, deptEmployees, initialEmployeeId]);
 
-  const activeEmployee = useMemo(
-    () => deptEmployees.find((e) => e.id === activeEmployeeId) ?? null,
-    [deptEmployees, activeEmployeeId]
-  );
+  const activeEmployee = useMemo(() => {
+    if (!activeEmployeeId) return null;
+    return (
+      deptEmployees.find((e) => e.id === activeEmployeeId) ??
+      findEmployeeAnywhere(activeEmployeeId, employeesByDepartment)
+    );
+  }, [deptEmployees, activeEmployeeId, employeesByDepartment]);
 
   const departmentDashboard = useMemo(() => {
     if (!sheet?.department) return null;

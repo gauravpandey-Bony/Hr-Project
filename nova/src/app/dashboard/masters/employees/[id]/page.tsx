@@ -3,6 +3,10 @@ import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { departmentMasterWhereForPlant } from "@/lib/unit-workspace";
 import { resolveWorkspace } from "@/lib/unit-workspace.server";
+import {
+  findUnitSlugByPlantUnitKey,
+  locationToPlantUnitKey,
+} from "@/lib/org-units.server";
 import { EmployeeProfileClient } from "@/components/masters/employee-profile-client";
 import {
   fetchEmployeeProfile,
@@ -35,6 +39,15 @@ export default async function EmployeeProfilePage({
   const profile = await fetchEmployeeProfile(user.organizationId, id);
   if (!profile) notFound();
 
+  // KRA sheet must open in the employee's plant, not only the current sidebar unit.
+  const employeePlantKey = await locationToPlantUnitKey(
+    user.organizationId,
+    profile.employee.location
+  );
+  const employeeUnitId =
+    (await findUnitSlugByPlantUnitKey(user.organizationId, employeePlantKey)) ??
+    workspace.unitId;
+
   const departments = await db.departmentMaster.findMany({
     where: workspace.dataScope
       ? departmentMasterWhereForPlant(user.organizationId, workspace.dataScope)
@@ -58,6 +71,7 @@ export default async function EmployeeProfilePage({
       performance={profile.performance}
       isAdmin={user.role === "ADMIN"}
       unitId={workspace.unitId}
+      kraUnitId={employeeUnitId}
       dojLabel={formatProfileDoj(profile.employee.doj)}
       incrementLabel={formatIncrementPercent(profile.employee.lastIncrementPercent)}
       ctcLabel={formatCtc(profile.employee.lastCtc)}
