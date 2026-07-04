@@ -2,10 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { departmentMasterWhereForPlant } from "@/lib/unit-workspace";
-import {
-  resolveWorkspace,
-  requireAdminWorkspace,
-} from "@/lib/unit-workspace.server";
+import { resolveWorkspace } from "@/lib/unit-workspace.server";
 import { EmployeeProfileClient } from "@/components/masters/employee-profile-client";
 import {
   fetchEmployeeProfile,
@@ -30,10 +27,8 @@ export default async function EmployeeProfilePage({
 
   const { id } = await params;
   const { unit: unitId } = await searchParams;
+  // Global search opens profiles without a plant unit selected — do not force unit workspace.
   const workspace = await resolveWorkspace(user, unitId);
-  if (user.role === "ADMIN") {
-    requireAdminWorkspace(user, workspace);
-  }
 
   const profile = await fetchEmployeeProfile(user.organizationId, id);
   if (!profile) notFound();

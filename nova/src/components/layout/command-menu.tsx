@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { UserRound } from "lucide-react";
 import {
@@ -30,6 +30,7 @@ type SearchEmployee = {
 
 function employeeSearchValue(emp: SearchEmployee): string {
   return [
+    emp.id,
     emp.name,
     emp.ecn,
     emp.department,
@@ -63,6 +64,7 @@ export function CommandMenu({ userRole = "ADMIN" }: { userRole?: UserRole }) {
   const [query, setQuery] = useState("");
   const [employees, setEmployees] = useState<SearchEmployee[]>([]);
   const [loadingEmployees, setLoadingEmployees] = useState(false);
+  const navigatingRef = useRef(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -84,6 +86,7 @@ export function CommandMenu({ userRole = "ADMIN" }: { userRole?: UserRole }) {
   useEffect(() => {
     if (!open) {
       setQuery("");
+      navigatingRef.current = false;
       return;
     }
     let cancelled = false;
@@ -113,8 +116,15 @@ export function CommandMenu({ userRole = "ADMIN" }: { userRole?: UserRole }) {
 
   const run = useCallback(
     (href: string) => {
+      if (navigatingRef.current) return;
+      navigatingRef.current = true;
       setOpen(false);
-      router.push(href);
+      setQuery("");
+      // Defer navigation so Radix dialog close does not cancel the route change.
+      window.setTimeout(() => {
+        router.push(href);
+        navigatingRef.current = false;
+      }, 10);
     },
     [router]
   );
@@ -141,21 +151,30 @@ export function CommandMenu({ userRole = "ADMIN" }: { userRole?: UserRole }) {
         {matchedEmployees.length > 0 && (
           <>
             <CommandGroup heading="Employees">
-              {matchedEmployees.map((emp) => (
-                <CommandItem
-                  key={emp.id}
-                  value={employeeSearchValue(emp)}
-                  onSelect={() => run(`/dashboard/masters/employees/${emp.id}`)}
-                >
-                  <UserRound className="text-muted-foreground" />
-                  <div className="flex min-w-0 flex-col">
-                    <span className="truncate font-medium">{emp.name}</span>
-                    <span className="truncate text-xs text-muted-foreground">
-                      {employeeSubtitle(emp)}
-                    </span>
-                  </div>
-                </CommandItem>
-              ))}
+              {matchedEmployees.map((emp) => {
+                const href = `/dashboard/masters/employees/${emp.id}`;
+                return (
+                  <CommandItem
+                    key={emp.id}
+                    value={employeeSearchValue(emp)}
+                    onSelect={() => run(href)}
+                    onMouseDown={(e) => {
+                      // Prevent dialog from stealing the click before onSelect.
+                      e.preventDefault();
+                      run(href);
+                    }}
+                    className="cursor-pointer"
+                  >
+                    <UserRound className="text-muted-foreground" />
+                    <div className="flex min-w-0 flex-col">
+                      <span className="truncate font-medium">{emp.name}</span>
+                      <span className="truncate text-xs text-muted-foreground">
+                        {employeeSubtitle(emp)}
+                      </span>
+                    </div>
+                  </CommandItem>
+                );
+              })}
             </CommandGroup>
             <CommandSeparator />
           </>
@@ -174,6 +193,11 @@ export function CommandMenu({ userRole = "ADMIN" }: { userRole?: UserRole }) {
                       key={item.href}
                       value={`${item.label} ${item.keywords?.join(" ") ?? ""}`}
                       onSelect={() => run(item.href)}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        run(item.href);
+                      }}
+                      className="cursor-pointer"
                     >
                       {Icon && <Icon className="text-muted-foreground" />}
                       <span>{item.label}</span>
