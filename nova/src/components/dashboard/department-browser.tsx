@@ -6,7 +6,6 @@ import { Filter, Loader2, Users, X } from "lucide-react";
 import { Card3D } from "@/components/ui/card-3d";
 import { cn } from "@/lib/utils";
 import { useOrgUnits } from "@/components/providers/org-units-provider";
-import { UNIT_GRADIENT_PRESETS } from "@/lib/org-units-defaults";
 
 type DeptRow = {
   id: string;
@@ -45,12 +44,10 @@ function DeptTile({
   dept,
   active,
   onSelect,
-  gradient,
 }: {
   dept: DeptRow;
   active: boolean;
   onSelect: () => void;
-  gradient: string;
 }) {
   return (
     <Card3D
@@ -59,32 +56,28 @@ function DeptTile({
       shine={false}
       onClick={onSelect}
       className={cn(
-        "w-full overflow-hidden border-0 bg-transparent p-0 text-left shadow-none",
+        "w-full overflow-hidden rounded-2xl border bg-card p-0 text-left shadow-soft transition",
         active
-          ? "ring-2 ring-emerald-600 ring-offset-2"
-          : "ring-1 ring-black/5"
+          ? "border-emerald-500 ring-2 ring-emerald-600/25 ring-offset-2"
+          : "border-border/80 hover:border-emerald-300 hover:shadow-md"
       )}
     >
-      <div
-        className="relative min-h-[96px] p-3 text-white sm:min-h-[104px] sm:p-3.5"
-        style={{ background: gradient }}
-      >
-        <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.16)_0%,transparent_55%)]" />
-        <div className="relative flex items-start justify-between gap-1.5">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/20 text-sm ring-1 ring-white/25 backdrop-blur-sm">
+      <div className="relative min-h-[96px] p-3.5 sm:min-h-[104px]">
+        <div className="flex items-start justify-between gap-1.5">
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-sm ring-1 ring-emerald-100 dark:bg-emerald-950/50 dark:ring-emerald-900">
             {deptEmoji(dept.name)}
           </span>
           {dept.employeeCount > 0 && (
-            <span className="rounded-full bg-black/20 px-2 py-0.5 text-[10px] font-semibold tabular-nums ring-1 ring-white/20">
+            <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold tabular-nums text-emerald-800 ring-1 ring-emerald-100 dark:bg-emerald-950/50 dark:text-emerald-200 dark:ring-emerald-900">
               {dept.employeeCount}
             </span>
           )}
         </div>
-        <h3 className="relative mt-2 text-xs font-bold leading-tight tracking-tight sm:text-sm">
+        <h3 className="mt-2.5 text-xs font-bold leading-tight tracking-tight text-foreground sm:text-sm">
           {dept.name}
         </h3>
         {dept.headName && (
-          <p className="relative mt-0.5 truncate text-[10px] text-white/75">
+          <p className="mt-0.5 truncate text-[10px] text-muted-foreground">
             {dept.headName}
           </p>
         )}
@@ -265,11 +258,10 @@ export function DepartmentBrowser() {
         </p>
       ) : (
         <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-          {visibleDepartments.map((dept, i) => (
+          {visibleDepartments.map((dept) => (
             <DeptTile
               key={`${dept.name}-${dept.id}`}
               dept={dept}
-              gradient={UNIT_GRADIENT_PRESETS[i % UNIT_GRADIENT_PRESETS.length]}
               active={selectedDept?.name === dept.name}
               onSelect={() => handleDeptClick(dept)}
             />
