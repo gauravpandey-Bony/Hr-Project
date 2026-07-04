@@ -46,6 +46,8 @@ const BONY_FLUID_58_KRA_FILES = [
   "Jitender KRA & KPI_Plant 58.xlsx",
   "Gulab Singh KRA & KPI_Plant 58.xlsx",
   "Dinesh KRA.xlsx",
+  "Basant Kumar KRA.xlsx",
+  "Dilip Kumar KRA & KPI_Plant 58.xlsx",
 ] as const;
 
 const db = new PrismaClient();
