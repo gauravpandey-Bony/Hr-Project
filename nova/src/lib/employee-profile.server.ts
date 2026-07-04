@@ -1,7 +1,11 @@
 import "server-only";
 
 import { db } from "@/lib/db";
-import { personNamesMatch } from "@/lib/person-name";
+import { personNameVariants, personNamesMatch } from "@/lib/person-name";
+import {
+  buildEmployeeDashboard,
+  type EmployeeDashboardData,
+} from "@/lib/ai/employee-report";
 
 export async function fetchEmployeeProfile(
   organizationId: string,
@@ -16,12 +20,24 @@ export async function fetchEmployeeProfile(
 
   if (!employee) return null;
 
-  const kpis = await db.kpi.findMany({
+  const nameVariants = personNameVariants(employee.name);
+
+  const linkedUser = await db.user.findFirst({
+    where: {
+      organizationId,
+      OR: nameVariants.map((name) => ({ name })),
+    },
+    select: { id: true, email: true, role: true, name: true, title: true, department: true, hrisExternalId: true, managerId: true },
+  });
+
+  const kpiCandidates = await db.kpi.findMany({
     where: {
       organizationId,
       isActive: true,
-      kpiLevel: "INDIVIDUAL",
-      ownerName: employee.name,
+      OR: [
+        ...(linkedUser ? [{ ownerId: linkedUser.id }] : []),
+        ...nameVariants.map((ownerName) => ({ ownerName })),
+      ],
     },
     select: {
       id: true,
@@ -29,19 +45,38 @@ export async function fetchEmployeeProfile(
       department: true,
       kraName: true,
       plantUnit: true,
+      ownerName: true,
+      ownerId: true,
+      kpiLevel: true,
     },
     orderBy: [{ kraName: "asc" }, { name: "asc" }],
   });
 
-  const linkedUser = await db.user.findFirst({
-    where: {
-      organizationId,
-      name: employee.name,
-    },
-    select: { id: true, email: true, role: true },
+  const kpis = kpiCandidates.filter((k) => {
+    if (linkedUser && k.ownerId === linkedUser.id) return true;
+    return k.ownerName ? personNamesMatch(k.ownerName, employee.name) : false;
   });
 
-  return { employee, kpis, linkedUser };
+  const master = {
+    name: employee.name,
+    ecn: employee.ecn,
+    designation: employee.designation,
+    department: employee.department,
+    managerName: employee.managerName,
+  };
+
+  const resolved = linkedUser
+    ? { kind: "user" as const, user: linkedUser, master }
+    : { kind: "master" as const, master };
+
+  let performance: EmployeeDashboardData | null = null;
+  try {
+    performance = await buildEmployeeDashboard(organizationId, resolved);
+  } catch {
+    performance = null;
+  }
+
+  return { employee, kpis, linkedUser, performance };
 }
 
 export function formatProfileDoj(doj: string | null | undefined): string {

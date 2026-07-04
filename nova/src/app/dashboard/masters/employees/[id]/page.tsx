@@ -57,6 +57,7 @@ export default async function EmployeeProfilePage({
       departments={departments}
       kpis={profile.kpis}
       linkedUser={profile.linkedUser}
+      performance={profile.performance}
       isAdmin={user.role === "ADMIN"}
       unitId={workspace.unitId}
       dojLabel={formatProfileDoj(profile.employee.doj)}

@@ -23,6 +23,8 @@ import { cn } from "@/lib/utils";
 import { appendUnitQuery } from "@/lib/unit-workspace";
 import { confirmReportingManagerChange } from "@/lib/employee-master-grouping";
 import { resolveReportingManagerName } from "@/lib/reporting-manager";
+import { EmployeeDashboardBlock } from "@/components/ai/employee-dashboard-block";
+import type { EmployeeDashboardData } from "@/lib/ai/employee-report";
 
 type KpiBrief = Pick<Kpi, "id" | "name" | "department" | "kraName" | "plantUnit">;
 
@@ -113,6 +115,7 @@ export function EmployeeProfileClient({
   departments,
   kpis,
   linkedUser,
+  performance,
   isAdmin,
   unitId,
   dojLabel,
@@ -125,6 +128,7 @@ export function EmployeeProfileClient({
   departments: DepartmentMaster[];
   kpis: KpiBrief[];
   linkedUser: Pick<User, "id" | "email" | "role"> | null;
+  performance?: EmployeeDashboardData | null;
   isAdmin: boolean;
   unitId?: string | null;
   dojLabel: string;
@@ -271,6 +275,22 @@ export function EmployeeProfileClient({
           )}
         </div>
       </div>
+
+      {performance && (
+        <section className="space-y-2">
+          <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            <BarChart3 className="h-4 w-4 text-primary" />
+            KRA / KPI performance dashboard
+          </h2>
+          <EmployeeDashboardBlock data={performance} />
+        </section>
+      )}
+
+      {!performance && kpis.length === 0 && (
+        <section className="rounded-2xl border border-dashed border-border bg-muted/20 px-5 py-6 text-sm text-muted-foreground">
+          No KRA / KPI performance data linked for this employee yet.
+        </section>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">
