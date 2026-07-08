@@ -25,6 +25,7 @@ import {
   groupEmployeesByDepartment,
 } from "@/lib/employee-master-grouping";
 import { resolveReportingManagerName } from "@/lib/reporting-manager";
+import { resolvePlantFromWorkingLocation } from "@/lib/masters/employee-plant-location";
 import { sanitizeKraDesignation } from "@/lib/masters/kra-workbook";
 import { appendQueryParams } from "@/lib/unit-workspace";
 import { StickyTableShell } from "@/components/ui/sticky-table-shell";
@@ -84,16 +85,23 @@ function managerTeamKey(departmentId: string, managerName: string) {
   return `${departmentId}::${managerName}`;
 }
 
+function plantLabelForRow(location: string | null | undefined): string {
+  if (!location?.trim()) return "Unassigned";
+  return resolvePlantFromWorkingLocation(location).plantUnitKey;
+}
+
 export function EmployeeMasterClient({
   initialRows,
   departments,
   isAdmin,
   unitId,
+  allPlants = false,
 }: {
   initialRows: EmployeeMaster[];
   departments: DepartmentMaster[];
   isAdmin: boolean;
   unitId?: string | null;
+  allPlants?: boolean;
 }) {
   const router = useRouter();
   const [rows, setRows] = useState(initialRows);
@@ -116,7 +124,16 @@ export function EmployeeMasterClient({
   const [expandedTeams, setExpandedTeams] = useState<Set<string>>(() => new Set());
   const [search, setSearch] = useState("");
   const [deptFilter, setDeptFilter] = useState("all");
+  const [plantFilter, setPlantFilter] = useState("all");
   const [page, setPage] = useState(0);
+
+  const plantOptions = useMemo(() => {
+    if (!allPlants) return [];
+    const labels = new Set(
+      rows.map((r) => plantLabelForRow(r.location)).filter(Boolean)
+    );
+    return [...labels].sort((a, b) => a.localeCompare(b));
+  }, [rows, allPlants]);
 
   const grouped = useMemo(
     () => groupEmployeesByDepartment(rows, departments),
@@ -126,6 +143,9 @@ export function EmployeeMasterClient({
   const filteredGrouped = useMemo(() => {
     const q = search.trim().toLowerCase();
     const matchEmp = (e: EmployeeMaster) => {
+      if (plantFilter !== "all" && plantLabelForRow(e.location) !== plantFilter) {
+        return false;
+      }
       if (!q) return true;
       const d = drafts[e.id];
       const hay = [
@@ -189,7 +209,7 @@ export function EmployeeMasterClient({
         return { ...g, sections, totalCount };
       })
       .filter(Boolean) as typeof grouped;
-  }, [grouped, deptFilter, search, drafts]);
+  }, [grouped, deptFilter, plantFilter, search, drafts]);
 
   const pageGroups = useMemo(
     () => pageSlice(filteredGrouped, page, DEPT_PAGE_SIZE),
@@ -205,7 +225,11 @@ export function EmployeeMasterClient({
     setDownloading(true);
     setError(null);
     try {
-      const qs = unitId ? `?unit=${encodeURIComponent(unitId)}` : "";
+      const qs = allPlants
+        ? "?all=1"
+        : unitId
+          ? `?unit=${encodeURIComponent(unitId)}`
+          : "";
       await downloadFromApi(`/api/employees/export${qs}`, "employee-master.xlsx");
       toast.success(`Downloaded ${rows.length} employee records`);
     } catch (e) {
@@ -517,9 +541,13 @@ export function EmployeeMasterClient({
               <Users className="h-3.5 w-3.5 text-emerald-100" />
               {COMPANY.shortName}
             </div>
-            <h1 className="text-3xl font-bold tracking-tight">Employee Master</h1>
+            <h1 className="text-3xl font-bold tracking-tight">
+              {allPlants ? "All Plants — Employee Master" : "Employee Master"}
+            </h1>
             <p className={MASTER_HERO_SUBTITLE}>
-              {rows.length} employees · grouped by department & manager
+              {rows.length} employees
+              {allPlants ? ` · ${plantOptions.length} plants` : ""}
+              {" · "}grouped by department & manager
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -536,7 +564,7 @@ export function EmployeeMasterClient({
               )}
               Download Sheet
             </button>
-            {isAdmin && (
+            {isAdmin && !allPlants && (
               <>
                 <button
                   type="button"
@@ -584,6 +612,28 @@ export function EmployeeMasterClient({
           placeholder="Search name, ECN, designation…"
           className="min-w-[200px] flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/30"
         />
+        {allPlants && (
+          <label className="flex items-center gap-2 text-xs">
+            <span className="font-semibold uppercase tracking-wide text-muted-foreground">
+              Plant
+            </span>
+            <select
+              value={plantFilter}
+              onChange={(e) => {
+                setPlantFilter(e.target.value);
+                setPage(0);
+              }}
+              className="min-w-[160px] rounded-lg border border-border bg-background px-3 py-2 text-sm"
+            >
+              <option value="all">All plants</option>
+              {plantOptions.map((plant) => (
+                <option key={plant} value={plant}>
+                  {plant}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <label className="flex items-center gap-2 text-xs">
           <span className="font-semibold uppercase tracking-wide text-muted-foreground">
             Department

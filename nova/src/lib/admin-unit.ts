@@ -18,6 +18,8 @@ const UNIT_SCOPED_ADMIN_PATHS = new Set([
   "/dashboard/ai",
 ]);
 
+const GLOBAL_ADMIN_PATHS = new Set(["/dashboard/masters/employees/all"]);
+
 function isValidUnitId(unitId: string, catalog?: OrgUnit[]): boolean {
   if (catalog) return catalog.some((u) => u.id === unitId);
   return /^[a-z0-9][a-z0-9-]{0,47}$/.test(unitId);
@@ -80,9 +82,14 @@ export function getAdminMainNav(
   catalog: OrgUnit[] = []
 ): NavItem[] {
   const selectUnit = mainNav.find((item) => item.href === ADMIN_UNIT_PICKER_PATH);
+  const allEmployees = mainNav.find(
+    (item) => item.href === "/dashboard/masters/employees/all"
+  );
   if (!selectUnit) return [];
 
-  if (!selectedUnitId) return [selectUnit];
+  if (!selectedUnitId) {
+    return allEmployees ? [selectUnit, allEmployees] : [selectUnit];
+  }
 
   return mainNav.map((item) => {
     if (item.href === ADMIN_UNIT_PICKER_PATH) {
@@ -95,6 +102,9 @@ export function getAdminMainNav(
     }
     if (item.href.startsWith("/dashboard/units/")) {
       return { ...item, href: `/dashboard/units/${selectedUnitId}` };
+    }
+    if (GLOBAL_ADMIN_PATHS.has(item.href)) {
+      return item;
     }
     if (UNIT_SCOPED_ADMIN_PATHS.has(item.href)) {
       return { ...item, href: appendUnitQuery(item.href, selectedUnitId) };

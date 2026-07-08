@@ -73,6 +73,12 @@ export const mainNav: NavItem[] = [
     keywords: ["employee", "master", "staff"],
   },
   {
+    href: "/dashboard/masters/employees/all",
+    label: "All Employees",
+    icon: Users,
+    keywords: ["employee", "all", "plants", "global", "master"],
+  },
+  {
     href: "/dashboard/reports",
     label: "Reports",
     icon: BarChart3,

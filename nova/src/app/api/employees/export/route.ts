@@ -23,8 +23,11 @@ export async function GET(request: Request) {
       ? employeeMasterWhereForPlant(user.organizationId, workspace.dataScope)
       : await employeeMasterWhereForUserAsync(user);
 
-  const employees = await db.employeeMaster.findMany({
-    where: employeeWhere,
+  const employeesExport = await db.employeeMaster.findMany({
+    where:
+      searchParams.get("all") === "1" && user.role === "ADMIN"
+        ? { organizationId: user.organizationId, isActive: true }
+        : employeeWhere,
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     select: {
       name: true,
@@ -39,8 +42,11 @@ export async function GET(request: Request) {
     },
   });
 
-  const buffer = employeeMasterXlsxBuffer(employees);
-  const filename = employeeMasterFilename(workspace.unitId);
+  const buffer = employeeMasterXlsxBuffer(employeesExport);
+  const filename =
+    searchParams.get("all") === "1"
+      ? employeeMasterFilename("all-plants")
+      : employeeMasterFilename(workspace.unitId);
 
   return new NextResponse(buffer, {
     headers: {
