@@ -60,7 +60,7 @@ export default async function PlantPerformanceReportPage({
 
   if (workspace.dataScope && workspace.unitId) {
     const kpis = await db.kpi.findMany({
-      where: mergeKpiWhereForWorkspace(user, workspace.dataScope, { isActive: true }),
+      where: await mergeKpiWhereForWorkspace(user, workspace.dataScope, { isActive: true }),
       select: KPI_SELECT,
     });
 
@@ -76,7 +76,7 @@ export default async function PlantPerformanceReportPage({
         const { locationAliases, kpiPlantAliases } = aliasesForUnit(unit);
         const scope = plantDataScope(unit.plantUnitKey, locationAliases, kpiPlantAliases);
         const kpis = await db.kpi.findMany({
-          where: mergeKpiWhereForWorkspace(user, scope, { isActive: true }),
+          where: await mergeKpiWhereForWorkspace(user, scope, { isActive: true }),
           select: KPI_SELECT,
         });
         return buildPlantScorecardBrief(unit.id, unit.name, kpis, quarter);

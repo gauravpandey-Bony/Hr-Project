@@ -274,7 +274,8 @@ export function KraPageClient({
       ? allKpis.filter(
           (k) =>
             k.kpiLevel === "INDIVIDUAL" &&
-            k.ownerName?.toLowerCase() === activeEmployee!.name.toLowerCase()
+            k.ownerName &&
+            personNamesMatch(k.ownerName, activeEmployee!.name)
         )
       : kpisForSheet(virtualSheet, allKpis)
   ) as KpiWithEntries[];

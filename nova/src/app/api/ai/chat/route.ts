@@ -50,7 +50,7 @@ export async function POST(request: Request) {
   const [ctx, existingKpis] = await Promise.all([
     buildOrganizationContext(user, scope),
     db.kpi.findMany({
-      where: mergeKpiWhereForWorkspace(user, scope.dataScope),
+      where: await mergeKpiWhereForWorkspace(user, scope.dataScope),
       select: { name: true },
     }),
   ]);

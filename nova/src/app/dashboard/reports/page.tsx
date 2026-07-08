@@ -22,7 +22,7 @@ export default async function ReportsPage({
   requireAdminWorkspace(user, workspace);
 
   const kpis = await db.kpi.findMany({
-    where: mergeKpiWhereForWorkspace(user, workspace.dataScope),
+    where: await mergeKpiWhereForWorkspace(user, workspace.dataScope),
     include: { entries: { orderBy: { recordedAt: "desc" }, take: 12 } },
   });
 

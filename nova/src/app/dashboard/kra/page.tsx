@@ -26,6 +26,8 @@ import {
   formatDepartmentDisplayName,
 } from "@/lib/masters/department-master-sync";
 import type { UserRole } from "@prisma/client";
+import { getManagedEmployees } from "@/lib/team-scope";
+import { personNamesMatch } from "@/lib/person-name";
 
 export const dynamic = "force-dynamic";
 
@@ -136,7 +138,7 @@ export default async function KraPage({
 
   const [kpis, sheetsRaw, employeesByDepartmentRaw, company] = await Promise.all([
     db.kpi.findMany({
-      where: mergeKpiWhereForWorkspace(user, workspace.dataScope, {}),
+      where: await mergeKpiWhereForWorkspace(user, workspace.dataScope, {}),
       include: { entries: { orderBy: { recordedAt: "desc" }, take: 12 } },
       orderBy: [{ kpiLevel: "asc" }, { weightage: "desc" }],
     }),
@@ -161,6 +163,18 @@ export default async function KraPage({
       Object.entries(employeesByDepartmentRaw).map(([dept, emps]) => [
         dept,
         emps.filter((e) => allowedIds.has(e.id)),
+      ])
+    );
+  } else if (user.role === "MANAGER") {
+    const team = await getManagedEmployees(user);
+    const allowedIds = new Set(team.map((e) => e.id));
+    employeesByDepartment = Object.fromEntries(
+      Object.entries(employeesByDepartmentRaw).map(([dept, emps]) => [
+        dept,
+        emps.filter(
+          (e) =>
+            allowedIds.has(e.id) || personNamesMatch(e.name, user.name)
+        ),
       ])
     );
   }

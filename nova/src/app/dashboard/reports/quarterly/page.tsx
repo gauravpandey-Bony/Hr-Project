@@ -29,7 +29,7 @@ export default async function QuarterlyReportPage({
 
   const [kpis, company] = await Promise.all([
     db.kpi.findMany({
-      where: mergeKpiWhereForWorkspace(user, workspace.dataScope, {
+      where: await mergeKpiWhereForWorkspace(user, workspace.dataScope, {
         kpiLevel: "INDIVIDUAL",
         isActive: true,
       }),

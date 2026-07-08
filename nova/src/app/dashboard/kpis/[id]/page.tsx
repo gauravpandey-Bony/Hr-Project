@@ -35,7 +35,7 @@ export default async function KpiDetailPage({
   if (id === "create") redirect("/dashboard/kpis/create");
 
   const kpi = await db.kpi.findFirst({
-    where: { id, ...kpiWhereForUser(user) },
+    where: { id, ...(await kpiWhereForUser(user)) },
     include: {
       entries: { orderBy: { recordedAt: "desc" } },
       owner: { select: { name: true } },

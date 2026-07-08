@@ -37,7 +37,7 @@ export async function POST(request: Request) {
   const plantUnit = workspace.plantUnitKey ?? "Bony Polymers";
 
   const existing = await db.kpi.findMany({
-    where: mergeKpiWhereForWorkspace(user, workspace.dataScope),
+    where: await mergeKpiWhereForWorkspace(user, workspace.dataScope),
     select: { name: true },
   });
   const existingNames = existing.map((k) => k.name);

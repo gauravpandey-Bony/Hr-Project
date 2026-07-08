@@ -158,7 +158,8 @@ export function DemoLoginForm() {
       <div>
         <h2 className="text-2xl font-semibold tracking-tight text-foreground">Sign in</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Select an account — enter password from your administrator
+          Enter your employee code (ECN). First-time password is the same as your ECN — you will be
+          asked to set a new password.
         </p>
       </div>
 
@@ -236,12 +237,13 @@ export function DemoLoginForm() {
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="userId">User ID</Label>
+            <Label htmlFor="userId">Employee code (ECN)</Label>
             <Input
               id="userId"
               value={userId}
               onChange={(e) => setUserId(e.target.value)}
               className="font-mono text-sm"
+              placeholder="e.g. 101240"
               autoComplete="username"
             />
           </div>
@@ -253,6 +255,7 @@ export function DemoLoginForm() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="font-mono text-sm"
+              placeholder="First login: same as ECN"
               autoComplete="current-password"
               required
             />

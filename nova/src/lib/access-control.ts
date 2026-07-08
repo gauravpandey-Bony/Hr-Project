@@ -4,7 +4,7 @@ import { adminHasUnitWorkspace, getAdminMainNav } from "@/lib/admin-unit";
 import type { OrgUnit } from "@/lib/org-units";
 import { DATA_UNIT_ID } from "@/lib/org-units";
 import { employeeDashboardPathForUser, kpiWhereForPlantScope, type PlantDataScope } from "@/lib/unit-workspace";
-import { kpiWhereForManager } from "@/lib/team-scope";
+import { getManagedEmployees, kpiWhereForManager } from "@/lib/team-scope";
 
 export const ROLE_COOKIE = "nova_user_role";
 
@@ -116,7 +116,7 @@ export function managerDashboardRedirect(pathname: string): string {
   return roleHomeRedirect("MANAGER");
 }
 
-export function kpiWhereForUser(user: User): Prisma.KpiWhereInput {
+export async function kpiWhereForUser(user: User): Promise<Prisma.KpiWhereInput> {
   const base: Prisma.KpiWhereInput = {
     organizationId: user.organizationId,
     isActive: true,
@@ -133,21 +133,21 @@ export function kpiWhereForUser(user: User): Prisma.KpiWhereInput {
   return { ...base, OR: or };
 }
 
-export function mergeKpiWhere(
+export async function mergeKpiWhere(
   user: User,
   extra?: Prisma.KpiWhereInput
-): Prisma.KpiWhereInput {
-  const scoped = kpiWhereForUser(user);
+): Promise<Prisma.KpiWhereInput> {
+  const scoped = await kpiWhereForUser(user);
   if (!extra || Object.keys(extra).length === 0) return scoped;
   return { AND: [scoped, extra] };
 }
 
 /** Scope KPI queries to a plant / unit workspace */
-export function mergeKpiWhereForUnit(
+export async function mergeKpiWhereForUnit(
   user: User,
   scope: PlantDataScope | string,
   extra?: Prisma.KpiWhereInput
-): Prisma.KpiWhereInput {
+): Promise<Prisma.KpiWhereInput> {
   const plantFilter =
     typeof scope === "string"
       ? { plantUnit: scope }
@@ -155,11 +155,11 @@ export function mergeKpiWhereForUnit(
   return mergeKpiWhere(user, { ...plantFilter, ...extra });
 }
 
-export function mergeKpiWhereForWorkspace(
+export async function mergeKpiWhereForWorkspace(
   user: User,
   dataScope: PlantDataScope | null | undefined,
   extra?: Prisma.KpiWhereInput
-): Prisma.KpiWhereInput {
+): Promise<Prisma.KpiWhereInput> {
   if (dataScope) {
     return mergeKpiWhereForUnit(user, dataScope, extra);
   }
@@ -196,8 +196,11 @@ export async function employeeMasterWhereForUserAsync(
 ): Promise<Prisma.EmployeeMasterWhereInput> {
   const base = { organizationId: user.organizationId };
   if (user.role === "ADMIN") return base;
-  if (user.role === "MANAGER" && user.department) {
-    return { ...base, department: user.department, isActive: true };
+  if (user.role === "MANAGER") {
+    const team = await getManagedEmployees(user);
+    const ids = team.map((e) => e.id);
+    if (ids.length === 0) return { ...base, id: "__none__" };
+    return { ...base, id: { in: ids }, isActive: true };
   }
   if (user.role === "EMPLOYEE" && user.name?.trim()) {
     return { ...base, name: user.name.trim() };

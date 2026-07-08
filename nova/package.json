@@ -15,6 +15,7 @@
     "import:plant-kra": "npx tsx scripts/import-plant-kra-workbook.ts",
     "import:kra-data": "npx tsx scripts/import-kra-data.ts",
     "import:staff": "npx tsx scripts/import-staff-details.ts",
+    "provision:users": "npx tsx scripts/provision-employee-users.ts",
     "db:reconcile-departments": "npx tsx scripts/reconcile-plant-departments.ts",
     "db:push": "prisma db push",
     "db:reset": "prisma migrate reset --force",

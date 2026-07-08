@@ -71,7 +71,7 @@ export async function buildOrganizationContext(
       },
     }),
     db.kpi.findMany({
-      where: mergeKpiWhereForWorkspace(user, dataScope),
+      where: await mergeKpiWhereForWorkspace(user, dataScope),
       include: {
         entries: { orderBy: { recordedAt: "desc" }, take: 3 },
         owner: { select: { name: true } },

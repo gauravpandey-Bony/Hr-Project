@@ -20,6 +20,7 @@ import {
   parseDepartmentOverrides,
 } from "@/lib/masters/preview-kra-upload";
 import { syncKraWorkbook } from "@/lib/masters/sync-kra-workbook";
+import { provisionUsersFromEmployees } from "@/lib/auth/provision-users";
 import { resolvePlantAssignment, summarizePlantAssignments } from "@/lib/masters/employee-plant-location";
 import { assignDepartmentKpisToEmployee } from "@/lib/kpi/assign-department-kpis";
 import { prepareStaffDetailsRows } from "@/lib/masters/staff-details-import";
@@ -302,6 +303,8 @@ export async function POST(request: Request) {
     );
   }
 
+  const userProvision = await provisionUsersFromEmployees(user.organizationId);
+
   return NextResponse.json({
     created,
     updated,
@@ -309,5 +312,7 @@ export async function POST(request: Request) {
     rowsProcessed: rows.length,
     plantSummary: summarizePlantAssignments(rows),
     parseErrors: errors,
+    usersCreated: userProvision.created,
+    usersUpdated: userProvision.updated,
   });
 }

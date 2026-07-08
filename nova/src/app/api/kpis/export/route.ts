@@ -20,7 +20,7 @@ export async function GET(request: Request) {
   const workspace = await resolveWorkspace(user, unitSlug);
 
   const kpis = await db.kpi.findMany({
-    where: mergeKpiWhereForWorkspace(user, workspace.dataScope, {
+    where: await mergeKpiWhereForWorkspace(user, workspace.dataScope, {
       ...(category && category !== "all" ? { category } : {}),
       ...(q
         ? {

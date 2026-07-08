@@ -130,9 +130,11 @@ model User {
   teamsUserId     String?
   hrisExternalId  String?
   avatarUrl       String?
-  passwordHash    String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  passwordHash         String?
+  mustChangePassword   Boolean  @default(false)
+  passwordChangedAt    DateTime?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   manager      User?        @relation("ManagerReports", fields: [managerId], references: [id])

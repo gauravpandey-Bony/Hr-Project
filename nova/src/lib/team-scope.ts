@@ -26,6 +26,25 @@ export async function canUpdateKpi(
   return null;
 }
 
+export async function canViewEmployeeMaster(
+  user: User,
+  employeeId: string
+): Promise<boolean> {
+  if (user.role === "ADMIN") return true;
+  if (user.role === "EMPLOYEE") {
+    const self = await db.employeeMaster.findFirst({
+      where: { id: employeeId, organizationId: user.organizationId },
+      select: { name: true },
+    });
+    return Boolean(self && personNamesMatch(self.name, user.name));
+  }
+  if (user.role === "MANAGER") {
+    const team = await getManagedEmployees(user);
+    return team.some((e) => e.id === employeeId);
+  }
+  return false;
+}
+
 export const IT_TEAM_META = {
   kpiLevel: "INDIVIDUAL",
   department: "IT",
@@ -33,7 +52,7 @@ export const IT_TEAM_META = {
   showPerspective: true,
 } as const;
 
-/** Employees this manager can manage (KRA/KPI fill, reports) */
+/** Employees this manager can manage — direct reports via reporting manager name */
 export async function getManagedEmployees(user: User) {
   if (user.role === "ADMIN") {
     return db.employeeMaster.findMany({
@@ -53,14 +72,15 @@ export async function getManagedEmployees(user: User) {
 
   return all.filter((e) => {
     if (personNamesMatch(e.name, user.name)) return false;
-    if (user.department && e.department === user.department) return true;
     if (e.managerName && personNamesMatch(e.managerName, user.name)) return true;
-    if (e.managerName && normalizePersonName(e.managerName).includes(managerKey)) return true;
+    if (e.managerName && normalizePersonName(e.managerName).includes(managerKey)) {
+      return true;
+    }
     return false;
   });
 }
 
-export function kpiWhereForManager(user: User): Prisma.KpiWhereInput {
+export async function kpiWhereForManager(user: User): Promise<Prisma.KpiWhereInput> {
   const base: Prisma.KpiWhereInput = {
     organizationId: user.organizationId,
     isActive: true,
@@ -70,8 +90,12 @@ export function kpiWhereForManager(user: User): Prisma.KpiWhereInput {
   for (const n of personNameVariants(user.name)) {
     or.push({ ownerName: n });
   }
-  if (user.department) {
-    or.push({ department: user.department });
+
+  const team = await getManagedEmployees(user);
+  for (const e of team) {
+    for (const n of personNameVariants(e.name)) {
+      or.push({ ownerName: n });
+    }
   }
 
   return { ...base, OR: or };
@@ -81,7 +105,6 @@ export async function canManageKpi(user: User, kpi: Pick<Kpi, "ownerId" | "owner
   if (user.role === "ADMIN") return true;
   if (user.role !== "MANAGER") return false;
   if (kpi.ownerId === user.id) return true;
-  if (user.department && kpi.department === user.department) return true;
 
   const team = await getManagedEmployees(user);
   if (!kpi.ownerName) return false;

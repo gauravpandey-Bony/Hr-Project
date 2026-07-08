@@ -17,7 +17,7 @@ export async function GET(request: Request) {
   const workspace = await resolveWorkspace(user, unitId);
 
   const kpis = await db.kpi.findMany({
-    where: mergeKpiWhereForWorkspace(
+    where: await mergeKpiWhereForWorkspace(
       user,
       workspace.dataScope,
       category ? { category } : undefined

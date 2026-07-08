@@ -82,7 +82,7 @@ export default async function UnitDashboardPage({
   const dataScope = plantDataScope(unit.plantUnitKey, locationAliases, kpiPlantAliases);
 
   const kpis = await db.kpi.findMany({
-    where: mergeKpiWhereForUnit(user, dataScope),
+    where: await mergeKpiWhereForUnit(user, dataScope),
     include: {
       entries: { orderBy: { recordedAt: "desc" }, take: 12 },
     },
@@ -92,7 +92,7 @@ export default async function UnitDashboardPage({
   const scorecardKpis = isEmployeeRole(user.role)
     ? []
     : await db.kpi.findMany({
-        where: mergeKpiWhereForUnit(user, dataScope, { isActive: true }),
+        where: await mergeKpiWhereForUnit(user, dataScope, { isActive: true }),
         select: KPI_SELECT,
       });
 

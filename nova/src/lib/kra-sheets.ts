@@ -1,6 +1,7 @@
 import type { Kpi } from "@prisma/client";
 import type { KraSheetFromDb } from "@/lib/kra-sheets.server";
 import { departmentsAreEquivalent } from "@/lib/masters/department-master-sync";
+import { personNamesMatch } from "@/lib/person-name";
 
 export type SheetMeta = {
   kpiLevel: string;
@@ -19,7 +20,8 @@ export function kpisForSheet(
     return allKpis.filter(
       (k) =>
         k.kpiLevel === "INDIVIDUAL" &&
-        k.ownerName?.toLowerCase() === meta.ownerName?.toLowerCase()
+        k.ownerName &&
+        personNamesMatch(k.ownerName, meta.ownerName!)
     );
   }
   return allKpis.filter((k) => {

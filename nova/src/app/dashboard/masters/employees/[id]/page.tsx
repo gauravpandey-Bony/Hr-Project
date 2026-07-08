@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { canViewEmployeeMaster } from "@/lib/team-scope";
 import { departmentMasterWhereForPlant } from "@/lib/unit-workspace";
 import { resolveWorkspace } from "@/lib/unit-workspace.server";
 import {
@@ -33,6 +34,10 @@ export default async function EmployeeProfilePage({
 
   const { id } = await params;
   const { unit: unitId } = await searchParams;
+
+  if (user.role === "MANAGER" && !(await canViewEmployeeMaster(user, id))) {
+    redirect("/dashboard/kra");
+  }
   // Global search opens profiles without a plant unit selected — do not force unit workspace.
   const workspace = await resolveWorkspace(user, unitId);
 

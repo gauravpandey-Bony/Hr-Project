@@ -8,14 +8,27 @@ import {
   managerDashboardRedirect,
   roleHomeRedirect,
 } from "@/lib/access-control";
-import { ROLE_COOKIE, SESSION_COOKIE } from "@/lib/constants";
+import { MUST_CHANGE_COOKIE, ROLE_COOKIE, SESSION_COOKIE } from "@/lib/constants";
 
 export function middleware(request: NextRequest) {
-  if (!request.nextUrl.pathname.startsWith("/dashboard")) {
+  const pathname = request.nextUrl.pathname;
+  const userId = request.cookies.get(SESSION_COOKIE)?.value;
+  const mustChange = request.cookies.get(MUST_CHANGE_COOKIE)?.value === "1";
+
+  if (pathname === "/change-password") {
+    if (!userId) {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
+    if (!mustChange) {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
+    }
     return NextResponse.next();
   }
 
-  const userId = request.cookies.get(SESSION_COOKIE)?.value;
+  if (!pathname.startsWith("/dashboard")) {
+    return NextResponse.next();
+  }
+
   if (!userId) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set(
@@ -25,11 +38,13 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
+  if (mustChange) {
+    return NextResponse.redirect(new URL("/change-password", request.url));
+  }
+
   const role = request.cookies.get(ROLE_COOKIE)?.value as
     | UserRole
     | undefined;
-
-  const pathname = request.nextUrl.pathname;
 
   if (
     role &&
@@ -63,5 +78,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard", "/dashboard/:path*"],
+  matcher: ["/dashboard", "/dashboard/:path*", "/change-password"],
 };

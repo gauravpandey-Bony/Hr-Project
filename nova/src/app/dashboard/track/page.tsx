@@ -20,7 +20,7 @@ export default async function TrackPage({
   requireAdminWorkspace(user, workspace);
 
   const kpis = await db.kpi.findMany({
-    where: mergeKpiWhereForWorkspace(user, workspace.dataScope),
+    where: await mergeKpiWhereForWorkspace(user, workspace.dataScope),
     select: { id: true, name: true, unit: true, category: true },
     orderBy: { name: "asc" },
   });
