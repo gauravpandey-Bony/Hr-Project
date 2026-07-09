@@ -26,18 +26,30 @@ export type DepartmentUpsertResult = {
   created: boolean;
 };
 
-const DEPT_ACRONYMS = new Set(["it", "hr", "mis", "ppc", "edp", "qa"]);
+const DEPT_ACRONYMS = new Set(["it", "hr", "mis", "ppc", "edp", "qa", "npd"]);
+
+/** 3-letter department tokens (NPD, QA, etc.) render in ALL CAPS. */
+function formatDepartmentWord(word: string): string {
+  if (word === "&") return "&";
+  const lower = word.toLowerCase();
+  if (DEPT_ACRONYMS.has(lower)) return lower.toUpperCase();
+  if (/^[a-zA-Z]{3}$/.test(word)) return word.toUpperCase();
+  return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+}
 
 function titleCaseName(name: string): string {
   return name
     .trim()
     .split(/\s+/)
-    .map((w) => {
-      if (w === "&") return "&";
-      const lower = w.toLowerCase();
-      if (DEPT_ACRONYMS.has(lower)) return lower.toUpperCase();
-      return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
-    })
+    .map(formatDepartmentWord)
+    .join(" ");
+}
+
+function uppercaseThreeLetterTokens(text: string): string {
+  return text
+    .trim()
+    .split(/\s+/)
+    .map(formatDepartmentWord)
     .join(" ");
 }
 
@@ -48,7 +60,7 @@ export function formatDepartmentDisplayName(name: string): string {
   if (key === "it" || key === "it & systems" || key === "it & system") {
     return "IT & Systems";
   }
-  return normalized;
+  return uppercaseThreeLetterTokens(normalized);
 }
 
 /** One canonical display name per department (roster aliases → master name). */
@@ -59,7 +71,7 @@ export function normalizeDepartmentMasterName(raw: string): string {
   const rosterKey = trimmed.toUpperCase().replace(/\s+/g, " ");
   const fromRoster = normalizeRosterDepartment(rosterKey);
   if (fromRoster.masterName !== titleCaseName(trimmed)) {
-    return fromRoster.masterName;
+    return uppercaseThreeLetterTokens(fromRoster.masterName);
   }
 
   const titled = titleCaseName(trimmed);
@@ -67,7 +79,7 @@ export function normalizeDepartmentMasterName(raw: string): string {
   if (key === "it" || key === "it & systems" || key === "it & system") {
     return "IT & Systems";
   }
-  return titled;
+  return uppercaseThreeLetterTokens(titled);
 }
 
 export function departmentNameKey(name: string): string {
@@ -104,6 +116,10 @@ export function departmentMatchKeys(name: string): Set<string> {
   if (/^quality\b|quality assurance/.test(compact)) {
     add("Quality");
     add("Quality Assurance");
+  }
+  if (/^npd\b|npd and|npd &/.test(compact)) {
+    add("NPD");
+    add("Npd");
   }
   if (/costing.*mis|mis.*costing/.test(compact)) {
     add("Costing & MIS");

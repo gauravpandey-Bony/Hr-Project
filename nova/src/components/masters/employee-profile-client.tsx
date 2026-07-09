@@ -27,6 +27,7 @@ import { AlertTriangle } from "lucide-react";
 import { EmployeeDashboardBlock } from "@/components/ai/employee-dashboard-block";
 import type { EmployeeDashboardData } from "@/lib/ai/employee-report";
 import { UploadKraWorkbookButton } from "@/components/kra/upload-kra-workbook-button";
+import { DepartmentLabel } from "@/components/masters/department-label";
 
 type KraIssueRow = {
   id: string;
@@ -264,7 +265,7 @@ export function EmployeeProfileClient({
               <p className="text-xs uppercase tracking-wider text-indigo-300">Employee Profile</p>
               <h1 className="text-2xl font-bold sm:text-3xl">{initial.name}</h1>
               <p className="mt-1 text-sm text-slate-300">
-                {initial.designation ?? "—"} · {initial.department ?? "—"}
+                {initial.designation ?? "—"} · <DepartmentLabel name={initial.department} />
               </p>
               <p className="mt-0.5 text-xs text-slate-400">
                 {initial.location ?? "—"} {initial.ecn ? `· ECN ${initial.ecn}` : ""}
@@ -409,7 +410,7 @@ export function EmployeeProfileClient({
                     ))}
                   </select>
                 ) : (
-                  <p className="text-sm font-medium">{initial.department ?? "—"}</p>
+                  <DepartmentLabel name={initial.department} className="text-sm font-medium" />
                 )}
               </div>
               <Field label="Designation" value={draft.designation} editing={editing} onChange={(v) => setDraft((d) => ({ ...d, designation: v }))} />

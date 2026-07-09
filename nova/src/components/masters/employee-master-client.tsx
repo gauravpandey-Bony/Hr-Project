@@ -52,6 +52,7 @@ import {
   ListPagination,
   pageSlice,
 } from "@/components/ui/list-pagination";
+import { DepartmentLabel } from "./department-label";
 
 const DEPT_PAGE_SIZE = 3;
 
@@ -460,7 +461,7 @@ export function EmployeeMasterClient({
               ))}
             </select>
           ) : (
-            <span>{row.department ?? "—"}</span>
+            <DepartmentLabel name={row.department} />
           )}
         </TableCell>
         <TableCell className={MASTER_CELL}>

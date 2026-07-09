@@ -95,7 +95,8 @@
   samp,
   .font-mono,
   .normal-case,
-  [data-no-capitalize] {
+  [data-no-capitalize],
+  .dept-name {
     text-transform: none;
   }
 

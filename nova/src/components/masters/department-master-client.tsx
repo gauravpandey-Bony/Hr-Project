@@ -30,6 +30,7 @@ import {
   ListPagination,
   pageSlice,
 } from "@/components/ui/list-pagination";
+import { DepartmentLabel } from "./department-label";
 
 type DeptRow = DepartmentMaster;
 
@@ -324,7 +325,7 @@ export function DepartmentMasterClient({
                         onChange={(e) => patch(row.id, { name: e.target.value })}
                       />
                     ) : (
-                      <span className="block font-medium leading-snug">{row.name}</span>
+                      <DepartmentLabel name={row.name} className="block font-medium leading-snug" />
                     )}
                   </TableCell>
                   <TableCell className={MASTER_CELL}>

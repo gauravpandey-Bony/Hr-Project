@@ -192,6 +192,9 @@ export function normalizeKraDepartment(raw: string): {
   if (/^design(?:ing)?$|^desiging$|^design\s*&\s*development$/i.test(d)) {
     return { masterName: "Design", kraSheetId: "design" };
   }
+  if (/^npd$/i.test(d)) {
+    return { masterName: "NPD", kraSheetId: "npd" };
+  }
   if (/^dispatch$/i.test(d)) {
     return { masterName: "Dispatch", kraSheetId: "dispatch" };
   }

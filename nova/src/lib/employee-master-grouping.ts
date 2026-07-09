@@ -1,5 +1,6 @@
 import type { DepartmentMaster, EmployeeMaster } from "@prisma/client";
 import { personNamesMatch } from "@/lib/person-name";
+import { formatDepartmentDisplayName } from "@/lib/masters/department-master-sync";
 import {
   buildEcnToNameMap,
   isEmployeeCode,
@@ -29,10 +30,10 @@ function deptNameFor(
   employee: EmployeeMaster,
   deptById: Map<string, DepartmentMaster>
 ): string {
-  if (employee.departmentId) {
-    return deptById.get(employee.departmentId)?.name ?? employee.department ?? "General";
-  }
-  return employee.department?.trim() || "General";
+  const raw = employee.departmentId
+    ? deptById.get(employee.departmentId)?.name ?? employee.department ?? "General"
+    : employee.department?.trim() || "General";
+  return formatDepartmentDisplayName(raw);
 }
 
 /** One visible row per ECN (and per id). Prefer the row with richer data. */

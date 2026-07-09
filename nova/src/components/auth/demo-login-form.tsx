@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { formatDepartmentDisplayName } from "@/lib/masters/department-master-sync";
 
 type ShowcaseAccount = {
   id: string;
@@ -100,7 +101,14 @@ function QuickLoginCard({
           </h3>
           <p className="mt-0.5 text-sm text-muted-foreground">
             {account.title ?? "Manager"}
-            {account.department ? ` · ${account.department}` : ""}
+            {account.department ? (
+              <>
+                {" · "}
+                <span className="dept-name">
+                  {formatDepartmentDisplayName(account.department)}
+                </span>
+              </>
+            ) : null}
           </p>
           {!isAdmin && account.teamSize ? (
             <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-white/80 px-2.5 py-1 text-xs font-medium text-violet-700 ring-1 ring-violet-100">

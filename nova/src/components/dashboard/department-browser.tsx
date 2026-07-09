@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Filter, Loader2, Users, X } from "lucide-react";
 import { Card3D } from "@/components/ui/card-3d";
 import { cn } from "@/lib/utils";
+import { formatDepartmentDisplayName } from "@/lib/masters/department-master-sync";
 import { useOrgUnits } from "@/components/providers/org-units-provider";
 import {
   DEFAULT_PAGE_SIZE,
@@ -81,8 +82,8 @@ function DeptTile({
             </span>
           )}
         </div>
-        <h3 className="mt-2.5 text-xs font-bold leading-tight tracking-tight text-foreground sm:text-sm">
-          {dept.name}
+        <h3 className="dept-name mt-2.5 text-xs font-bold leading-tight tracking-tight text-foreground sm:text-sm">
+          {formatDepartmentDisplayName(dept.name)}
         </h3>
         {dept.headName && (
           <p className="mt-0.5 truncate text-[10px] text-muted-foreground">
