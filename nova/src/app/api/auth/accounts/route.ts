@@ -164,10 +164,14 @@ export async function GET() {
       where: { organizationId: org.id, hrisExternalId: { not: null } },
     })) > 0;
 
+  const switchableAccounts = [showcase.admin, showcase.manager]
+    .filter((u): u is ShowcaseAccount => u != null)
+    .map(({ id, name, role }) => ({ id, name, role }));
+
   return NextResponse.json({
     organization: { id: org.id, name: org.name },
     showcase,
     hasEmployeeLogin,
-    accounts: users,
+    switchableAccounts,
   });
 }

@@ -33,14 +33,17 @@ export function UserSwitcher({
       try {
         const res = await fetch("/api/auth/accounts");
         const data = await res.json();
+        const list = (data.switchableAccounts ?? []) as {
+          id: string;
+          name: string;
+          role: string;
+        }[];
         setUsers(
-          (data.accounts ?? []).map(
-            (a: { id: string; name: string; role: string }) => ({
-              id: a.id,
-              label: a.name,
-              role: a.role,
-            })
-          )
+          list.map((a) => ({
+            id: a.id,
+            label: a.name,
+            role: a.role,
+          }))
         );
       } catch {
         setUsers([]);
@@ -65,7 +68,7 @@ export function UserSwitcher({
   }
 
   const switchable = users.filter(
-    (u) => u.id && (currentRole === "ADMIN" || u.role === currentRole)
+    (u) => u.id && u.label.trim().toLowerCase() !== currentName.trim().toLowerCase()
   );
 
   return (
@@ -116,7 +119,7 @@ export function UserSwitcher({
           <LogOut className="h-4 w-4" />
           Logout
         </DropdownMenuItem>
-        {currentRole !== "EMPLOYEE" && switchable.length > 1 && (
+        {switchable.length > 1 && (
           <>
             <DropdownMenuSeparator />
             <DropdownMenuLabel className="text-xs text-muted-foreground">
