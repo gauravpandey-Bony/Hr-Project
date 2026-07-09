@@ -115,8 +115,8 @@ export default async function LoginPage() {
         </header>
 
         <div className="flex flex-1 flex-col items-center justify-center px-4 py-10 sm:px-8">
-          <div className="w-full max-w-[480px] animate-fade-up">
-            <div className="mb-8 text-center lg:text-left">
+          <div className="w-full max-w-[520px] animate-fade-up">
+            <div className="mb-6 text-center lg:text-left">
               <h2 className="text-2xl font-bold tracking-tight text-foreground">
                 Welcome back
               </h2>
@@ -125,7 +125,7 @@ export default async function LoginPage() {
               </p>
             </div>
 
-            <div className="rounded-2xl border border-border/70 bg-card p-6 shadow-elevated sm:p-8">
+            <div className="rounded-2xl border border-border/70 bg-card/80 p-6 shadow-elevated backdrop-blur-sm sm:p-8">
               {currentUser && (
                 <LoginSessionBanner
                   name={currentUser.name}

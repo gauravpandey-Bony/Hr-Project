@@ -20,7 +20,22 @@ const PLANT_KRA_IMPORTS: PlantKraImport[] = [
     dataDir: "data/bony-37p-kra",
     plantUnitKey: "Bony Polymers",
     location: "Bony Polymers 37-P",
-    files: ["Costing & MIS KRA KPI 26-27.xlsx", "New KRA KPI 2026.xlsx"],
+    files: [
+      "Costing & MIS KRA KPI 26-27.xlsx",
+      "New KRA KPI 2026.xlsx",
+    ],
+  },
+  {
+    dataDir: "data/bony-24-kra",
+    plantUnitKey: "Bony 24",
+    location: "Bony 24 Faridabad",
+    files: [
+      "Development.xlsx",
+      "Quality Department 26.06.26.xlsx",
+      "Production Department 19.xlsx",
+      "maint department.xlsx",
+      "KRA-KPI_Ankush Gupta_Dispatch.xlsx",
+    ],
   },
   {
     dataDir: "data/bony-corporate-kra",
@@ -31,6 +46,11 @@ const PLANT_KRA_IMPORTS: PlantKraImport[] = [
     dataDir: "data/bony-fluid-58-kra",
     plantUnitKey: "Bony Fluid 58",
     location: "Bony Fluid 58",
+  },
+  {
+    dataDir: "data/bony-manesar-kra",
+    plantUnitKey: "Bony Maneshar",
+    location: "Bony Maneshar",
   },
   {
     dataDir: "data/saket-unit1-kra",
@@ -69,7 +89,7 @@ function listWorkbookFiles(dirPath: string, explicit?: readonly string[]): strin
   if (!existsSync(dirPath)) return [];
   return readdirSync(dirPath).filter((name) => {
     const lower = name.toLowerCase();
-    return lower.endsWith(".xlsx") || lower.endsWith(".xls");
+    return lower.endsWith(".xlsx") || lower.endsWith(".xls") || lower.endsWith(".xlt");
   });
 }
 

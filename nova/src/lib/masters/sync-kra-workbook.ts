@@ -137,31 +137,84 @@ async function upsertEmployees(
       .map((e) => [e.ecn!.trim(), e] as const)
   );
 
+  function kraNameTokens(name: string): string[] {
+    return normalizeEmployeeName(name).split(" ").filter((t) => t.length >= 3);
+  }
+
+  function kraNameAliases(token: string): string[] {
+    const map: Record<string, string[]> = {
+      shyamal: ["shyamal", "shymal"],
+      shymal: ["shymal", "shyamal"],
+    };
+    return map[token] ?? [token];
+  }
+
+  function tokensMatchMasterName(tokens: string[], masterName: string): boolean {
+    const n = normalizeEmployeeName(masterName);
+    return tokens.every((t) => kraNameAliases(t).some((a) => n.includes(a)));
+  }
+
+  function fuzzyMatchAtPlant(row: KraWorkbookEmployee) {
+    const pool = plantKey
+      ? masterRows.filter(
+          (e) => resolvePlantFromWorkingLocation(e.location).plantUnitKey === plantKey
+        )
+      : masterRows;
+    const deptPool = pool.filter((e) =>
+      departmentsAreEquivalent(e.department ?? "", row.department ?? "")
+    );
+    const tokens = kraNameTokens(row.name);
+    if (!tokens.length) return null;
+
+    for (const search of [deptPool, pool]) {
+      const candidates = search.filter((e) => tokensMatchMasterName(tokens, e.name));
+      if (candidates.length === 1) return candidates[0];
+    }
+
+    const first = tokens[0];
+    for (const search of [deptPool, pool]) {
+      const firstNameOnly = search.filter((e) => {
+        const parts = normalizeEmployeeName(e.name).split(" ").filter(Boolean);
+        return parts.length === 1 && kraNameAliases(first).some((a) => parts[0] === a);
+      });
+      if (firstNameOnly.length === 1) return firstNameOnly[0];
+    }
+
+    return null;
+  }
+
   function findExisting(row: KraWorkbookEmployee) {
     const ecnKey = isValidKraEcn(row.ecn) ? row.ecn!.trim() : null;
-    if (ecnKey && byEcn.has(ecnKey)) return byEcn.get(ecnKey)!;
-
-    const nameMatches = masterRows.filter((e) => personNamesMatch(e.name, row.name));
-    if (!nameMatches.length) return null;
-
-    if (plantKey) {
-      const atPlant = nameMatches.filter(
-        (e) =>
-          resolvePlantFromWorkingLocation(e.location).plantUnitKey === plantKey
-      );
-      if (atPlant.length === 1) return atPlant[0];
-      if (atPlant.length > 1) {
-        const sameDept = atPlant.find((e) =>
-          departmentsAreEquivalent(e.department ?? "", row.department ?? "")
-        );
-        return sameDept ?? atPlant[0];
+    if (ecnKey && byEcn.has(ecnKey)) {
+      const ecnMatch = byEcn.get(ecnKey)!;
+      if (!plantKey || resolvePlantFromWorkingLocation(ecnMatch.location).plantUnitKey === plantKey) {
+        return ecnMatch;
       }
     }
 
-    const sameDept = nameMatches.find((e) =>
-      departmentsAreEquivalent(e.department ?? "", row.department ?? "")
-    );
-    return sameDept ?? nameMatches[0];
+    const nameMatches = masterRows.filter((e) => personNamesMatch(e.name, row.name));
+    if (nameMatches.length) {
+      if (plantKey) {
+        const atPlant = nameMatches.filter(
+          (e) =>
+            resolvePlantFromWorkingLocation(e.location).plantUnitKey === plantKey
+        );
+        if (atPlant.length === 1) return atPlant[0];
+        if (atPlant.length > 1) {
+          const sameDept = atPlant.find((e) =>
+            departmentsAreEquivalent(e.department ?? "", row.department ?? "")
+          );
+          return sameDept ?? atPlant[0];
+        }
+      }
+
+      const sameDept = nameMatches.find((e) =>
+        departmentsAreEquivalent(e.department ?? "", row.department ?? "")
+      );
+      return sameDept ?? nameMatches[0];
+    }
+
+    return fuzzyMatchAtPlant(row);
   }
 
   for (const row of employees) {
@@ -172,6 +225,10 @@ async function upsertEmployees(
       null;
     const ecnKey = isValidKraEcn(row.ecn) ? row.ecn!.trim() : null;
     const existing = findExisting(row);
+    const ecnOwner = ecnKey ? byEcn.get(ecnKey) : null;
+    const sheetEcnMatchesExisting =
+      !!ecnKey &&
+      (!existing || existing.id === ecnOwner?.id || existing.ecn?.trim() === ecnKey);
 
     const deptName = normalizeKraDepartment(row.department ?? row.departmentRaw ?? "").masterName;
     // Plant import always assigns the plant location; never leave staff on wrong plant.
@@ -194,7 +251,7 @@ async function upsertEmployees(
       department: deptName,
       location,
       doj: row.doj ?? existing?.doj ?? null,
-      ecn: ecnKey ?? existing?.ecn ?? null,
+      ecn: sheetEcnMatchesExisting ? ecnKey : existing?.ecn ?? ecnKey ?? null,
       managerName: row.managerName?.trim() || existing?.managerName || null,
       sortOrder: row.sortOrder ?? existing?.sortOrder ?? 0,
       isActive: existing?.isActive ?? true,

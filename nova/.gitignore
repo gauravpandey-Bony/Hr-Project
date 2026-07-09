@@ -48,5 +48,8 @@ next-env.d.ts
 /prisma/prisma/
 data/logistics-kra/*.xlsx
 data/bony-37p-kra/*.xlsx
+data/bony-24-kra/*.xlsx
 data/bony-fluid-58-kra/*.xlsx
 data/saket-unit1-kra/*.xlsx
+data/bony-manesar-kra/*.xlsx
+data/saket-unit1-kra/*.xlt

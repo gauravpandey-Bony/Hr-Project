@@ -91,7 +91,7 @@ const WORKING_LOCATION_RULES: PlantRule[] = [
     location: "Bony 77 Faridabad",
   },
   {
-    test: /sector\s*[-–]?\s*24\b|plot\s*no\.?\s*[-–]?\s*132\b/i,
+    test: /sector\s*[-–]?\s*24\b|plot\s*no\.?\s*[-–]?\s*132\b|\b24\s*unit\b/i,
     plantUnitKey: "Bony 24",
     location: "Bony 24 Faridabad",
   },

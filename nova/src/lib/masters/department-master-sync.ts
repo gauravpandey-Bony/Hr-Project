@@ -137,6 +137,18 @@ export function departmentMatchKeys(name: string): Set<string> {
   if (/^production$/.test(compact)) {
     add("Production");
   }
+  if (/^design\b|designing|desiging|design and development/.test(compact)) {
+    add("Design");
+    add("Designing");
+    add("Desiging");
+    add("Design & Development");
+    add("Development");
+  }
+  if (/^development$|^r and d$/.test(compact)) {
+    add("Development");
+    add("Design & Development");
+    add("Design");
+  }
 
   return keys;
 }

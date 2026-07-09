@@ -6,7 +6,6 @@ import { BonyLogo } from "@/components/brand/bony-logo";
 import { Button } from "@/components/ui/button";
 import { MotionFadeUp } from "@/components/ui/motion";
 import { DemoLoginForm } from "@/components/auth/demo-login-form";
-import { Skeleton } from "@/components/ui/skeleton";
 
 export default function HomePage() {
   return (
@@ -46,14 +45,14 @@ export default function HomePage() {
         <MotionFadeUp delay={0.1} className="mt-10">
           <Suspense
             fallback={
-              <div className="max-w-md rounded-2xl border bg-card p-6">
-                <Skeleton className="mb-4 h-8 w-40" />
-                <Skeleton className="h-10 w-full" />
+              <div className="max-w-lg rounded-2xl border bg-card p-6">
+                <div className="mb-4 h-8 w-40 animate-pulse rounded bg-muted" />
+                <div className="h-32 animate-pulse rounded-xl bg-muted" />
               </div>
             }
           >
-            <div className="max-w-md">
-              <DemoLoginForm />
+            <div className="max-w-lg">
+              <DemoLoginForm compact />
             </div>
           </Suspense>
         </MotionFadeUp>

@@ -111,19 +111,24 @@ function parseHeaderBlock(text: string): Partial<KraWorkbookEmployee> {
   const out: Partial<KraWorkbookEmployee> = {};
   const pick = (re: RegExp) => text.match(re)?.[1]?.trim();
 
-  const name = pick(/Name:\s*([^\r\n]+)/i);
+  const name = pick(/Name:\s*([^\r\n|]+)/i);
   if (name) out.name = name.replace(/\s+/g, " ").trim();
 
-  out.level = pick(/Level:\s*([^\r\n]+)/i);
-  out.designation = sanitizeKraDesignation(pick(/Designation:\s*([^\r\n]+)/i));
-  const deptRaw = pick(/Department:\s*([^\r\n]+)/i);
+  out.level = pick(/Level:\s*([^\r\n|]+)/i);
+  out.designation = sanitizeKraDesignation(
+    pick(/Designation:\s*([^\r\n|]+?)(?=\s*(?:Department|Reporting|$))/i) ??
+      pick(/Designation:\s*([^\r\n|]+)/i)
+  );
+  const deptRaw =
+    pick(/Department:\s*([^\r\n|]+?)(?=\s*(?:Reporting|Location|$))/i) ??
+    pick(/Department:\s*([^\r\n|]+)/i);
   if (deptRaw) {
     out.departmentRaw = deptRaw.replace(/\.$/, "").trim();
     const { masterName } = normalizeKraDepartment(deptRaw);
     out.department = masterName;
   }
-  out.location = pick(/Location:\s*([^\r\n]+)/i);
-  out.doj = pick(/DOJ:\s*([^\r\n]+)/i);
+  out.location = pick(/Location:\s*([^\r\n|]+)/i);
+  out.doj = pick(/DOJ:\s*([^\r\n|]+)/i);
   out.totalExperience = pick(/Total Experience:\s*([^\r\n]+)/i);
   out.experienceInBony = pick(/Experience In Bony:\s*([^\r\n]+)/i);
 
@@ -180,6 +185,15 @@ export function normalizeKraDepartment(raw: string): {
   }
   if (/^quality$/i.test(d)) {
     return { masterName: "Quality", kraSheetId: "quality" };
+  }
+  if (/^development$|^r\s*&\s*d$/i.test(d)) {
+    return { masterName: "Development", kraSheetId: "development" };
+  }
+  if (/^design(?:ing)?$|^desiging$|^design\s*&\s*development$/i.test(d)) {
+    return { masterName: "Design", kraSheetId: "design" };
+  }
+  if (/^dispatch$/i.test(d)) {
+    return { masterName: "Dispatch", kraSheetId: "dispatch" };
   }
   if (/costing\s*&?\s*mis/i.test(d)) {
     return { masterName: "Costing & MIS", kraSheetId: "costing-mis" };
@@ -289,10 +303,29 @@ function sheetMatrix(wb: XLSX.WorkBook, sheetName: string): string[][] {
   }) as string[][];
 }
 
+/** Corporate Design "WORK RECORD" sheets — Name:/Department: block + Perspective/KRA/KPI table. */
+function isWorkRecordSheet(matrix: string[][]): boolean {
+  const headerCell = (matrix[0] ?? [])
+    .map((c) => String(c ?? ""))
+    .filter(Boolean)
+    .join("\n");
+  if (!/Name:\s*.+/i.test(headerCell)) return false;
+  if (!/Department:/i.test(headerCell) && !/Location:/i.test(headerCell)) return false;
+  return findKpiHeaderRow(matrix) >= 0;
+}
+
 function isSf1Workbook(wb: XLSX.WorkBook): boolean {
   for (const sheetName of wb.SheetNames) {
-    const title = cellStr(sheetMatrix(wb, sheetName)[0]?.[0]);
+    const matrix = sheetMatrix(wb, sheetName);
+    // Work-record workbooks must use the Perspective/KRA/KPI parser, not SF1.
+    if (isWorkRecordSheet(matrix)) return false;
+    const title = cellStr(matrix[0]?.[0]);
     if (/KRA\s*\/\s*KPI|SF-1|Saket Fabs/i.test(title)) return true;
+    if (/^kra\s*(?:\/\s*)?kpi/i.test(sheetName.trim())) return true;
+    if (findSf1EmployeeInfoRow(matrix) >= 0) return true;
+    if (isSf1KpiHeaderRow(matrix[1] ?? []) || isSf1KpiHeaderRow(matrix[4] ?? [])) {
+      return true;
+    }
   }
   return false;
 }
@@ -301,8 +334,12 @@ function isSf1EmployeeInfoRow(row: unknown[]): boolean {
   const joined = row.map((c) => String(c ?? "").toLowerCase()).join("|");
   return (
     joined.includes("name") &&
-    (joined.includes("department") || joined.includes("dept")) &&
-    (joined.includes("e.code") || joined.includes("ecode") || joined.includes("doj"))
+    (joined.includes("department") ||
+      joined.includes("dept") ||
+      joined.includes("doj") ||
+      joined.includes("date of joining") ||
+      joined.includes("e.code") ||
+      joined.includes("ecode"))
   );
 }
 
@@ -330,6 +367,8 @@ function inferDepartmentFromTitle(title: string, sheetName = ""): string {
   const t = `${title} ${sheetName}`.toLowerCase();
   if (/maintenance|maint/i.test(t)) return "Maintenance";
   if (/quality|qa/i.test(t)) return "Quality";
+  if (/development|r\s*&\s*d/i.test(t)) return "Development";
+  if (/\bdesign(?:ing)?\b/i.test(t)) return "Design";
   if (/tool\s*room/i.test(t)) return "Tool Room";
   if (/it\s*&?\s*system/i.test(t)) return "IT & Systems";
   if (/\bstore\b/i.test(t)) return "Store";
@@ -344,9 +383,64 @@ function inferDepartmentFromTitle(title: string, sheetName = ""): string {
 
 function parseEmployeeNameFromSheetName(sheetName: string): string {
   const trimmed = sheetName.trim();
-  const qa = trimmed.match(/(?:QA\s*-?\s*26-27|KRA\s*KPI)\s+(.+)$/i);
+  const qa = trimmed.match(
+    /(?:KRA\s*KPI\s*)?(?:QA|Maint)\s*-?\s*26-?27\s+(.+)$/i
+  );
   if (qa?.[1]) return titleCaseName(qa[1].trim());
+
+  const stripped = trimmed
+    .replace(/^kra\s*(?:\/\s*)?kpi\s*-?\s*26-?27\s*/i, "")
+    .replace(/^mr\.?\s+|^ms\.?\s+|^mrs\.?\s+/i, "")
+    .trim();
+  if (stripped && stripped !== trimmed) return titleCaseName(stripped);
+
   return titleCaseName(trimmed);
+}
+
+function isSummaryKraSheetName(sheetName: string): boolean {
+  const t = sheetName.trim();
+  if (/^kra\s*(?:\/\s*)?kpi\s*-?\s*26-?27\s*$/i.test(t)) return true;
+  if (/^kra\s*kpi\s*maint\s*-?\s*26-?27\s*$/i.test(t)) return true;
+  return false;
+}
+
+function looksLikeKraEmployeeSheetName(sheetName: string): boolean {
+  return /^kra\s*(?:\/\s*)?kpi/i.test(sheetName.trim());
+}
+
+function parseNameFromKraBanner(cell: string): string | null {
+  const m = cell.match(/^(.+?)\s+kra\s*\/\s*kpi/i);
+  if (m?.[1]?.trim()) return titleCaseName(m[1].trim());
+  return null;
+}
+
+/** Merge label/value pairs from the first rows (Name on row 0, Department on row 1, etc.). */
+function parseSpreadsheetEmployeeMeta(
+  matrix: string[][],
+  maxRows = 8
+): Partial<KraWorkbookEmployee> {
+  const meta: Partial<KraWorkbookEmployee> = {};
+  for (let i = 0; i < Math.min(matrix.length, maxRows); i++) {
+    const row = matrix[i] ?? [];
+    const bannerName = parseNameFromKraBanner(cellStr(row[0]));
+    if (bannerName && !isMisreadEmployeeName(bannerName)) meta.name = bannerName;
+
+    const rowMeta = parseLogisticKraHeaderRow(row);
+    if (rowMeta.name && !isMisreadEmployeeName(rowMeta.name)) {
+      meta.name = rowMeta.name;
+    }
+    if (rowMeta.department && !isMisreadDepartment(rowMeta.department)) {
+      meta.department = rowMeta.department;
+      meta.departmentRaw = rowMeta.departmentRaw ?? rowMeta.department;
+    }
+    if (rowMeta.designation && !meta.designation) meta.designation = rowMeta.designation;
+    if (rowMeta.doj && !meta.doj) meta.doj = rowMeta.doj;
+    if (rowMeta.ecn && !meta.ecn) meta.ecn = rowMeta.ecn;
+    if (rowMeta.managerName && !meta.managerName) meta.managerName = rowMeta.managerName;
+    if (rowMeta.location && !meta.location) meta.location = rowMeta.location;
+    if (rowMeta.level && !meta.level) meta.level = rowMeta.level;
+  }
+  return meta;
 }
 
 function isMainKraSheetName(name: string): boolean {
@@ -450,17 +544,42 @@ function isKraHeaderLabelValue(val: string): boolean {
   );
 }
 
+function isMisreadDepartment(dept: string | null | undefined): boolean {
+  const d = (dept ?? "").trim();
+  if (!d) return true;
+  return /^(experience|qualification|reporting manager|general)$/i.test(d);
+}
+
 function isMisreadEmployeeName(name: string | null | undefined): boolean {
   const n = (name ?? "").trim();
   if (!n) return true;
-  return isKraHeaderLabelValue(n);
+  if (isKraHeaderLabelValue(n)) return true;
+  if (looksLikeKraEmployeeSheetName(n)) return true;
+  if (
+    /^(date of joining|experience|qualification|reporting manager|department|designation|name|uom|weightage)$/i.test(
+      n
+    )
+  ) {
+    return true;
+  }
+  return false;
+}
+
+function isSerialNumberHeader(cell: string): boolean {
+  const c0 = cell.toLowerCase().replace(/\./g, "").replace(/\s+/g, "");
+  return (
+    c0.includes("sno") ||
+    c0.includes("srno") ||
+    c0 === "sno" ||
+    c0 === "srno"
+  );
 }
 
 function findLogisticKpiHeaderRow(matrix: string[][]): number {
   for (let i = 0; i < matrix.length; i++) {
-    const c0 = cellStr(matrix[i]?.[0]).toLowerCase();
+    const c0 = cellStr(matrix[i]?.[0]);
     const c2 = cellStr(matrix[i]?.[2]).toLowerCase();
-    if ((c0 === "sno" || c0.includes("sno")) && c2.includes("kpi")) {
+    if (isSerialNumberHeader(c0) && c2.includes("kpi")) {
       return i;
     }
   }
@@ -793,6 +912,11 @@ function parseSf1KraSheet(
   const title = cellStr(matrix[0]?.[0]);
   let defaultDept = inferDepartmentFromTitle(title, sheetName);
   if (/store/i.test(sourceFileName ?? "")) defaultDept = "Store";
+  if (/maint/i.test(sourceFileName ?? "")) defaultDept = "Maintenance";
+  if (/production/i.test(sourceFileName ?? "")) defaultDept = "Production";
+  if (/quality/i.test(sourceFileName ?? "")) defaultDept = "Quality";
+  if (/development/i.test(sourceFileName ?? "")) defaultDept = "Development";
+  if (/dispatch/i.test(sourceFileName ?? "")) defaultDept = "Dispatch";
 
   if (isDwmChecklistSheet(matrix)) {
     const dwm = parseDwmEmployeeOnly(sheetName, matrix, idx);
@@ -800,21 +924,25 @@ function parseSf1KraSheet(
   }
 
   const empRowIdx = findSf1EmployeeInfoRow(matrix);
-  let meta: Partial<KraWorkbookEmployee> = {};
-  if (empRowIdx >= 0) {
-    meta = parseLogisticKraHeaderRow(matrix[empRowIdx] ?? []);
+  let meta: Partial<KraWorkbookEmployee> = parseSpreadsheetEmployeeMeta(matrix);
+  if (empRowIdx >= 0 && !meta.name) {
+    meta = { ...meta, ...parseLogisticKraHeaderRow(matrix[empRowIdx] ?? []) };
   }
 
-  const qualityStyle = empRowIdx < 0 && isSf1KpiHeaderRow(matrix[1] ?? []);
+  const qualityStyle = !meta.name && empRowIdx < 0 && isSf1KpiHeaderRow(matrix[1] ?? []);
   if (qualityStyle) {
     meta.department = defaultDept;
     meta.departmentRaw = defaultDept;
     meta.name = parseEmployeeNameFromSheetName(sheetName);
   }
 
-  if (!meta.department) {
+  if (!meta.department || isMisreadDepartment(meta.department)) {
     meta.department = defaultDept;
     meta.departmentRaw = defaultDept;
+  }
+  if (/maint/i.test(sourceFileName ?? "") && meta.department === "Tool Room") {
+    meta.department = "Maintenance";
+    meta.departmentRaw = "Maintenance";
   }
 
   const displayName =
@@ -872,8 +1000,7 @@ function parseLogisticKraSheet(
   idx: number
 ): { employee?: KraWorkbookEmployee; kpis: KraWorkbookKpi[]; errors: string[] } {
   const errors: string[] = [];
-  const empRowIdx = findSf1EmployeeInfoRow(matrix);
-  const meta = parseLogisticKraHeaderRow(matrix[empRowIdx >= 0 ? empRowIdx : 1] ?? []);
+  const meta = parseSpreadsheetEmployeeMeta(matrix);
   if (!meta.department) {
     errors.push(`Sheet "${sheetName}": could not read department`);
     return { kpis: [], errors };
@@ -881,7 +1008,7 @@ function parseLogisticKraSheet(
 
   const displayName =
     (!isMisreadEmployeeName(meta.name) ? meta.name?.trim() : null) ||
-    sheetName.trim() ||
+    parseEmployeeNameFromSheetName(sheetName) ||
     `Employee ${idx + 1}`;
 
   const employee: KraWorkbookEmployee = {
@@ -924,11 +1051,15 @@ function findKpiHeaderRow(matrix: string[][]): number {
       c0.includes("sno") ||
       c0 === "s. no" ||
       c0 === "s.no" ||
-      c0 === "s no";
+      c0 === "s no" ||
+      c0 === "sr. no" ||
+      c0 === "sr.no";
     const hasKpi = joined.includes("kpi");
     const hasKra = joined.includes("kra");
+    const hasPerspective = joined.includes("perspective");
     if (hasSr && hasKpi) return i;
-    if (hasSr && hasKra && joined.includes("weight")) return i;
+    if (hasSr && hasKra && (joined.includes("weight") || hasPerspective)) return i;
+    if (hasPerspective && hasKra && hasKpi) return i;
   }
   return -1;
 }
@@ -1027,6 +1158,104 @@ function mapKpiHeaderColumns(headerRow: unknown[]): KpiColMap {
     q4t: q1Col + 6,
     q4a: q1Col + 7,
   };
+}
+
+function parseWorkRecordKpiRows(
+  matrix: string[][],
+  ws: XLSX.WorkSheet,
+  headerIdx: number,
+  ctx: { sheetName: string; ownerName: string; department: string }
+): KraWorkbookKpi[] {
+  const cols = mapKpiHeaderColumns(matrix[headerIdx] ?? []);
+  const hasUomWeight = cols.uom >= 0 && cols.weightage >= 0;
+  const kpis: KraWorkbookKpi[] = [];
+  let currentPerspective = "";
+  let currentKra = "";
+  let currentSr = 0;
+
+  // Skip blank spacer row under merged header if present.
+  let dataStart = headerIdx + 1;
+  while (dataStart < matrix.length) {
+    const row = matrix[dataStart] ?? [];
+    const nonempty = row.some((c) => cellStr(c).trim());
+    if (nonempty) break;
+    dataStart++;
+  }
+
+  for (let r = dataStart; r < matrix.length; r++) {
+    const row = matrix[r] ?? [];
+    const kpiName = cellStr(row[cols.kpi >= 0 ? cols.kpi : 3]).trim();
+    if (!kpiName) continue;
+
+    const srCell = cellStr(row[cols.sr >= 0 ? cols.sr : 0]);
+    const perspectiveCell = cellStr(
+      row[cols.perspective >= 0 ? cols.perspective : 1]
+    ).replace(/\r?\n/g, " ");
+    const kraCell = cellStr(row[cols.kra >= 0 ? cols.kra : 2]);
+    if (srCell) currentSr = parseInt(srCell, 10) || currentSr + 1;
+    if (perspectiveCell) currentPerspective = perspectiveCell;
+    if (kraCell) currentKra = kraCell;
+    if (!currentKra && !currentPerspective) continue;
+
+    let unit = "%";
+    let weightage = 0;
+    let achievedNote = "";
+    let targetAnnual = "";
+
+    if (hasUomWeight) {
+      const uomRaw = cellStr(row[cols.uom]);
+      unit = normalizeUnit(uomRaw || "%");
+      weightage = readNumericWeightage(
+        ws,
+        r,
+        cols.weightage,
+        row[cols.weightage]
+      );
+      // Achieved / remarks typically sit in the column after weightage.
+      const noteCol = cols.weightage + 1;
+      achievedNote =
+        readSheetCell(ws, r, noteCol, unit, "quarterAchieved") ||
+        cellStr(row[noteCol]);
+      targetAnnual = achievedNote;
+    } else {
+      // Lightweight work record (no UOM/Weightage columns) — narrative in next col.
+      const noteCol = (cols.kpi >= 0 ? cols.kpi : 3) + 1;
+      achievedNote =
+        cellStr(row[noteCol]) ||
+        cellStr(row[noteCol + 1]) ||
+        cellStr(row[noteCol + 2]);
+      unit = inferUnitFromText(achievedNote, kpiName);
+      targetAnnual = achievedNote;
+    }
+
+    const direction = inferDirection(unit, targetAnnual, kpiName);
+    const targetValue = resolveImportTargetValue(targetAnnual, "", unit);
+    const q1a = normalizeKraCellValue(achievedNote, unit);
+
+    kpis.push({
+      sheetName: ctx.sheetName,
+      ownerName: ctx.ownerName,
+      department: ctx.department,
+      srNo: currentSr || kpis.length + 1,
+      perspective: currentPerspective,
+      kraName: currentKra || currentPerspective,
+      name: kpiName,
+      unit,
+      weightage,
+      targetAnnual,
+      targetValue,
+      direction,
+      quarterTargets: {
+        q1: { target: targetAnnual, achieved: q1a },
+        q2: { target: "", achieved: "" },
+        q3: { target: "", achieved: "" },
+        q4: { target: "", achieved: "" },
+      },
+      entryValues: [],
+    });
+  }
+
+  return kpis;
 }
 
 function parseKpiRows(
@@ -1222,7 +1451,15 @@ export function parseKraWorkbook(
 
   wb.SheetNames.forEach((sheetName, idx) => {
     if (isLogisticsJunkName(sheetName)) return;
+    if (isSummaryKraSheetName(sheetName)) return;
     const matrix = sheetMatrix(wb, sheetName);
+    if (
+      /^sheet\d*$/i.test(sheetName.trim()) &&
+      findLogisticKpiHeaderRow(matrix) < 0 &&
+      findKpiHeaderRow(matrix) < 0
+    ) {
+      return;
+    }
     const ws = wb.Sheets[sheetName];
 
     // Skip pure report/trend tabs (not individual KRA scorecards).
@@ -1346,6 +1583,9 @@ export function parseKraWorkbook(
       (isPrimeStyleSheet(matrix)
         ? parseEmployeeNameFromSheetName(sheetName)
         : null) ||
+      (looksLikeKraEmployeeSheetName(sheetName)
+        ? parseEmployeeNameFromSheetName(sheetName)
+        : null) ||
       (/^sheet\d*$/i.test(sheetName.trim())
         ? parseEmployeeNameFromSheetName(sourceFileName ?? "Plant Head")
         : sheetName.trim()) ||
@@ -1384,11 +1624,17 @@ export function parseKraWorkbook(
       return;
     }
 
-    const parsedKpis = parseKpiRows(matrix, wb.Sheets[sheetName], headerIdx, {
-      sheetName: sheetName.trim(),
-      ownerName: displayName,
-      department,
-    });
+    const parsedKpis = isWorkRecordSheet(matrix)
+      ? parseWorkRecordKpiRows(matrix, wb.Sheets[sheetName], headerIdx, {
+          sheetName: sheetName.trim(),
+          ownerName: displayName,
+          department,
+        })
+      : parseKpiRows(matrix, wb.Sheets[sheetName], headerIdx, {
+          sheetName: sheetName.trim(),
+          ownerName: displayName,
+          department,
+        });
     if (!parsedKpis.length) {
       errors.push(
         formatKraIssue(
