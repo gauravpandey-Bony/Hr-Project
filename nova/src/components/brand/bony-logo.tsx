@@ -16,44 +16,60 @@ export function BonyLogo({
   variant = "mark",
   className,
   priority,
+  /** Right-to-left 3D flip once on mount / every page refresh */
+  flipOnLoad = false,
 }: {
   size?: keyof typeof SIZE;
   variant?: "mark" | "full";
   className?: string;
   priority?: boolean;
+  flipOnLoad?: boolean;
 }) {
   const s = SIZE[size];
 
   if (variant === "full") {
     return (
-      <Image
-        src={COMPANY.logoFullPath}
-        alt={COMPANY.brandName}
-        width={s.size}
-        height={Math.round(s.size * 1.05)}
-        priority={priority}
-        className={cn("h-auto w-auto object-contain", className)}
-        style={{ width: s.size, height: "auto" }}
-      />
+      <span className={cn("inline-flex shrink-0 [perspective:520px]", className)}>
+        <span
+          className={cn(
+            "inline-flex",
+            flipOnLoad && "animate-logo-flip-rtl"
+          )}
+          style={flipOnLoad ? { transformStyle: "preserve-3d" } : undefined}
+        >
+          <Image
+            src={COMPANY.logoFullPath}
+            alt={COMPANY.brandName}
+            width={s.size}
+            height={Math.round(s.size * 1.05)}
+            priority={priority}
+            className="h-auto w-auto object-contain"
+            style={{ width: s.size, height: "auto" }}
+          />
+        </span>
+      </span>
     );
   }
 
   return (
-    <span
-      className={cn(
-        "inline-flex shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white p-1 ring-1 ring-black/[0.06]",
-        s.box,
-        className
-      )}
-    >
-      <Image
-        src={COMPANY.logoMarkPath}
-        alt={COMPANY.brandName}
-        width={s.size}
-        height={s.size}
-        priority={priority}
-        className="h-full w-full object-contain object-center"
-      />
+    <span className={cn("inline-flex shrink-0 [perspective:520px]", className)}>
+      <span
+        className={cn(
+          "inline-flex items-center justify-center overflow-hidden rounded-xl bg-white p-1 ring-1 ring-black/[0.06]",
+          s.box,
+          flipOnLoad && "animate-logo-flip-rtl"
+        )}
+        style={flipOnLoad ? { transformStyle: "preserve-3d" } : undefined}
+      >
+        <Image
+          src={COMPANY.logoMarkPath}
+          alt={COMPANY.brandName}
+          width={s.size}
+          height={s.size}
+          priority={priority}
+          className="h-full w-full object-contain object-center"
+        />
+      </span>
     </span>
   );
 }

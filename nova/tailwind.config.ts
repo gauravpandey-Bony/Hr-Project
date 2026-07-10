@@ -113,6 +113,24 @@ const config: Config = {
           "0%, 100%": { transform: "translateY(0px)" },
           "50%": { transform: "translateY(-4px)" },
         },
+        "logo-flip-rtl": {
+          "0%": {
+            opacity: "0.4",
+            transform: "perspective(520px) rotateY(95deg) scale(0.88)",
+          },
+          "35%": {
+            opacity: "1",
+            transform: "perspective(520px) rotateY(35deg) scale(0.96)",
+          },
+          "70%": {
+            opacity: "1",
+            transform: "perspective(520px) rotateY(-14deg) scale(1.04)",
+          },
+          "100%": {
+            opacity: "1",
+            transform: "perspective(520px) rotateY(0deg) scale(1)",
+          },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -120,6 +138,7 @@ const config: Config = {
         shimmer: "shimmer 1.5s infinite",
         "fade-up": "fade-up 0.4s ease-out both",
         float: "float 4s ease-in-out infinite",
+        "logo-flip-rtl": "logo-flip-rtl 2.4s cubic-bezier(0.33, 0.1, 0.25, 1) both",
       },
     },
   },
