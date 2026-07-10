@@ -84,11 +84,15 @@ function SpotlightCard({
             <div className="mt-4 grid grid-cols-2 gap-2" style={{ transform: "translateZ(20px)" }}>
               <div className="rounded-xl bg-black/20 px-3 py-2.5 ring-1 ring-white/10 backdrop-blur-sm">
                 <p className="text-[10px] text-white/50">Achieved</p>
-                <p className="font-mono text-base font-black">{kpi.achieved}</p>
+                <p className="truncate font-mono text-base font-black" title={kpi.achieved}>
+                  {kpi.achieved}
+                </p>
               </div>
               <div className="rounded-xl bg-black/20 px-3 py-2.5 ring-1 ring-white/10 backdrop-blur-sm">
                 <p className="text-[10px] text-white/50">Target</p>
-                <p className="font-mono text-base font-black">{kpi.target}</p>
+                <p className="line-clamp-2 font-mono text-sm font-black leading-snug" title={kpi.target}>
+                  {kpi.target}
+                </p>
               </div>
             </div>
             <p className="mt-2 truncate text-[10px] text-white/45">

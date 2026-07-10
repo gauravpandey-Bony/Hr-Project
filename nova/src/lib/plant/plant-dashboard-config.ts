@@ -155,7 +155,7 @@ export const PLANT_DASHBOARD_PROFILES: PlantDashboardProfile[] = [
         icon: "quality",
         gradient: "from-blue-500 to-indigo-600",
         glow: "shadow-blue-500/30",
-        keywords: ["quality", "rejection", "ppm", "defect"],
+        keywords: ["quality", "rejection", "ppm", "defect", "customer complaint"],
         preferLevel: "PLANT",
       },
       {
@@ -213,7 +213,7 @@ const DEFAULT_PROFILE: PlantDashboardProfile = {
       icon: "quality",
       gradient: "from-blue-500 to-indigo-600",
       glow: "shadow-blue-500/30",
-      keywords: ["quality", "rejection", "ppm"],
+      keywords: ["quality", "rejection", "ppm", "defect", "customer complaint"],
       preferLevel: "PLANT",
     },
     {
@@ -267,6 +267,51 @@ function matchScore(text: string, keywords: string[]): number {
   return score;
 }
 
+/** Reject Design/activity KRAs that only mention "quality" loosely. */
+function isExcludedSpotlightNoise(def: SpotlightMetricDef, row: KpiLike): boolean {
+  const blob = normalize(`${row.kraName} ${row.kpiName} ${row.target} ${row.achieved}`);
+
+  // Long sentence targets are almost never plant spotlight metrics
+  if ((row.target?.trim().length ?? 0) > 48 && !/\d/.test(row.target)) return true;
+  if ((row.target?.trim().length ?? 0) > 80) return true;
+
+  if (def.id === "quality" || def.icon === "quality") {
+    // Drawing / ECN / NPD activity — not plant quality (PPM/rejection)
+    if (
+      /\b(ecn|drawing|drawings|revised drawing|distributed|concern department|npd|design release)\b/.test(
+        blob
+      )
+    ) {
+      return true;
+    }
+    // Require a real quality signal beyond the word alone in category
+    const strong =
+      /\b(ppm|rejection|defect|customer complaint|quality assurance|qa\b|incoming|in process|final inspection)\b/.test(
+        blob
+      );
+    const onlyWeakCategory =
+      normalize(row.category).includes("quality") &&
+      matchScore(`${row.kraName} ${row.kpiName}`, def.keywords) < 7;
+    if (!strong && onlyWeakCategory) return true;
+    if (!strong && matchScore(`${row.kraName} ${row.kpiName}`, ["quality"]) > 0) {
+      // "quality" alone in name without PPM/rejection — skip for spotlight
+      const nameScore = matchScore(`${row.kraName} ${row.kpiName}`, [
+        "ppm",
+        "rejection",
+        "defect",
+        "complaint",
+      ]);
+      if (nameScore === 0) return true;
+    }
+  }
+
+  if (def.id === "sales" || def.icon === "sales") {
+    if (/\b(manpower|cost control|headcount|recruitment)\b/.test(blob)) return true;
+  }
+
+  return false;
+}
+
 function rowToKpiLike(row: PlantBusinessKpiRow | LevelKpiRow): KpiLike {
   return {
     kpiId: row.kpiId,
@@ -305,27 +350,39 @@ export function resolveSpotlightMetrics(
       { source: "employee", rows: empPool },
     ];
 
+    // Business spotlights: plant → department first; employee only as last resort
+    // and only with a stronger keyword score (avoids Design "quality" false matches).
     const order =
-      def.preferLevel === "PLANT"
-        ? pools
-        : def.preferLevel === "DEPARTMENT"
-          ? [pools[1], pools[0], pools[2]]
-          : def.preferLevel === "INDIVIDUAL"
-            ? [pools[2], pools[1], pools[0]]
-            : pools;
+      def.preferLevel === "DEPARTMENT"
+        ? [pools[1], pools[0], pools[2]]
+        : def.preferLevel === "INDIVIDUAL"
+          ? [pools[2], pools[1], pools[0]]
+          : pools;
 
     let best: { row: KpiLike; source: ResolvedSpotlightMetric["matchSource"]; score: number } | null =
       null;
 
     for (const pool of order) {
       for (const row of pool.rows) {
+        if (isExcludedSpotlightNoise(def, row)) continue;
         const text = `${row.kraName} ${row.kpiName} ${row.category}`;
-        const score = matchScore(text, def.keywords);
-        if (score > 0 && (!best || score > best.score)) {
+        let score = matchScore(text, def.keywords);
+        if (score <= 0) continue;
+
+        // Prefer plant/dept over weak employee matches
+        if (pool.source === "employee") {
+          score -= 3;
+          if (score < 6) continue;
+        }
+        if (pool.source === "plant") score += 4;
+        if (pool.source === "department") score += 2;
+
+        if (!best || score > best.score) {
           best = { row, source: pool.source, score };
         }
       }
-      if (best && def.preferLevel) break;
+      // Stop early only when we already have a solid plant/dept hit
+      if (best && best.source !== "employee" && best.score >= 6) break;
     }
 
     return {
