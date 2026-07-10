@@ -95,13 +95,13 @@ function GroupTile({
       as="button"
       floatIndex={floatIndex}
       onClick={() => onOpen(group)}
-      className="w-full overflow-hidden border-0 bg-transparent p-0 text-left text-white shadow-none ring-1 ring-white/20"
+      className="w-full overflow-visible border-0 bg-transparent p-0 text-left text-white shadow-none ring-1 ring-white/20"
     >
-      <div className="relative p-6" style={{ background: group.gradientCss }}>
+      <div className="relative overflow-hidden rounded-[inherit] p-6" style={{ background: group.gradientCss }}>
         <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.15)_0%,transparent_55%)]" />
         <div className="relative flex items-start justify-between gap-3">
           {group.id === "bony" ? (
-            <span style={{ transform: "translateZ(32px)" }}>
+            <span className="relative z-10 shrink-0" style={{ transform: "translateZ(32px)" }}>
               <BonyLogo
                 size="lg"
                 variant="mark"

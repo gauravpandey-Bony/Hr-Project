@@ -67,9 +67,19 @@ export function isArchivedDepartmentName(name: string | null | undefined): boole
   return /\(archived\b/i.test(name?.trim() ?? "");
 }
 
+/** Remove every `(archived …)` marker so UI never shows merge junk. */
+export function stripArchivedDepartmentSuffix(name: string): string {
+  return name
+    .replace(/\s*\(archived[^)]*\)/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 /** UI label for department tabs and headers */
 export function formatDepartmentDisplayName(name: string): string {
-  const normalized = normalizeDepartmentMasterName(name);
+  const cleaned = stripArchivedDepartmentSuffix(name);
+  if (!cleaned) return cleaned;
+  const normalized = normalizeDepartmentMasterName(cleaned);
   const key = departmentNameKey(normalized);
   if (key === "it" || key === "it & systems" || key === "it & system") {
     return "IT & Systems";
@@ -82,7 +92,7 @@ export function formatDepartmentDisplayName(name: string): string {
 
 /** One canonical display name per department (roster aliases → master name). */
 export function normalizeDepartmentMasterName(raw: string): string {
-  const trimmed = raw.trim();
+  const trimmed = stripArchivedDepartmentSuffix(raw);
   if (!trimmed) return trimmed;
 
   if (isMdOfficeAlias(trimmed)) {
@@ -420,9 +430,10 @@ function clusterDepartmentsByPlant(
 }
 
 function archiveDepartmentRow(name: string, location: string | null, id: string) {
+  const base = stripArchivedDepartmentSuffix(name) || name.trim();
   return {
     isActive: false as const,
-    name: `${name} (archived ${id.slice(-6)})`,
+    name: `${base} (archived ${id.slice(-6)})`,
     location: `${location ?? "unknown"}#${id.slice(-6)}`,
   };
 }

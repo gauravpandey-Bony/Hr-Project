@@ -53,6 +53,7 @@ import {
   pageSlice,
 } from "@/components/ui/list-pagination";
 import { DepartmentLabel } from "./department-label";
+import { formatDepartmentDisplayName } from "@/lib/masters/department-master-sync";
 
 const DEPT_PAGE_SIZE = 3;
 
@@ -456,7 +457,7 @@ export function EmployeeMasterClient({
               <option value="">—</option>
               {departments.map((dep) => (
                 <option key={dep.id} value={dep.id}>
-                  {dep.name}
+                  {formatDepartmentDisplayName(dep.name)}
                 </option>
               ))}
             </select>

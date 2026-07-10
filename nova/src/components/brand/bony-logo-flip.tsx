@@ -59,7 +59,7 @@ export function BonyLogoFlip({
           width={s.px}
           height={s.px}
           priority
-          className="h-full w-full scale-[1.08] object-cover object-center"
+          className="h-full w-full object-contain object-center p-0.5"
         />
       </motion.div>
     </div>

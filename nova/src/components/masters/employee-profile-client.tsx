@@ -28,6 +28,7 @@ import { EmployeeDashboardBlock } from "@/components/ai/employee-dashboard-block
 import type { EmployeeDashboardData } from "@/lib/ai/employee-report";
 import { UploadKraWorkbookButton } from "@/components/kra/upload-kra-workbook-button";
 import { DepartmentLabel } from "@/components/masters/department-label";
+import { formatDepartmentDisplayName } from "@/lib/masters/department-master-sync";
 
 type KraIssueRow = {
   id: string;
@@ -405,7 +406,7 @@ export function EmployeeProfileClient({
                     <option value="">—</option>
                     {departments.map((dep) => (
                       <option key={dep.id} value={dep.id}>
-                        {dep.name}
+                        {formatDepartmentDisplayName(dep.name)}
                       </option>
                     ))}
                   </select>

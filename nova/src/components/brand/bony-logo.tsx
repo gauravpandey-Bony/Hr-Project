@@ -67,7 +67,7 @@ export function BonyLogo({
           width={s.size}
           height={s.size}
           priority={priority}
-          className="h-full w-full scale-[1.08] object-cover object-center"
+          className="h-full w-full object-contain object-center p-0.5"
         />
       </span>
     </span>

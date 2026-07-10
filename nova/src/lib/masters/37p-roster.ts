@@ -1,6 +1,6 @@
 import * as XLSX from "xlsx";
 import type { DepartmentImportRow, EmployeeImportRow } from "./import";
-import { dedupeDepartmentMasters } from "./department-master-sync";
+import { dedupeDepartmentMasters, stripArchivedDepartmentSuffix } from "./department-master-sync";
 
 /** Excel Department column → master name, KRA sheet, KPI library department */
 export const ROSTER_DEPT_MAP: Record<
@@ -294,7 +294,7 @@ export async function reconcilePlantHeadEmployeesAsProduction(
         where: { id: dept.id },
         data: {
           isActive: false,
-          name: `${dept.name} (archived ${dept.id.slice(-6)})`,
+          name: `${stripArchivedDepartmentSuffix(dept.name) || dept.name} (archived ${dept.id.slice(-6)})`,
           location: `${dept.location ?? "unknown"}#${dept.id.slice(-6)}`,
         },
       });
