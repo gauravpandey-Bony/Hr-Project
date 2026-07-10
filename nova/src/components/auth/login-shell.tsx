@@ -26,64 +26,59 @@ export function LoginShell({
 }) {
   return (
     <div className="flex min-h-screen flex-col bg-[#eef1f6] lg:min-h-[100dvh] lg:flex-row">
-      {/* Desktop hero */}
-      <aside className="relative hidden min-h-[100dvh] w-[54%] shrink-0 overflow-hidden lg:block xl:w-[58%]">
-        {/* Full-bleed building from the top — same cover fill as before */}
-        <div className="absolute inset-0 overflow-hidden bg-[#0b1220]">
+      {/* Desktop hero — image top→middle (full photo), copy below */}
+      <aside className="relative hidden min-h-[100dvh] w-[54%] shrink-0 flex-col overflow-hidden bg-[#0b1220] lg:flex xl:w-[58%]">
+        {/* Top half: complete building image, no crop */}
+        <div className="relative h-[52%] min-h-0 w-full shrink-0 overflow-hidden bg-[#0b1220]">
           <Image
             src={BUILDING_IMAGE}
             alt={`${companyName} corporate office`}
             fill
             priority
-            className="object-cover object-[center_28%]"
+            className="object-contain object-center"
             sizes="58vw"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-black/15" />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/35 via-transparent to-transparent" />
-          <div className="absolute inset-x-0 bottom-0 h-[55%] bg-gradient-to-t from-black/85 to-transparent" />
         </div>
 
-        {/* Bottom copy bar — full width left → right */}
-        <div className="relative flex h-full min-h-[100dvh] flex-col justify-end">
-          <div className="w-full px-5 pb-5 pt-8 xl:px-7 xl:pb-7">
-            <div className="login-hero-glass w-full space-y-4 p-5 sm:p-6 xl:space-y-5 xl:p-7">
-              <p className="inline-flex rounded-full border border-white/30 bg-white/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] backdrop-blur-md">
-                Performance management
-              </p>
-              <h1
-                className="text-balance text-3xl font-bold leading-[1.12] tracking-tight text-white xl:text-[2.55rem]"
-                style={{ textShadow: "0 2px 18px rgba(0,0,0,0.55)" }}
-              >
-                KPI tracking built for every plant.
-              </h1>
-              <p
-                className="max-w-3xl text-sm leading-relaxed text-white/95 xl:text-base"
-                style={{ textShadow: "0 1px 10px rgba(0,0,0,0.5)" }}
-              >
-                Department master, employee KRA sheets, and quarterly reports — one
-                workspace for {companyName}.
-              </p>
-
-              <div className="grid w-full grid-cols-3 gap-2.5 pt-1">
-                {HIGHLIGHTS.map(({ icon: Icon, label, value }) => (
-                  <div key={label} className="login-stat-tile">
-                    <Icon className="mb-1.5 h-4 w-4 text-white drop-shadow" />
-                    <p className="text-[9px] font-bold uppercase tracking-wider text-white/70">
-                      {label}
-                    </p>
-                    <p className="mt-0.5 text-xs font-bold text-white xl:text-sm">{value}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <p
-              className="mt-3 pl-1 text-[11px] text-white/70"
-              style={{ textShadow: "0 1px 6px rgba(0,0,0,0.5)" }}
-            >
-              © {new Date().getFullYear()} {companyName}
+        {/* Bottom half: KPI copy — full width */}
+        <div className="relative flex min-h-0 flex-1 flex-col justify-center bg-gradient-to-b from-[#0f172a] via-[#111827] to-[#0b1220] px-5 py-5 xl:px-7 xl:py-6">
+          <div className="login-hero-glass w-full space-y-3.5 p-5 sm:p-6 xl:space-y-4 xl:p-7">
+            <p className="inline-flex rounded-full border border-white/30 bg-white/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] backdrop-blur-md">
+              Performance management
             </p>
+            <h1
+              className="text-balance text-3xl font-bold leading-[1.12] tracking-tight text-white xl:text-[2.45rem]"
+              style={{ textShadow: "0 2px 18px rgba(0,0,0,0.55)" }}
+            >
+              KPI tracking built for every plant.
+            </h1>
+            <p
+              className="text-sm leading-relaxed text-white/95 xl:text-base"
+              style={{ textShadow: "0 1px 10px rgba(0,0,0,0.5)" }}
+            >
+              Department master, employee KRA sheets, and quarterly reports — one
+              workspace for {companyName}.
+            </p>
+
+            <div className="grid w-full grid-cols-3 gap-2.5 pt-1">
+              {HIGHLIGHTS.map(({ icon: Icon, label, value }) => (
+                <div key={label} className="login-stat-tile">
+                  <Icon className="mb-1.5 h-4 w-4 text-white drop-shadow" />
+                  <p className="text-[9px] font-bold uppercase tracking-wider text-white/70">
+                    {label}
+                  </p>
+                  <p className="mt-0.5 text-xs font-bold text-white xl:text-sm">{value}</p>
+                </div>
+              ))}
+            </div>
           </div>
+
+          <p
+            className="mt-3 pl-1 text-[11px] text-white/70"
+            style={{ textShadow: "0 1px 6px rgba(0,0,0,0.5)" }}
+          >
+            © {new Date().getFullYear()} {companyName}
+          </p>
         </div>
       </aside>
 
