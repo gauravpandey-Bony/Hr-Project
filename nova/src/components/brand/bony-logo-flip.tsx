@@ -30,7 +30,7 @@ export function BonyLogoFlip({
     >
       <motion.div
         className={cn(
-          "inline-flex items-center justify-center overflow-hidden rounded-2xl bg-white p-1.5 shadow-lg ring-1 ring-black/10",
+          "inline-flex items-center justify-center overflow-hidden rounded-2xl bg-white shadow-lg ring-1 ring-black/10",
           s.box
         )}
         style={{ transformStyle: "preserve-3d", transformOrigin: "center center" }}
@@ -47,7 +47,7 @@ export function BonyLogoFlip({
           width={s.px}
           height={s.px}
           priority
-          className="h-full w-full object-contain object-center"
+          className="h-full w-full scale-[1.08] object-cover object-center"
         />
       </motion.div>
     </div>

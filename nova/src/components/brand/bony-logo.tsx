@@ -55,7 +55,7 @@ export function BonyLogo({
     <span className={cn("inline-flex shrink-0 [perspective:520px]", className)}>
       <span
         className={cn(
-          "inline-flex items-center justify-center overflow-hidden rounded-xl bg-white p-1 ring-1 ring-black/[0.06]",
+          "inline-flex items-center justify-center overflow-hidden rounded-xl bg-white ring-1 ring-black/[0.06]",
           s.box,
           flipOnLoad && "animate-logo-flip-rtl"
         )}
@@ -67,7 +67,7 @@ export function BonyLogo({
           width={s.size}
           height={s.size}
           priority={priority}
-          className="h-full w-full object-contain object-center"
+          className="h-full w-full scale-[1.08] object-cover object-center"
         />
       </span>
     </span>

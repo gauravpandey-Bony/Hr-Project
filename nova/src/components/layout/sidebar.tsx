@@ -168,7 +168,7 @@ export function Sidebar({
           collapsed && "justify-center px-2"
         )}
       >
-        <BonyLogo size="md" className="shadow-glow shrink-0" />
+        <BonyLogo size="md" className="shrink-0" />
         {!collapsed && (
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-bold leading-tight tracking-tight">
