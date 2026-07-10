@@ -121,6 +121,10 @@ export function departmentMatchKeys(name: string): Set<string> {
     add("NPD");
     add("Npd");
   }
+  if (/^admin\b|corporate office/.test(compact)) {
+    add("Admin");
+    add("Corporate Office");
+  }
   if (/costing.*mis|mis.*costing/.test(compact)) {
     add("Costing & MIS");
     add("MIS");
