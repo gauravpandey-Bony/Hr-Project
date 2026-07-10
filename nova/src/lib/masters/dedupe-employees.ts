@@ -1,13 +1,18 @@
 import type { PrismaClient } from "@prisma/client";
+import { isDataPurgeAllowed } from "./data-safety";
 
 /**
  * Deactivate duplicate EmployeeMaster rows that share the same ECN.
  * Keeps the richest / newest active row per organizationId + ecn.
+ * Requires ALLOW_DATA_PURGE=1 — never runs during deploy/import by default.
  */
 export async function dedupeEmployeeMastersByEcn(
   db: PrismaClient,
   organizationId: string
-): Promise<{ kept: number; deactivated: number; duplicateEcns: string[] }> {
+): Promise<{ kept: number; deactivated: number; duplicateEcns: string[]; skipped?: boolean }> {
+  if (!isDataPurgeAllowed()) {
+    return { kept: 0, deactivated: 0, duplicateEcns: [], skipped: true };
+  }
   const rows = await db.employeeMaster.findMany({
     where: { organizationId, ecn: { not: null } },
     orderBy: [{ updatedAt: "desc" }],

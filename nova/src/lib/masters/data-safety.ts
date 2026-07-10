@@ -1,8 +1,10 @@
 /**
- * Production data safety — nothing bulk-deletes / deactivates plant data
- * unless an operator explicitly sets ALLOW_DATA_PURGE=1 (or SEED_RESET_DATA=1).
+ * Production data safety — nothing deletes / deactivates plant data
+ * (bulk OR single) unless an operator explicitly sets ALLOW_DATA_PURGE=1
+ * (or SEED_RESET_DATA=1 for full rebuild).
  *
- * Deploy, seed, and KRA import must NEVER wipe employees/KPIs on their own.
+ * Deploy, seed, KRA import, and the Cursor agent must NEVER wipe data
+ * unless the user gives an explicit delete/wipe/purge command.
  */
 export function isDataPurgeAllowed(): boolean {
   return (
@@ -14,7 +16,7 @@ export function isDataPurgeAllowed(): boolean {
 export function requireDataPurgeAllowed(action: string): void {
   if (isDataPurgeAllowed()) return;
   throw new Error(
-    `Refused to ${action}. Plant data is protected. ` +
-      `Re-run only with ALLOW_DATA_PURGE=1 (explicit operator command).`
+    `Refused to ${action}. Plant data is protected (bulk and single). ` +
+      `Re-run only with ALLOW_DATA_PURGE=1 after an explicit operator command.`
   );
 }

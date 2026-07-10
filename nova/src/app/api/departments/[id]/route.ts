@@ -77,6 +77,10 @@ export async function DELETE(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  await db.departmentMaster.delete({ where: { id: params.id } });
-  return NextResponse.json({ ok: true });
+  // Never hard-delete department rows — soft-deactivate only.
+  await db.departmentMaster.update({
+    where: { id: params.id },
+    data: { isActive: false },
+  });
+  return NextResponse.json({ ok: true, softDeleted: true });
 }

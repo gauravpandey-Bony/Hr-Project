@@ -404,12 +404,16 @@ function pickCanonicalDepartment(cluster: DepartmentWithCount[]): DepartmentMast
   })[0]!;
 }
 
-/** Merge duplicate department rows (same name + same plant) across the org. */
+/** Merge duplicate department rows (same name + same plant) across the org.
+ *  Reassigns employees always; archiving duplicate dept rows needs ALLOW_DATA_PURGE=1. */
 export async function dedupeDepartmentMasters(
   db: PrismaClient,
   organizationId: string,
   plantUnitKey?: string | null
 ): Promise<{ merged: number; deactivated: number }> {
+  const { isDataPurgeAllowed } = await import("./data-safety");
+  const canArchive = isDataPurgeAllowed();
+
   const all = await db.departmentMaster.findMany({
     where: { organizationId },
     include: { _count: { select: { employees: true } } },
@@ -456,13 +460,15 @@ export async function dedupeDepartmentMasters(
           },
         });
 
-        await db.departmentMaster.update({
-          where: { id: dup.id },
-          data: archiveDepartmentRow(dup.name, dup.location, dup.id),
-        });
+        if (canArchive) {
+          await db.departmentMaster.update({
+            where: { id: dup.id },
+            data: archiveDepartmentRow(dup.name, dup.location, dup.id),
+          });
+          deactivated++;
+        }
 
         merged++;
-        deactivated++;
       }
 
       const canonicalName = normalizeDepartmentMasterName(keeper.name);

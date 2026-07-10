@@ -107,12 +107,16 @@ function normalizeEmployeeName(name: string): string {
     .trim();
 }
 
-/** Deactivate legacy placeholder rows when roster has same person with ECN */
+/** Deactivate legacy placeholder rows when roster has same person with ECN.
+ *  Requires ALLOW_DATA_PURGE=1. */
 async function dedupeLegacyEmployees(
   db: PrismaClient,
   organizationId: string,
   rows: Roster37pRow[]
 ): Promise<number> {
+  const { isDataPurgeAllowed } = await import("./data-safety");
+  if (!isDataPurgeAllowed()) return 0;
+
   const rosterKeys = new Set(
     rows.filter((r) => r.ecn).map((r) => normalizeEmployeeName(r.name))
   );

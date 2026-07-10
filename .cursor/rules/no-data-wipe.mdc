@@ -1,0 +1,29 @@
+---
+description: Never delete or wipe plant/employee/KPI data unless the user explicitly commands it
+alwaysApply: true
+---
+
+# Plant data — no deletes without explicit user command
+
+Employee, department, KPI, KRA, and org-unit data is critical production data.
+
+## Hard rules for the agent
+
+1. **Never delete** (hard or soft / `isActive: false`) any employee, department, KPI, KPI entry, or plant data unless the **current user message explicitly asks** to delete, remove, wipe, purge, or reset that data.
+2. This applies to **bulk and single-row** operations — both are forbidden without an explicit command.
+3. **Never** run, suggest, or enable on deploy:
+   - `SEED_RESET_DATA=1`
+   - `ALLOW_DATA_PURGE=1`
+   - `npm run db:purge-junk`
+   - `npm run db:reset`
+   - `prisma migrate reset`
+   - `prisma db push --accept-data-loss`
+4. Deploy / update / import may only **upsert / add / fix** data. Do not deactivate or delete as a side effect.
+5. If a script or API would delete data and the user did not ask for deletion, **stop and ask** instead of proceeding.
+6. UI soft-delete (admin clicking Delete in the app) is a product feature — do not remove it, but do not call those APIs yourself unless the user asked to delete that record.
+
+## Allowed without delete permission
+
+- Read / diagnose production data
+- Upsert / import / reconcile that only creates or updates fields
+- Deploy code that does **not** wipe data

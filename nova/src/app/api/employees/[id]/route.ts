@@ -121,6 +121,10 @@ export async function DELETE(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  await db.employeeMaster.delete({ where: { id: params.id } });
-  return NextResponse.json({ ok: true });
+  // Never hard-delete employee rows — soft-deactivate only (data is recoverable).
+  await db.employeeMaster.update({
+    where: { id: params.id },
+    data: { isActive: false },
+  });
+  return NextResponse.json({ ok: true, softDeleted: true });
 }
