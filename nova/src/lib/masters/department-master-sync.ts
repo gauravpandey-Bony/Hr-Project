@@ -154,6 +154,11 @@ export function departmentMatchKeys(name: string): Set<string> {
     add("MDO");
     add("Md Office");
   }
+  if (/^finance\b|^accounts?\b|accounts?\s*&\s*finance|finance\s*&\s*accounts/.test(compact)) {
+    add("Finance");
+    add("Accounts");
+    add("Accounts & Finance");
+  }
   if (/costing.*mis|mis.*costing/.test(compact)) {
     add("Costing & MIS");
     add("MIS");
