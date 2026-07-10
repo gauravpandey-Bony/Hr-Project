@@ -533,9 +533,24 @@ async function main() {
     where: { organizationId: org.id },
   });
 
-  await db.kpiEntry.deleteMany({ where: { kpi: { organizationId: org.id } } });
-  await db.kpi.deleteMany({ where: { organizationId: org.id } });
-  await db.employeeMaster.deleteMany({ where: { organizationId: org.id } });
+  /**
+   * NEVER wipe production plant data on routine deploys.
+   * Set SEED_RESET_DATA=1 only for intentional full rebuilds.
+   * Deploy uses import:kra-data + staff import to upsert plant data safely.
+   */
+  const resetData = process.env.SEED_RESET_DATA === "1";
+  if (resetData) {
+    console.warn(
+      "SEED_RESET_DATA=1 — deleting all KPIs and employees before reimport"
+    );
+    await db.kpiEntry.deleteMany({ where: { kpi: { organizationId: org.id } } });
+    await db.kpi.deleteMany({ where: { organizationId: org.id } });
+    await db.employeeMaster.deleteMany({ where: { organizationId: org.id } });
+  } else {
+    console.log(
+      "Seed: skipping KPI/employee wipe (set SEED_RESET_DATA=1 to force rebuild)"
+    );
+  }
 
   const bony37pImports: Record<string, unknown>[] = [];
   for (const file of BONY_37P_KRA_FILES) {

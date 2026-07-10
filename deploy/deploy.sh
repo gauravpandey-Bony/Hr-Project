@@ -33,8 +33,10 @@ npm ci
 echo "==> Sync database schema"
 npx prisma db push --accept-data-loss
 
-echo "==> Seed database (idempotent)"
-npm run db:seed || true
+echo "==> Seed database (users/org only — does NOT wipe plant KPIs/employees)"
+# SEED_RESET_DATA must stay unset on production deploys. Wiping all plant data
+# caused Corporate / other units to lose KRA & employees on every push.
+SEED_RESET_DATA= npm run db:seed || true
 
 echo "==> Purge logistics KPI junk from database"
 npm run db:purge-junk || true

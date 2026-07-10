@@ -322,6 +322,32 @@ function normalizeDept(name: string | null | undefined): string {
   return name?.trim() || "—";
 }
 
+function departmentsMatch(a: string | null | undefined, b: string | null | undefined): boolean {
+  const left = normalizeDept(a);
+  const right = normalizeDept(b);
+  if (left === right) return true;
+  if (left === "—" || right === "—") return false;
+  const key = (s: string) =>
+    s
+      .toLowerCase()
+      .replace(/&/g, " and ")
+      .replace(/[^a-z0-9]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  const lk = key(left);
+  const rk = key(right);
+  if (lk === rk) return true;
+  const hr = new Set(["hr", "human resource", "human resources"]);
+  if (hr.has(lk) && hr.has(rk)) return true;
+  const it = new Set(["it", "it and systems", "it and system", "edp"]);
+  if (it.has(lk) && it.has(rk)) return true;
+  const qa = new Set(["quality", "quality assurance"]);
+  if (qa.has(lk) && qa.has(rk)) return true;
+  const admin = new Set(["admin", "corporate office"]);
+  if (admin.has(lk) && admin.has(rk)) return true;
+  return false;
+}
+
 function buildDepartmentScorecards(
   kpis: KpiPick[],
   employees: EmployeePerformanceRow[],
@@ -329,18 +355,37 @@ function buildDepartmentScorecards(
 ): DepartmentScorecard[] {
   const deptNames = new Set<string>();
   for (const e of employees) deptNames.add(normalizeDept(e.department));
+  // Include departments from ALL KPI levels so Corporate individual KRA sheets
+  // still create department tiles on the plant dashboard.
   for (const k of kpis) {
-    if (k.kpiLevel === "DEPARTMENT") deptNames.add(normalizeDept(k.department));
+    deptNames.add(normalizeDept(k.department));
   }
 
-  return [...deptNames]
+  // Collapse aliases (HR ↔ Human Resources) into one display department.
+  const displayDepts: string[] = [];
+  for (const name of [...deptNames].sort((a, b) => a.localeCompare(b))) {
+    if (displayDepts.some((d) => departmentsMatch(d, name))) continue;
+    const empLabel = employees.find((e) => departmentsMatch(e.department, name))?.department;
+    displayDepts.push(normalizeDept(empLabel) !== "—" ? normalizeDept(empLabel!) : name);
+  }
+
+  return displayDepts
     .sort((a, b) => a.localeCompare(b))
     .map((department) => {
       const emps = employees
-        .filter((e) => normalizeDept(e.department) === department)
+        .filter((e) => departmentsMatch(e.department, department))
         .sort((a, b) => a.employeeName.localeCompare(b.employeeName));
 
-      const kpiRows = buildLevelKpiRows(kpis, quarter, "DEPARTMENT", department);
+      const relatedDeptNames = [
+        ...new Set(
+          kpis
+            .map((k) => normalizeDept(k.department))
+            .filter((d) => departmentsMatch(d, department))
+        ),
+      ];
+      const kpiRows = relatedDeptNames.flatMap((d) =>
+        buildLevelKpiRows(kpis, quarter, "DEPARTMENT", d)
+      );
       const kpiScoreResult = scoreFromKpiRows(`${department} dept KPIs`, kpiRows);
 
       const scoredEmps = emps.filter((e) => e.weightedScore != null);
