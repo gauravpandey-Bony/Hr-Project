@@ -14,7 +14,6 @@ import {
   isArchivedDepartmentName,
   staffedDepartmentNamesFromEmployees,
 } from "@/lib/masters/department-master-sync";
-import { filterRealKraEmployees } from "@/lib/masters/logistics-kra-junk";
 
 export default async function DepartmentMasterPage({
   searchParams,
