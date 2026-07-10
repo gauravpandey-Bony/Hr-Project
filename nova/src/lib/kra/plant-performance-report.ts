@@ -14,6 +14,7 @@ import { buildQuarterlyReportRows, quarterlyReportSummary } from "@/lib/kra/quar
 export const EMPLOYEE_SCORE_METHODOLOGY = [
   "Employee section uses Individual KRA/KPI rows (kpiLevel = INDIVIDUAL) for the selected plant and quarter.",
   "Each KPI: Achieved = 100 pts, Not achieved = 0 pts, Entered (review) = 50 pts. Pending KPIs are excluded.",
+  "If Achieved still equals the Target text (common Excel template paste), it counts as Pending — not 100%.",
   "Employee score = Σ (weightage × points) ÷ Σ (weightage) for that employee's scored KPIs.",
   "Overall employee score = weighted average across all individual KPIs at the plant.",
 ] as const;
@@ -140,6 +141,9 @@ export function describeQuarterComparison(
   const a = achieved?.trim() || "—";
 
   if (status === "pending") {
+    if (isUnfilledTemplateAchieved(target, achieved)) {
+      return `Achieved still equals the target text ("${t}") — treated as not entered yet (Excel template copy).`;
+    }
     return "Achieved value missing or placeholder (0 / blank) — excluded from score.";
   }
   if (status === "entered") {
