@@ -91,7 +91,9 @@ export function getAdminMainNav(
     return allEmployees ? [selectUnit, allEmployees] : [selectUnit];
   }
 
-  return mainNav.map((item) => {
+  return mainNav
+    .filter((item) => !GLOBAL_ADMIN_PATHS.has(item.href))
+    .map((item) => {
     if (item.href === ADMIN_UNIT_PICKER_PATH) {
       const unit = getOrgUnitFromCatalog(catalog, selectedUnitId);
       return {
@@ -102,9 +104,6 @@ export function getAdminMainNav(
     }
     if (item.href.startsWith("/dashboard/units/")) {
       return { ...item, href: `/dashboard/units/${selectedUnitId}` };
-    }
-    if (GLOBAL_ADMIN_PATHS.has(item.href)) {
-      return item;
     }
     if (UNIT_SCOPED_ADMIN_PATHS.has(item.href)) {
       return { ...item, href: appendUnitQuery(item.href, selectedUnitId) };
