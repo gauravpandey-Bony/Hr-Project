@@ -66,8 +66,12 @@ function HealthRing({
   score: number | null;
   onClick?: () => void;
 }) {
-  const pct = score ?? 0;
-  const circumference = 2 * Math.PI * 54;
+  const pct = Math.max(0, Math.min(100, score ?? 0));
+  // Geometry stays fully inside the square viewBox (no clip / oval look).
+  const size = 100;
+  const stroke = 8;
+  const radius = 40; // outer edge = 44, well inside 50
+  const circumference = 2 * Math.PI * radius;
   const offset = circumference - (pct / 100) * circumference;
   const color =
     score == null ? "#94a3b8" : pct >= 90 ? "#10b981" : pct >= 70 ? "#f59e0b" : "#f43f5e";
@@ -76,34 +80,51 @@ function HealthRing({
     <button
       type="button"
       onClick={onClick}
-      className="group relative mx-auto block h-36 w-36 rounded-full outline-none transition hover:scale-[1.02] focus-visible:ring-2 focus-visible:ring-indigo-400/60"
-      style={{ transform: "translateZ(40px)" }}
+      className="group relative mx-auto flex h-40 w-40 shrink-0 items-center justify-center overflow-visible rounded-full outline-none transition hover:scale-[1.02] focus-visible:ring-2 focus-visible:ring-indigo-400/60"
       title="Click to see how this score is calculated"
       aria-label="Overall plant health score — click for calculation basis"
     >
-      <svg className="h-full w-full -rotate-90" viewBox="0 0 120 120">
-        <circle cx="60" cy="60" r="54" fill="none" stroke="rgb(255 255 255 / 0.08)" strokeWidth="10" />
+      <svg
+        className="pointer-events-none absolute inset-0 h-full w-full -rotate-90 overflow-visible"
+        viewBox={`0 0 ${size} ${size}`}
+        aria-hidden
+      >
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke="rgb(255 255 255 / 0.12)"
+          strokeWidth={stroke}
+        />
         <motion.circle
-          cx="60"
-          cy="60"
-          r="54"
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
           fill="none"
           stroke={color}
-          strokeWidth="10"
+          strokeWidth={stroke}
           strokeLinecap="round"
           strokeDasharray={circumference}
           initial={{ strokeDashoffset: circumference }}
-          animate={{ strokeDashoffset: offset }}
+          animate={{ strokeDashoffset: score == null ? circumference : offset }}
           transition={{ duration: 1.2, ease: "easeOut" }}
-          style={{ filter: `drop-shadow(0 0 12px ${color}66)` }}
+          style={{ filter: `drop-shadow(0 0 8px ${color}66)` }}
         />
       </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className={cn("text-4xl font-black tracking-tight", scoreTone(score))}>
+      <div className="relative z-10 flex flex-col items-center justify-center leading-none">
+        <span
+          className={cn(
+            "text-[2.35rem] font-black tabular-nums tracking-tight",
+            scoreTone(score)
+          )}
+        >
           {score ?? "—"}
         </span>
-        {score != null && <span className="text-xs font-medium text-white/50">%</span>}
-        <span className="mt-1 inline-flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wider text-white/35 opacity-0 transition group-hover:opacity-100">
+        {score != null && (
+          <span className="mt-1 text-[11px] font-semibold text-white/55">%</span>
+        )}
+        <span className="mt-1.5 inline-flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wider text-white/35 opacity-0 transition group-hover:opacity-100">
           <Info className="h-2.5 w-2.5" /> How
         </span>
       </div>
