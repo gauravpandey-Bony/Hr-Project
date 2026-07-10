@@ -15,17 +15,17 @@ export function LoginBrandHeader({
 }) {
   return (
     <motion.div
-      className="mb-7 flex items-center gap-3"
+      className="mb-6 flex items-center gap-2.5"
       initial={{ opacity: 0, y: -8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.55, ease: [0.22, 0.8, 0.2, 1] }}
     >
-      <BonyLogoFlip size="lg" />
+      <BonyLogoFlip size="md" />
       <div className="min-w-0 leading-tight">
-        <p className="text-[1.05rem] font-bold tracking-tight text-slate-900 sm:text-lg">
+        <p className="text-base font-bold tracking-tight text-slate-900">
           {productName}
+          <span className="font-semibold text-slate-500"> · {companyName}</span>
         </p>
-        <p className="mt-0.5 text-sm font-medium text-slate-500">{companyName}</p>
       </div>
     </motion.div>
   );

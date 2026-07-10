@@ -22,13 +22,12 @@ export default function HomePage() {
         companyName={COMPANY.shortName}
       />
 
-      <div className="mb-6 text-left">
-        <h1 className="text-balance text-2xl font-bold tracking-tight text-slate-900 sm:text-[1.65rem] xl:text-[1.85rem]">
+      <div className="mb-5 text-left">
+        <h1 className="text-balance text-[1.65rem] font-bold tracking-tight text-slate-900 sm:text-[1.75rem]">
           Log into your Account
         </h1>
         <p className="mt-1.5 text-sm leading-relaxed text-slate-500">
-          Admin quick access, employee ECN login, or reporting manager — choose your
-          role below.
+          Enter employee code registered on {COMPANY.productName}
         </p>
       </div>
 

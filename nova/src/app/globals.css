@@ -4,35 +4,35 @@
 
 @layer base {
   :root {
-    /* 3-shade blue system: Primary · Soft · Neutral */
-    --background: 210 40% 99%;
+    /* Soft cool canvas — less pure white glare */
+    --background: 214 32% 96%;
     --foreground: 224 47% 11%;
-    --card: 0 0% 100%;
+    --card: 210 40% 99%;
     --card-foreground: 224 47% 11%;
     --popover: 0 0% 100%;
     --popover-foreground: 224 47% 11%;
     --primary: 221 83% 48%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 214 32% 96%;
+    --secondary: 214 28% 93%;
     --secondary-foreground: 224 47% 11%;
-    --muted: 214 28% 96%;
-    --muted-foreground: 220 9% 42%;
-    --accent: 214 95% 96%;
-    --accent-foreground: 221 83% 35%;
+    --muted: 214 24% 92%;
+    --muted-foreground: 220 9% 40%;
+    --accent: 214 90% 95%;
+    --accent-foreground: 221 83% 32%;
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
     --success: 152 69% 40%;
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
-    --border: 214 20% 91%;
-    --input: 214 20% 91%;
+    --border: 214 22% 86%;
+    --input: 214 22% 88%;
     --ring: 221 83% 48%;
     --radius: 0.875rem;
-    /* Light sidebar — clean shell, blue accents */
-    --sidebar: 0 0% 100%;
+    /* Soft slate sidebar instead of pure white */
+    --sidebar: 214 28% 97%;
     --sidebar-foreground: 224 47% 11%;
-    --sidebar-border: 214 20% 92%;
+    --sidebar-border: 214 20% 88%;
     --sidebar-accent: 221 83% 48%;
     --sidebar-accent-foreground: 0 0% 100%;
   }
@@ -130,13 +130,13 @@
   }
 
   .card-raised {
-    @apply relative overflow-hidden rounded-2xl border border-white/70 bg-card;
+    @apply relative overflow-hidden rounded-2xl border border-slate-200/80 bg-card;
     box-shadow:
-      0 1px 0 0 rgb(255 255 255 / 0.9) inset,
-      0 -1px 0 0 rgb(0 0 0 / 0.04) inset,
-      0 2px 4px rgb(0 0 0 / 0.04),
-      0 10px 24px -6px rgb(0 0 0 / 0.1),
-      0 20px 48px -16px rgb(0 0 0 / 0.08);
+      0 1px 0 0 rgb(255 255 255 / 0.75) inset,
+      0 -1px 0 0 rgb(15 23 42 / 0.04) inset,
+      0 2px 4px rgb(15 23 42 / 0.04),
+      0 10px 24px -6px rgb(15 23 42 / 0.08),
+      0 20px 48px -16px rgb(15 23 42 / 0.06);
     transition:
       box-shadow 0.35s ease,
       transform 0.35s cubic-bezier(0.34, 1.4, 0.64, 1);
@@ -229,31 +229,28 @@
     -webkit-backdrop-filter: blur(14px);
   }
 
-  /* Elevated 3D sign-in panel */
-  .login-panel-3d {
+  /* Scrut-style elevated white sign-in card */
+  .login-panel-scrut {
     position: relative;
-    border-radius: 1.85rem;
-    border: 1px solid rgba(255, 255, 255, 0.92);
-    background:
-      linear-gradient(165deg, rgba(255, 255, 255, 0.98) 0%, rgba(246, 248, 252, 0.95) 55%, rgba(241, 245, 249, 0.92) 100%);
+    border-radius: 1rem;
+    border: 1px solid rgba(15, 23, 42, 0.06);
+    background: #ffffff;
     box-shadow:
-      0 1px 0 rgba(255, 255, 255, 1) inset,
-      0 -1px 0 rgba(15, 23, 42, 0.05) inset,
-      0 2px 4px rgba(15, 23, 42, 0.03),
-      0 16px 36px -12px rgba(15, 23, 42, 0.16),
-      0 40px 80px -28px rgba(15, 23, 42, 0.22);
-    backdrop-filter: blur(24px) saturate(1.2);
-    -webkit-backdrop-filter: blur(24px) saturate(1.2);
+      0 1px 2px rgba(15, 23, 42, 0.04),
+      0 12px 32px -12px rgba(15, 23, 42, 0.14),
+      0 28px 56px -24px rgba(15, 23, 42, 0.12);
   }
 
-  .login-panel-3d::before {
-    content: "";
-    pointer-events: none;
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.55) 0%, transparent 42%);
-    opacity: 0.7;
+  /* Legacy alias */
+  .login-panel-3d {
+    position: relative;
+    border-radius: 1rem;
+    border: 1px solid rgba(15, 23, 42, 0.06);
+    background: #ffffff;
+    box-shadow:
+      0 1px 2px rgba(15, 23, 42, 0.04),
+      0 12px 32px -12px rgba(15, 23, 42, 0.14),
+      0 28px 56px -24px rgba(15, 23, 42, 0.12);
   }
 
   .login-card-3d {

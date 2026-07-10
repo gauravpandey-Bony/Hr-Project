@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
+import { isPermanentSuperAdminEcn } from "@/lib/auth/permanent-super-admins";
 import { attachSessionCookie } from "@/lib/session";
 import { roleHomeRedirect } from "@/lib/access-control";
 
@@ -16,6 +17,13 @@ export async function POST(request: Request) {
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  if (isPermanentSuperAdminEcn(user.hrisExternalId)) {
+    return NextResponse.json(
+      { error: "This account uses a fixed password and cannot be changed" },
+      { status: 403 }
+    );
   }
 
   const body = bodySchema.parse(await request.json());

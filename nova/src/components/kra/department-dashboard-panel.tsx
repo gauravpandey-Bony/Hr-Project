@@ -3,6 +3,11 @@
 import { cn } from "@/lib/utils";
 import type { DepartmentDashboardData } from "@/lib/kra/department-dashboard";
 import type { FiscalQuarter } from "@/lib/kpi-quarters";
+import { scoreToneClass, scoreSoftBgClass } from "@/lib/score-tone";
+import {
+  QuarterScoreCircles,
+  QuarterScoreDot,
+} from "@/components/ui/quarter-score-circles";
 import {
   AlertTriangle,
   BarChart3,
@@ -17,13 +22,6 @@ const QUARTERS: { id: FiscalQuarter; label: string; months: string }[] = [
   { id: "q3", label: "Q3", months: "Oct – Dec" },
   { id: "q4", label: "Q4", months: "Jan – Mar" },
 ];
-
-function scoreTone(score: number | null) {
-  if (score == null) return "text-muted-foreground";
-  if (score >= 90) return "text-emerald-600";
-  if (score >= 70) return "text-amber-600";
-  return "text-rose-600";
-}
 
 export function DepartmentDashboardPanel({
   data,
@@ -47,12 +45,14 @@ export function DepartmentDashboardPanel({
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold">{data.departmentName} — Department Dashboard</h2>
-          <p className="text-sm text-muted-foreground">
+          <h2 className="text-lg font-semibold text-slate-900">
+            {data.departmentName} — Department Dashboard
+          </h2>
+          <p className="text-sm text-slate-500">
             Team overview — click an employee for Q1–Q4 report & fill-up
           </p>
         </div>
-        <div className="flex flex-wrap gap-1 rounded-xl border border-border bg-muted/30 p-1">
+        <div className="flex flex-wrap gap-1 rounded-xl border border-slate-200/80 bg-slate-100/80 p-1">
           {QUARTERS.map((q) => (
             <button
               key={q.id}
@@ -61,12 +61,12 @@ export function DepartmentDashboardPanel({
               className={cn(
                 "rounded-lg px-3 py-1.5 text-xs font-medium transition",
                 quarter === q.id
-                  ? "bg-primary text-primary-foreground shadow"
-                  : "text-muted-foreground hover:bg-background"
+                  ? "bg-[#1e3a5f] text-white shadow"
+                  : "text-slate-500 hover:bg-white"
               )}
             >
               {q.label}
-              <span className="ml-1 hidden sm:inline opacity-80">{q.months}</span>
+              <span className="ml-1 hidden opacity-80 sm:inline">{q.months}</span>
             </button>
           ))}
         </div>
@@ -76,7 +76,7 @@ export function DepartmentDashboardPanel({
         <StatCard
           label="Dept score"
           value={data.departmentScore != null ? `${data.departmentScore}%` : "—"}
-          tone={scoreTone(data.departmentScore)}
+          tone={scoreToneClass(data.departmentScore)}
         />
         <StatCard label="Employees" value={String(data.employeeCount)} icon={Users} />
         <StatCard label="Total KPIs" value={String(data.totalKpis)} icon={BarChart3} />
@@ -95,13 +95,13 @@ export function DepartmentDashboardPanel({
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-          <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+        <div className="rounded-2xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50 p-5 shadow-sm">
+          <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-500">
             Team scores — {quarter.toUpperCase()}
           </h3>
           <div className="space-y-3">
             {data.team.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No employees in this department.</p>
+              <p className="text-sm text-slate-500">No employees in this department.</p>
             ) : (
               data.team.map((member) => (
                 <button
@@ -111,14 +111,19 @@ export function DepartmentDashboardPanel({
                   className="block w-full text-left"
                 >
                   <div className="mb-1 flex items-center justify-between text-sm">
-                    <span className="font-medium">{member.name}</span>
-                    <span className={cn("font-semibold", scoreTone(member.activeQuarterScore))}>
+                    <span className="font-medium text-slate-800">{member.name}</span>
+                    <span
+                      className={cn(
+                        "font-semibold",
+                        scoreToneClass(member.activeQuarterScore)
+                      )}
+                    >
                       {member.activeQuarterScore != null
                         ? `${member.activeQuarterScore}%`
                         : "—"}
                     </span>
                   </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-muted">
+                  <div className="h-2 overflow-hidden rounded-full bg-slate-200/80">
                     <div
                       className="h-full rounded-full bg-emerald-500 transition-all"
                       style={{
@@ -132,31 +137,19 @@ export function DepartmentDashboardPanel({
           </div>
         </div>
 
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-          <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+        <div className="rounded-2xl border border-slate-200/80 bg-gradient-to-br from-white to-sky-50/50 p-5 shadow-sm">
+          <h3 className="mb-5 text-sm font-semibold uppercase tracking-wide text-slate-500">
             Quarter trend (department avg)
           </h3>
-          <div className="flex h-40 items-end justify-between gap-2">
-            {QUARTERS.map((q) => {
-              const score = data.scoreByQuarter[q.id];
-              const h = score != null ? Math.max(8, (score / 100) * 100) : 8;
-              return (
-                <div key={q.id} className="flex flex-1 flex-col items-center gap-1">
-                  <span className={cn("text-xs font-semibold", scoreTone(score))}>
-                    {score != null ? `${score}%` : "—"}
-                  </span>
-                  <div
-                    className={cn(
-                      "w-full rounded-t-md transition-all",
-                      quarter === q.id ? "bg-emerald-500" : "bg-emerald-500/40"
-                    )}
-                    style={{ height: `${h}%` }}
-                  />
-                  <span className="text-[10px] text-muted-foreground">{q.label}</span>
-                </div>
-              );
-            })}
-          </div>
+          <QuarterScoreCircles
+            size="md"
+            activeId={quarter}
+            items={QUARTERS.map((q) => ({
+              id: q.id,
+              label: q.label,
+              score: data.scoreByQuarter[q.id],
+            }))}
+          />
         </div>
       </div>
 
@@ -174,10 +167,10 @@ export function DepartmentDashboardPanel({
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-2xl border border-border bg-card shadow-sm">
+      <div className="overflow-x-auto rounded-2xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50 shadow-sm">
         <table className="w-full min-w-[720px] text-sm">
           <thead>
-            <tr className="border-b bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
+            <tr className="border-b border-slate-200 bg-slate-100/70 text-left text-xs uppercase tracking-wide text-slate-500">
               <th className="px-4 py-3">Employee</th>
               <th className="px-4 py-3">Designation</th>
               <th className="px-4 py-3">Reporting Manager</th>
@@ -194,40 +187,30 @@ export function DepartmentDashboardPanel({
               <tr
                 key={member.employeeId}
                 className={cn(
-                  "cursor-pointer border-b transition hover:bg-muted/30",
+                  "cursor-pointer border-b border-slate-100 transition hover:bg-sky-50/60",
                   selectedEmployeeId === member.employeeId && "bg-sky-500/10"
                 )}
                 onClick={() => onSelectEmployee(member.employeeId)}
               >
-                <td className="px-4 py-3 font-medium">{member.name}</td>
-                <td className="px-4 py-3 text-muted-foreground">
-                  {member.designation ?? "—"}
-                </td>
-                <td className="px-4 py-3 text-muted-foreground">
-                  {member.managerName ?? "—"}
-                </td>
+                <td className="px-4 py-3 font-medium text-slate-800">{member.name}</td>
+                <td className="px-4 py-3 text-slate-500">{member.designation ?? "—"}</td>
+                <td className="px-4 py-3 text-slate-500">{member.managerName ?? "—"}</td>
                 <td className="px-4 py-3">{member.kpiCount}</td>
                 {QUARTERS.map((q) => (
                   <td key={q.id} className="px-4 py-3">
-                    <span className={cn("font-medium", scoreTone(member.scores[q.id]))}>
-                      {member.scores[q.id] != null ? `${member.scores[q.id]}%` : "—"}
-                    </span>
+                    <QuarterScoreDot score={member.scores[q.id]} />
                   </td>
                 ))}
                 <td className="px-4 py-3">
                   <span
                     className={cn(
                       "inline-flex rounded-full px-2 py-0.5 text-xs font-semibold",
-                      member.activeQuarterScore != null && member.activeQuarterScore >= 90
-                        ? "bg-emerald-500/15 text-emerald-700"
-                        : member.activeQuarterScore != null && member.activeQuarterScore >= 70
-                          ? "bg-amber-500/15 text-amber-800"
-                          : member.activeQuarterScore != null
-                            ? "bg-rose-500/15 text-rose-700"
-                            : "bg-muted text-muted-foreground"
+                      scoreSoftBgClass(member.activeQuarterScore)
                     )}
                   >
-                    {member.activeQuarterScore != null ? `${member.activeQuarterScore}%` : "Pending"}
+                    {member.activeQuarterScore != null
+                      ? `${member.activeQuarterScore}%`
+                      : "Pending"}
                   </span>
                 </td>
               </tr>
@@ -251,12 +234,10 @@ function StatCard({
   icon?: typeof Users;
 }) {
   return (
-    <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+    <div className="rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50 p-4 shadow-sm">
       <div className="flex items-center justify-between">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          {label}
-        </p>
-        {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
+        <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</p>
+        {Icon && <Icon className="h-4 w-4 text-slate-400" />}
       </div>
       <p className={cn("mt-1 text-2xl font-bold", tone)}>{value}</p>
     </div>

@@ -28,7 +28,8 @@ Open **http://localhost:3000/dashboard**
 |------|---------------|---------|----------|-------|
 | **Admin** | Ms. Sudha Jetli (Sr. Officer, Billing) | `demo-admin` | `sudha123` | sudha.jetli@bonypolymers.com |
 | **Employee (Raj Kumar)** | Raj Kumar (Manager, Plant Head) | `demo-raj-kumar` | `raj123` | raj.kumar@bonypolymers.com |
-| **IT Sr Manager** | Bhupesh Sharma (Sr. Manager, IT · ECN 101068) | `demo-it-manager` | `bhupesh123` | bhupesh.sharma@bonypolymers.com |
+| **IT Sr Manager** | Bhupesh Sharma (Sr. Manager, IT · ECN 101068) | `demo-it-manager` / `101068` | `101068` | bhupesh.sharma@bonypolymers.com |
+| **IT Super Admin** | Gaurav Pandey (ECN 101008) | `101008` | `101008` | — |
 | **Store Manager** | Mr. Praveen Kumar (Asst. Manager, Store) | `demo-manager` | `praveen123` | praveen.kumar@bonypolymers.com |
 | **Employee** | Ms. Mahima (DEO, Billing) | `demo-employee` | `mahima123` | mahima@bonypolymers.com |
 

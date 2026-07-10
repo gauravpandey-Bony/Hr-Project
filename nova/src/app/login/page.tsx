@@ -30,12 +30,12 @@ export default async function LoginPage() {
         companyName={company.shortName ?? company.name}
       />
 
-      <div className="mb-6 text-left">
-        <h2 className="text-balance text-2xl font-bold tracking-tight text-slate-900 xl:text-[1.85rem]">
+      <div className="mb-5 text-left">
+        <h2 className="text-balance text-[1.65rem] font-bold tracking-tight text-slate-900 sm:text-[1.75rem]">
           Log into your Account
         </h2>
         <p className="mt-1.5 text-sm leading-relaxed text-slate-500">
-          Sign in to your {company.productName} workspace
+          Enter employee code registered on {company.productName}
         </p>
       </div>
 

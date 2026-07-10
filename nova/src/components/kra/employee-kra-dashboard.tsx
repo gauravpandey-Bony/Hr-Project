@@ -7,6 +7,7 @@ import type { FiscalQuarter } from "@/lib/kpi-quarters";
 import { quarterStatusClass } from "@/lib/kra/quarter-status";
 import { cn } from "@/lib/utils";
 import { BarChart3 } from "lucide-react";
+import { QuarterScoreCircles } from "@/components/ui/quarter-score-circles";
 
 type KpiWithEntries = Kpi & { entries: KpiEntry[] };
 
@@ -63,14 +64,14 @@ export function EmployeeKraDashboard({
   });
 
   return (
-    <div className="space-y-4 rounded-2xl border border-border bg-card p-5 shadow-sm">
+    <div className="space-y-4 rounded-2xl border border-slate-200/80 bg-gradient-to-br from-slate-50 via-white to-sky-50/40 p-5 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
             Employee performance report
           </p>
-          <h3 className="text-xl font-bold">{employeeName}</h3>
-          <p className="text-sm text-muted-foreground">{departmentLabel}</p>
+          <h3 className="text-xl font-bold text-slate-900">{employeeName}</h3>
+          <p className="text-sm text-slate-500">{departmentLabel}</p>
         </div>
         <div className="flex flex-wrap gap-2 text-sm">
           <Badge label="On track" value={met} tone="emerald" />
@@ -80,32 +81,26 @@ export function EmployeeKraDashboard({
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-xl border border-border bg-muted/20 p-4">
-          <p className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase text-muted-foreground">
+        <div className="rounded-xl border border-slate-200/70 bg-white/70 p-4 backdrop-blur-sm">
+          <p className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase text-slate-500">
             <BarChart3 className="h-3.5 w-3.5" />
             Quarter achievement rate
           </p>
-          <div className="flex h-28 items-end gap-2">
-            {quarterScores.map(({ q, pct }) => (
-              <div key={q} className="flex flex-1 flex-col items-center gap-1">
-                <span className="text-xs font-medium">{pct != null ? `${pct}%` : "—"}</span>
-                <div
-                  className={cn(
-                    "w-full rounded-t",
-                    quarter === q ? "bg-sky-500" : "bg-sky-500/35"
-                  )}
-                  style={{ height: pct != null ? `${Math.max(10, pct)}%` : "10%" }}
-                />
-                <span className="text-[10px] uppercase text-muted-foreground">{q}</span>
-              </div>
-            ))}
-          </div>
+          <QuarterScoreCircles
+            size="md"
+            activeId={quarter}
+            items={quarterScores.map(({ q, pct }) => ({
+              id: q,
+              label: q.toUpperCase(),
+              score: pct,
+            }))}
+          />
         </div>
 
-        <div className="overflow-x-auto rounded-xl border border-border">
+        <div className="overflow-x-auto rounded-xl border border-slate-200/70 bg-white/70">
           <table className="w-full min-w-[480px] text-xs">
             <thead>
-              <tr className="bg-muted/40 text-left uppercase text-muted-foreground">
+              <tr className="bg-slate-100/80 text-left uppercase text-slate-500">
                 <th className="px-3 py-2">KRA / KPI</th>
                 {QUARTERS.map((q) => (
                   <th key={q} className="px-3 py-2 text-center">
@@ -115,33 +110,35 @@ export function EmployeeKraDashboard({
               </tr>
             </thead>
             <tbody>
-              {[...new Map(activeRows.map((r) => [r.kpiName, r])).values()].slice(0, 8).map((row) => (
-                <tr key={row.kpiId} className="border-t">
-                  <td className="px-3 py-2">
-                    <p className="font-medium">{row.kpiName}</p>
-                    <p className="text-muted-foreground">{row.kraName}</p>
-                  </td>
-                  {QUARTERS.map((q) => {
-                    const qRow = (byQuarter[q] ?? []).find((r) => r.kpiId === row.kpiId);
-                    return (
-                      <td key={q} className="px-3 py-2 text-center">
-                        {qRow ? (
-                          <span
-                            className={cn(
-                              "inline-block rounded px-1.5 py-0.5 font-medium",
-                              quarterStatusClass(qRow.status)
-                            )}
-                          >
-                            {qRow.achieved !== "—" ? qRow.achieved : "—"}
-                          </span>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
+              {[...new Map(activeRows.map((r) => [r.kpiName, r])).values()]
+                .slice(0, 8)
+                .map((row) => (
+                  <tr key={row.kpiId} className="border-t border-slate-100">
+                    <td className="px-3 py-2">
+                      <p className="font-medium text-slate-800">{row.kpiName}</p>
+                      <p className="text-slate-500">{row.kraName}</p>
+                    </td>
+                    {QUARTERS.map((q) => {
+                      const qRow = (byQuarter[q] ?? []).find((r) => r.kpiId === row.kpiId);
+                      return (
+                        <td key={q} className="px-3 py-2 text-center">
+                          {qRow ? (
+                            <span
+                              className={cn(
+                                "inline-block rounded-full px-2 py-0.5 font-medium",
+                                quarterStatusClass(qRow.status)
+                              )}
+                            >
+                              {qRow.achieved !== "—" ? qRow.achieved : "—"}
+                            </span>
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
             </tbody>
           </table>
         </div>

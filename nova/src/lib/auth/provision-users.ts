@@ -1,6 +1,10 @@
 import type { UserRole } from "@prisma/client";
 import { db } from "@/lib/db";
 import { hashPassword } from "@/lib/auth/password";
+import {
+  isPermanentSuperAdminEcn,
+  permanentSuperAdminPassword,
+} from "@/lib/auth/permanent-super-admins";
 import { personNamesMatch } from "@/lib/person-name";
 import {
   buildEcnToNameMap,
@@ -61,9 +65,14 @@ export async function provisionUsersFromEmployees(
 
     const id = userIdForEcn(ecn);
     const email = emailForEcn(ecn);
+    const isSuperAdmin = isPermanentSuperAdminEcn(ecn);
     const isManager = [...managerNames].some((m) => personNamesMatch(m, emp.name));
-    const role: UserRole = isManager ? "MANAGER" : "EMPLOYEE";
-    if (isManager) result.managers++;
+    const role: UserRole = isSuperAdmin
+      ? "ADMIN"
+      : isManager
+        ? "MANAGER"
+        : "EMPLOYEE";
+    if (isManager && !isSuperAdmin) result.managers++;
 
     const existing = await db.user.findFirst({
       where: {
@@ -72,8 +81,15 @@ export async function provisionUsersFromEmployees(
       },
     });
 
-    const passwordHash = await hashPassword(ecn);
-    const mustChangePassword = options?.resetPasswords ? true : !existing;
+    const passwordPlain = isSuperAdmin
+      ? permanentSuperAdminPassword(ecn)
+      : ecn;
+    const passwordHash = await hashPassword(passwordPlain);
+    const mustChangePassword = isSuperAdmin
+      ? false
+      : options?.resetPasswords
+        ? true
+        : !existing;
 
     if (existing) {
       await db.user.update({
@@ -84,9 +100,15 @@ export async function provisionUsersFromEmployees(
           department: emp.department,
           hrisExternalId: ecn,
           role,
-          ...(options?.resetPasswords
-            ? { passwordHash, mustChangePassword: true, passwordChangedAt: null }
-            : {}),
+          ...(isSuperAdmin
+            ? {
+                passwordHash,
+                mustChangePassword: false,
+                passwordChangedAt: null,
+              }
+            : options?.resetPasswords
+              ? { passwordHash, mustChangePassword: true, passwordChangedAt: null }
+              : {}),
         },
       });
       userByName.set(emp.name, existing.id);

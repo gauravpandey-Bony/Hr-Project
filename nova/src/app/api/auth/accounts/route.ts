@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { personNamesMatch } from "@/lib/person-name";
+import {
+  isPermanentSuperAdminEcn,
+  permanentSuperAdminPassword,
+} from "@/lib/auth/permanent-super-admins";
 import { SEED_USERS, seedPasswordForUser } from "../../../../../prisma/seed-users";
 
 export type ShowcaseAccount = {
@@ -20,6 +24,14 @@ function showcaseCredentials(user: {
   role: string;
   hrisExternalId: string | null;
 }): { loginId: string; loginPassword: string } | null {
+  const ecn = user.hrisExternalId?.trim();
+  if (isPermanentSuperAdminEcn(ecn)) {
+    return {
+      loginId: ecn,
+      loginPassword: permanentSuperAdminPassword(ecn),
+    };
+  }
+
   const seed = SEED_USERS.find((u) => u.id === user.id);
   if (seed) {
     return {
@@ -28,7 +40,6 @@ function showcaseCredentials(user: {
     };
   }
 
-  const ecn = user.hrisExternalId?.trim();
   if (ecn) {
     return { loginId: ecn, loginPassword: ecn };
   }

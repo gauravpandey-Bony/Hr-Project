@@ -38,10 +38,11 @@ export const SEED_USERS: SeedUserDef[] = [
     id: "demo-it-manager",
     email: "bhupesh.sharma@bonypolymers.com",
     name: "Bhupesh Sharma",
-    role: "MANAGER",
+    role: "ADMIN",
     title: "Sr. Manager",
     department: "IT",
-    defaultPassword: "bhupesh123",
+    // Permanent super-admin: password always equals ECN
+    defaultPassword: "101068",
     ecn: "101068",
   },
   {
