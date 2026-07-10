@@ -28,42 +28,24 @@ export function LoginShell({
     <div className="flex min-h-screen flex-col bg-[#eef1f6] lg:min-h-[100dvh] lg:flex-row">
       {/* Desktop hero */}
       <aside className="relative hidden min-h-[100dvh] w-[54%] shrink-0 overflow-hidden lg:block xl:w-[58%]">
-        <div className="absolute inset-3 overflow-hidden rounded-[1.85rem] bg-[#0b1220] shadow-[0_30px_80px_-20px_rgba(0,0,0,0.55)] ring-1 ring-white/25 xl:inset-4">
+        <div className="absolute inset-0 overflow-hidden bg-[#0b1220]">
           <Image
             src={BUILDING_IMAGE}
             alt={`${companyName} corporate office`}
             fill
             priority
-            className="object-contain object-center"
+            className="object-cover object-top"
             sizes="58vw"
           />
-          {/* Scrim stronger at bottom where glass text sits; keep top of building clearer */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/5" />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/35 via-transparent to-transparent" />
-          <div className="absolute inset-x-0 bottom-0 h-[42%] bg-gradient-to-t from-black/75 to-transparent" />
+          {/* Scrim stronger at bottom where glass text sits */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-black/10" />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-transparent to-transparent" />
+          <div className="absolute inset-x-0 bottom-0 h-[48%] bg-gradient-to-t from-black/80 to-transparent" />
         </div>
 
-        <div className="relative flex h-full min-h-[100dvh] flex-col p-8 xl:p-12">
-          <div className="flex items-center gap-3 pl-1 pt-1">
-            <BonyLogoFlip size="lg" />
-            <div>
-              <p
-                className="text-lg font-bold tracking-tight text-white"
-                style={{ textShadow: "0 2px 12px rgba(0,0,0,0.65)" }}
-              >
-                {productName}
-              </p>
-              <p
-                className="text-sm text-white/90"
-                style={{ textShadow: "0 1px 8px rgba(0,0,0,0.55)" }}
-              >
-                {companyName}
-              </p>
-            </div>
-          </div>
-
-          {/* Keep glass panel low so the building photo stays visible above */}
-          <div className="mt-auto max-w-xl space-y-4 pb-1">
+        <div className="relative flex h-full min-h-[100dvh] flex-col justify-end p-8 xl:p-12">
+          {/* Glass panel anchored at bottom — no top logo */}
+          <div className="max-w-xl space-y-4 pb-1">
             <div className="login-hero-glass space-y-5 p-6 xl:p-7">
               <p className="inline-flex rounded-full border border-white/30 bg-white/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] backdrop-blur-md">
                 Performance management
