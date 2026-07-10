@@ -5,7 +5,11 @@ import Link from "next/link";
 import { Filter, Loader2, Users, X } from "lucide-react";
 import { Card3D } from "@/components/ui/card-3d";
 import { cn } from "@/lib/utils";
-import { formatDepartmentDisplayName } from "@/lib/masters/department-master-sync";
+import {
+  formatDepartmentDisplayName,
+  groupDepartmentMasterRowsForBrowser,
+  type DepartmentBrowserRow,
+} from "@/lib/masters/department-master-sync";
 import { useOrgUnits } from "@/components/providers/org-units-provider";
 import {
   DEFAULT_PAGE_SIZE,
@@ -16,13 +20,7 @@ import {
 const DEPT_CARD_PAGE_SIZE = 24;
 const EMP_PAGE_SIZE = DEFAULT_PAGE_SIZE;
 
-type DeptRow = {
-  id: string;
-  name: string;
-  headName: string | null;
-  location: string | null;
-  employeeCount: number;
-};
+type DeptRow = DepartmentBrowserRow;
 
 type DeptEmployee = {
   id: string;
@@ -95,13 +93,6 @@ function DeptTile({
   );
 }
 
-function departmentsOverlap(a: string, b: string): boolean {
-  const norm = (s: string) => s.toLowerCase().trim();
-  const an = norm(a);
-  const bn = norm(b);
-  return an === bn || an.includes(bn) || bn.includes(an);
-}
-
 export function DepartmentBrowser() {
   const { groups, standaloneUnits } = useOrgUnits();
   const [companyFilter, setCompanyFilter] = useState("all");
@@ -133,25 +124,14 @@ export function DepartmentBrowser() {
     companyOptions.find((o) => o.value === companyFilter)?.label ?? "All companies";
 
   const visibleDepartments = useMemo(() => {
-    const named = departments.filter((d) => d.name?.trim());
-    const kept: DeptRow[] = [];
-    for (const d of named) {
-      const idx = kept.findIndex((k) => departmentsOverlap(k.name, d.name));
-      if (idx >= 0) {
-        kept[idx] = {
-          ...kept[idx],
-          employeeCount: kept[idx].employeeCount + d.employeeCount,
-        };
-      } else {
-        kept.push({ ...d });
-      }
-    }
+    const grouped = groupDepartmentMasterRowsForBrowser(departments);
     const q = deptSearch.trim().toLowerCase();
-    const sorted = kept.sort((a, b) => a.name.localeCompare(b.name));
+    const sorted = grouped.sort((a, b) => a.name.localeCompare(b.name));
     if (!q) return sorted;
     return sorted.filter(
       (d) =>
         d.name.toLowerCase().includes(q) ||
+        formatDepartmentDisplayName(d.name).toLowerCase().includes(q) ||
         (d.headName?.toLowerCase().includes(q) ?? false)
     );
   }, [departments, deptSearch]);
@@ -189,6 +169,7 @@ export function DepartmentBrowser() {
             headName: d.headName,
             location: d.location,
             employeeCount: d._count?.employees ?? 0,
+            departmentIds: [d.id],
           }))
         );
       }
@@ -204,6 +185,9 @@ export function DepartmentBrowser() {
       try {
         const params = new URLSearchParams();
         params.set("department", dept.name);
+        if (dept.departmentIds.length) {
+          params.set("departmentIds", dept.departmentIds.join(","));
+        }
         if (companyFilter !== "all") {
           params.set("unit", companyFilter);
         }
@@ -238,7 +222,7 @@ export function DepartmentBrowser() {
 
   function handleDeptClick(dept: DeptRow) {
     setSelectedDept((prev) => {
-      if (prev?.name === dept.name) return null;
+      if (prev?.id === dept.id) return null;
       return dept;
     });
     setEmpPage(0);
@@ -306,7 +290,7 @@ export function DepartmentBrowser() {
               <DeptTile
                 key={`${dept.name}-${dept.id}`}
                 dept={dept}
-                active={selectedDept?.name === dept.name}
+                active={selectedDept?.id === dept.id}
                 onSelect={() => handleDeptClick(dept)}
               />
             ))}

@@ -7,7 +7,10 @@ import { employeeMasterWhereForUserAsync } from "@/lib/access-control";
 import { getOrgUnitBySlug } from "@/lib/org-units.server";
 import { getLocationVariantsForPlant } from "@/lib/org-units";
 import { filterRealKraEmployees } from "@/lib/masters/logistics-kra-junk";
-import { departmentsAreEquivalent } from "@/lib/masters/department-master-sync";
+import {
+  departmentsAreEquivalent,
+  employeeMatchesDepartmentGroup,
+} from "@/lib/masters/department-master-sync";
 import { resolvePlantFromWorkingLocation } from "@/lib/masters/employee-plant-location";
 
 function plantLabelFromLocation(location: string | null | undefined): string {
@@ -42,6 +45,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const departmentId = searchParams.get("departmentId");
   const departmentName = searchParams.get("department")?.trim();
+  const departmentIdsParam = searchParams.get("departmentIds");
   const unitSlug = searchParams.get("unit");
 
   const baseWhere = await employeeMasterWhereForUserAsync(user);
@@ -71,9 +75,27 @@ export async function GET(request: Request) {
 
   let rows = filterRealKraEmployees(employees);
 
-  if (departmentName) {
+  if (departmentName || departmentIdsParam) {
+    const explicitIds =
+      departmentIdsParam
+        ?.split(",")
+        .map((id) => id.trim())
+        .filter(Boolean) ?? [];
+
+    let matchingIds = explicitIds;
+    if (departmentName) {
+      const deptRows = await db.departmentMaster.findMany({
+        where: { organizationId: user.organizationId, isActive: true },
+        select: { id: true, name: true },
+      });
+      const fromName = deptRows
+        .filter((d) => departmentsAreEquivalent(d.name, departmentName))
+        .map((d) => d.id);
+      matchingIds = [...new Set([...matchingIds, ...fromName])];
+    }
+
     rows = rows.filter((e) =>
-      departmentsAreEquivalent(e.department ?? "", departmentName)
+      employeeMatchesDepartmentGroup(e, departmentName ?? "", matchingIds)
     );
   }
 

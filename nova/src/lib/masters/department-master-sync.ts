@@ -594,7 +594,7 @@ async function loadDepartmentNameById(
   return new Map(rows.map((row) => [row.id, row.name]));
 }
 
-function resolveEmployeeDepartmentName(
+export function resolveEmployeeDepartmentName(
   employee: { department?: string | null; departmentId?: string | null },
   deptNameById: Map<string, string>
 ): string | null {
@@ -602,6 +602,66 @@ function resolveEmployeeDepartmentName(
   if (fromText) return fromText;
   if (!employee.departmentId) return null;
   return deptNameById.get(employee.departmentId)?.trim() ?? null;
+}
+
+export type DepartmentBrowserRow = {
+  id: string;
+  name: string;
+  headName: string | null;
+  location: string | null;
+  employeeCount: number;
+  departmentIds: string[];
+};
+
+/** Group plant-scoped department master rows by canonical name for dashboard tiles. */
+export function groupDepartmentMasterRowsForBrowser(
+  rows: Array<{
+    id: string;
+    name: string;
+    headName: string | null;
+    location: string | null;
+    employeeCount: number;
+  }>
+): DepartmentBrowserRow[] {
+  const groups = new Map<string, DepartmentBrowserRow>();
+
+  for (const row of rows) {
+    if (!row.name?.trim()) continue;
+    const key = departmentNameKey(row.name);
+    const existing = groups.get(key);
+    if (existing) {
+      existing.employeeCount += row.employeeCount;
+      existing.departmentIds.push(row.id);
+      if (!existing.headName && row.headName) existing.headName = row.headName;
+      continue;
+    }
+    groups.set(key, {
+      id: row.id,
+      name: row.name,
+      headName: row.headName,
+      location: row.location,
+      employeeCount: row.employeeCount,
+      departmentIds: [row.id],
+    });
+  }
+
+  return [...groups.values()];
+}
+
+export function employeeMatchesDepartmentGroup(
+  employee: {
+    department?: string | null;
+    departmentId?: string | null;
+    dept?: { name: string } | null;
+  },
+  departmentName: string,
+  departmentIds: Iterable<string>
+): boolean {
+  const idSet = new Set(departmentIds);
+  if (employee.departmentId && idSet.has(employee.departmentId)) return true;
+  const resolved =
+    employee.department?.trim() || employee.dept?.name?.trim() || "";
+  return resolved ? departmentsAreEquivalent(resolved, departmentName) : false;
 }
 
 /** Ensure each active employee in a plant links to a department row at that plant's location. */
