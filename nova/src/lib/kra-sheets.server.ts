@@ -10,7 +10,7 @@ import {
   PLANT_HEAD_KPI_DEPARTMENT,
   PLANT_HEAD_KRA_SHEET_ID,
 } from "@/lib/masters/37p-roster";
-import { formatDepartmentDisplayName, departmentsAreEquivalent } from "@/lib/masters/department-master-sync";
+import { formatDepartmentDisplayName, departmentsAreEquivalent, isArchivedDepartmentName } from "@/lib/masters/department-master-sync";
 import {
   filterRealKraEmployees,
   isHiddenKraDepartment,
@@ -55,8 +55,9 @@ function pushSheetIfNew(
 ): void {
   if (isPlantHeadRoleDepartment(name)) return;
   if (isHiddenKraDepartment(name)) return;
+  if (isArchivedDepartmentName(name)) return;
   const displayName = formatDepartmentDisplayName(name);
-  if (isHiddenKraDepartment(displayName)) return;
+  if (!displayName || isHiddenKraDepartment(displayName)) return;
   const id = slugDept(displayName);
   if (seen.has(id)) return;
   // Collapse equivalent department labels (e.g. "QA" / "Quality Assurance")
@@ -126,7 +127,12 @@ export async function fetchKraSheets(
   const linkedDepartments =
     linkedDeptIds.length > 0
       ? await db.departmentMaster.findMany({
-          where: { organizationId, id: { in: linkedDeptIds } },
+          where: {
+            organizationId,
+            id: { in: linkedDeptIds },
+            isActive: true,
+            NOT: { name: { contains: "(archived" } },
+          },
           select: { id: true, name: true },
         })
       : [];
@@ -137,6 +143,7 @@ export async function fetchKraSheets(
 
   // 1) Every active Department Master row for this unit
   for (const d of departments) {
+    if (isArchivedDepartmentName(d.name)) continue;
     pushSheetIfNew(sheets, seen, d.name, {
       kpiLevel: (d.kpiLevel as KraSheetFromDb["meta"]["kpiLevel"]) ?? "DEPARTMENT",
       category: d.category ?? undefined,
@@ -149,13 +156,15 @@ export async function fetchKraSheets(
     const raw =
       emp.department?.trim() ||
       (emp.departmentId ? deptNameById.get(emp.departmentId)?.trim() : undefined);
-    if (raw) pushSheetIfNew(sheets, seen, raw, { kpiLevel: "INDIVIDUAL" });
+    if (!raw || isArchivedDepartmentName(raw)) continue;
+    pushSheetIfNew(sheets, seen, raw, { kpiLevel: "INDIVIDUAL" });
   }
 
   // 3) Departments present on plant KPIs but missing above
   for (const k of plantKpis) {
     const dept = k.department?.trim();
-    if (dept) pushSheetIfNew(sheets, seen, dept, { kpiLevel: "INDIVIDUAL" });
+    if (!dept || isArchivedDepartmentName(dept)) continue;
+    pushSheetIfNew(sheets, seen, dept, { kpiLevel: "INDIVIDUAL" });
   }
 
   sheets.sort((a, b) => a.label.localeCompare(b.label));

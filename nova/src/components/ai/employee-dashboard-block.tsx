@@ -14,6 +14,7 @@ import {
   CalendarRange,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatDepartmentDisplayName } from "@/lib/masters/department-master-sync";
 import { HealthDonut } from "@/components/reports/health-donut";
 import type { EmployeeDashboardData } from "@/lib/ai/employee-report";
 import {
@@ -124,7 +125,7 @@ export function EmployeeDashboardBlock({ data }: { data: EmployeeDashboardData }
       <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {[
           { icon: Hash, label: "ECN", value: employee.ecn ?? "—" },
-          { icon: Briefcase, label: "Department", value: employee.department ?? "—" },
+          { icon: Briefcase, label: "Department", value: employee.department ? formatDepartmentDisplayName(employee.department) : "—" },
           { icon: User, label: "Designation", value: employee.designation ?? "—" },
           ...(employee.managerName
             ? [{ icon: User, label: "Manager", value: employee.managerName }]
