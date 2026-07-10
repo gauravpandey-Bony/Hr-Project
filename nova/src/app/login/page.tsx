@@ -24,21 +24,21 @@ export default async function LoginPage() {
 
   return (
     <LoginShell productName={company.productName} companyName={company.name}>
-      <div className="mb-6 text-center lg:text-left">
-        <h2 className="text-2xl font-bold tracking-tight text-foreground">Welcome back</h2>
+      <div className="mb-6 text-center lg:mb-7 lg:text-left">
+        <h2 className="text-2xl font-bold tracking-tight text-foreground xl:text-3xl">
+          Welcome back
+        </h2>
         <p className="mt-1.5 text-sm text-muted-foreground">
           Sign in to your {company.productName} workspace
         </p>
       </div>
 
-      <div className="rounded-2xl border border-border/60 bg-card p-6 shadow-elevated sm:p-7">
-        {currentUser && (
-          <LoginSessionBanner name={currentUser.name} role={currentUser.role} />
-        )}
-        <Suspense fallback={<LoginFormFallback />}>
-          <DemoLoginForm />
-        </Suspense>
-      </div>
+      {currentUser && (
+        <LoginSessionBanner name={currentUser.name} role={currentUser.role} />
+      )}
+      <Suspense fallback={<LoginFormFallback />}>
+        <DemoLoginForm />
+      </Suspense>
     </LoginShell>
   );
 }
