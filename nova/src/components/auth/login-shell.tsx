@@ -28,43 +28,43 @@ export function LoginShell({
     <div className="flex min-h-screen flex-col bg-[#eef1f6] lg:min-h-[100dvh] lg:flex-row">
       {/* Desktop hero */}
       <aside className="relative hidden min-h-[100dvh] w-[54%] shrink-0 overflow-hidden lg:block xl:w-[58%]">
+        {/* Full-bleed building from the top — same cover fill as before */}
         <div className="absolute inset-0 overflow-hidden bg-[#0b1220]">
           <Image
             src={BUILDING_IMAGE}
             alt={`${companyName} corporate office`}
             fill
             priority
-            className="object-cover object-top"
+            className="object-cover object-[center_28%]"
             sizes="58vw"
           />
-          {/* Scrim stronger at bottom where glass text sits */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-black/10" />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-transparent to-transparent" />
-          <div className="absolute inset-x-0 bottom-0 h-[48%] bg-gradient-to-t from-black/80 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-black/15" />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/35 via-transparent to-transparent" />
+          <div className="absolute inset-x-0 bottom-0 h-[55%] bg-gradient-to-t from-black/85 to-transparent" />
         </div>
 
-        <div className="relative flex h-full min-h-[100dvh] flex-col justify-end p-8 xl:p-12">
-          {/* Glass panel anchored at bottom — no top logo */}
-          <div className="max-w-xl space-y-4 pb-1">
-            <div className="login-hero-glass space-y-5 p-6 xl:p-7">
+        {/* Bottom copy bar — full width left → right */}
+        <div className="relative flex h-full min-h-[100dvh] flex-col justify-end">
+          <div className="w-full px-5 pb-5 pt-8 xl:px-7 xl:pb-7">
+            <div className="login-hero-glass w-full space-y-4 p-5 sm:p-6 xl:space-y-5 xl:p-7">
               <p className="inline-flex rounded-full border border-white/30 bg-white/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] backdrop-blur-md">
                 Performance management
               </p>
               <h1
-                className="text-balance text-3xl font-bold leading-[1.12] tracking-tight text-white xl:text-[2.65rem]"
+                className="text-balance text-3xl font-bold leading-[1.12] tracking-tight text-white xl:text-[2.55rem]"
                 style={{ textShadow: "0 2px 18px rgba(0,0,0,0.55)" }}
               >
                 KPI tracking built for every plant.
               </h1>
               <p
-                className="max-w-lg text-sm leading-relaxed text-white/95 xl:text-base"
+                className="max-w-3xl text-sm leading-relaxed text-white/95 xl:text-base"
                 style={{ textShadow: "0 1px 10px rgba(0,0,0,0.5)" }}
               >
                 Department master, employee KRA sheets, and quarterly reports — one
                 workspace for {companyName}.
               </p>
 
-              <div className="grid max-w-lg grid-cols-3 gap-2.5 pt-1">
+              <div className="grid w-full grid-cols-3 gap-2.5 pt-1">
                 {HIGHLIGHTS.map(({ icon: Icon, label, value }) => (
                   <div key={label} className="login-stat-tile">
                     <Icon className="mb-1.5 h-4 w-4 text-white drop-shadow" />
@@ -78,7 +78,7 @@ export function LoginShell({
             </div>
 
             <p
-              className="pl-1 text-[11px] text-white/70"
+              className="mt-3 pl-1 text-[11px] text-white/70"
               style={{ textShadow: "0 1px 6px rgba(0,0,0,0.5)" }}
             >
               © {new Date().getFullYear()} {companyName}
