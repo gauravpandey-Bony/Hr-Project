@@ -8,6 +8,7 @@ const DEPT_NAME_ALIASES: Record<string, string[]> = {
   Store: ["Store"],
   Maintenance: ["Maintenance"],
   IT: ["IT", "Information Technology"],
+  "MD Office": ["MD Office", "Md Office", "MDO"],
 };
 
 function departmentVariants(departmentName: string): string[] {

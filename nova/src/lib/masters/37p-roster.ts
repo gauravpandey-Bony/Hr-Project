@@ -133,6 +133,24 @@ export const ROSTER_DEPT_MAP: Record<
     kpiDepartment: "Quality Assurance",
     sortOrder: 3,
   },
+  MDO: {
+    masterName: "MD Office",
+    kraSheetId: "md-office",
+    kpiDepartment: "MD Office",
+    sortOrder: 16,
+  },
+  "MD OFFICE": {
+    masterName: "MD Office",
+    kraSheetId: "md-office",
+    kpiDepartment: "MD Office",
+    sortOrder: 16,
+  },
+  "MD. OFFICE": {
+    masterName: "MD Office",
+    kraSheetId: "md-office",
+    kpiDepartment: "MD Office",
+    sortOrder: 16,
+  },
   MAINtenace: {
     masterName: "Maintenance",
     kraSheetId: "maintenance",

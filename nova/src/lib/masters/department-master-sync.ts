@@ -26,7 +26,7 @@ export type DepartmentUpsertResult = {
   created: boolean;
 };
 
-const DEPT_ACRONYMS = new Set(["it", "hr", "mis", "ppc", "edp", "qa", "npd"]);
+const DEPT_ACRONYMS = new Set(["it", "hr", "mis", "ppc", "edp", "qa", "npd", "md", "mdo"]);
 
 /** 3-letter department tokens (NPD, QA, etc.) render in ALL CAPS. */
 function formatDepartmentWord(word: string): string {
@@ -53,12 +53,24 @@ function uppercaseThreeLetterTokens(text: string): string {
     .join(" ");
 }
 
+function isMdOfficeAlias(raw: string): boolean {
+  const compact = raw
+    .toLowerCase()
+    .replace(/[._-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return compact === "mdo" || compact === "md office" || /^md\s+office$/.test(compact);
+}
+
 /** UI label for department tabs and headers */
 export function formatDepartmentDisplayName(name: string): string {
   const normalized = normalizeDepartmentMasterName(name);
   const key = departmentNameKey(normalized);
   if (key === "it" || key === "it & systems" || key === "it & system") {
     return "IT & Systems";
+  }
+  if (key === "md office" || key === "mdo") {
+    return "MD Office";
   }
   return uppercaseThreeLetterTokens(normalized);
 }
@@ -67,6 +79,10 @@ export function formatDepartmentDisplayName(name: string): string {
 export function normalizeDepartmentMasterName(raw: string): string {
   const trimmed = raw.trim();
   if (!trimmed) return trimmed;
+
+  if (isMdOfficeAlias(trimmed)) {
+    return "MD Office";
+  }
 
   const rosterKey = trimmed.toUpperCase().replace(/\s+/g, " ");
   const fromRoster = normalizeRosterDepartment(rosterKey);
@@ -78,6 +94,9 @@ export function normalizeDepartmentMasterName(raw: string): string {
   const key = titled.toLowerCase();
   if (key === "it" || key === "it & systems" || key === "it & system") {
     return "IT & Systems";
+  }
+  if (isMdOfficeAlias(titled)) {
+    return "MD Office";
   }
   return uppercaseThreeLetterTokens(titled);
 }
@@ -124,6 +143,11 @@ export function departmentMatchKeys(name: string): Set<string> {
   if (/^admin\b|corporate office/.test(compact)) {
     add("Admin");
     add("Corporate Office");
+  }
+  if (/^mdo\b|^md\s*office/.test(compact)) {
+    add("MD Office");
+    add("MDO");
+    add("Md Office");
   }
   if (/costing.*mis|mis.*costing/.test(compact)) {
     add("Costing & MIS");
@@ -434,29 +458,20 @@ export async function dedupeDepartmentMasters(
   for (const rows of Array.from(byName.values())) {
     const clusters = clusterDepartmentsByPlant(rows, plantUnitKey);
     for (const cluster of clusters) {
-      if (cluster.length < 2) continue;
-
       const keeper = pickCanonicalDepartment(cluster);
       const duplicates = cluster.filter((d) => d.id !== keeper.id);
+      const canonicalName = normalizeDepartmentMasterName(keeper.name);
+      const clusterIds = cluster.map((d) => d.id);
+      const clusterNames = Array.from(
+        new Set(cluster.map((d) => d.name).filter(Boolean))
+      );
 
       for (const dup of duplicates) {
         await db.employeeMaster.updateMany({
           where: { organizationId, departmentId: dup.id },
           data: {
             departmentId: keeper.id,
-            department: keeper.name,
-          },
-        });
-
-        await db.employeeMaster.updateMany({
-          where: {
-            organizationId,
-            departmentId: null,
-            department: dup.name,
-          },
-          data: {
-            departmentId: keeper.id,
-            department: keeper.name,
+            department: canonicalName,
           },
         });
 
@@ -471,7 +486,25 @@ export async function dedupeDepartmentMasters(
         merged++;
       }
 
-      const canonicalName = normalizeDepartmentMasterName(keeper.name);
+      // Sync denormalized department text for everyone on this cluster
+      await db.employeeMaster.updateMany({
+        where: {
+          organizationId,
+          OR: [
+            { departmentId: { in: clusterIds } },
+            { departmentId: null, department: { in: clusterNames } },
+          ],
+        },
+        data: {
+          departmentId: keeper.id,
+          department: canonicalName,
+        },
+      });
+
+      if (duplicates.length === 0 && keeper.name === canonicalName) {
+        continue;
+      }
+
       const canonicalLoc = canonicalDepartmentLocation(keeper.location, plantUnitKey);
       const mergedKraSheetId =
         keeper.kraSheetId ?? duplicates.find((d) => d.kraSheetId)?.kraSheetId ?? null;
@@ -490,15 +523,19 @@ export async function dedupeDepartmentMasters(
           where: { organizationId, departmentId: keeper.id },
           data: { departmentId: conflict.id, department: conflict.name },
         });
-        await db.departmentMaster.update({
-          where: { id: keeper.id },
-          data: archiveDepartmentRow(keeper.name, keeper.location, keeper.id),
-        });
+        if (canArchive) {
+          await db.departmentMaster.update({
+            where: { id: keeper.id },
+            data: archiveDepartmentRow(keeper.name, keeper.location, keeper.id),
+          });
+          deactivated++;
+        }
         await db.departmentMaster.update({
           where: { id: conflict.id },
           data: {
             kraSheetId: mergedKraSheetId ?? conflict.kraSheetId,
             isActive: true,
+            name: canonicalName,
           },
         });
       } else {
@@ -645,11 +682,12 @@ export function groupDepartmentMasterRowsForBrowser(
       existing.employeeCount += row.employeeCount;
       existing.departmentIds.push(row.id);
       if (!existing.headName && row.headName) existing.headName = row.headName;
+      existing.name = formatDepartmentDisplayName(row.name);
       continue;
     }
     groups.set(key, {
       id: row.id,
-      name: row.name,
+      name: formatDepartmentDisplayName(row.name),
       headName: row.headName,
       location: row.location,
       employeeCount: row.employeeCount,

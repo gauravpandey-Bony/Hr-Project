@@ -198,6 +198,9 @@ export function normalizeKraDepartment(raw: string): {
   if (/^corporate\s*office$/i.test(d)) {
     return { masterName: "Admin", kraSheetId: "admin" };
   }
+  if (/^mdo$/i.test(d) || /^md\s*office$/i.test(d)) {
+    return { masterName: "MD Office", kraSheetId: "md-office" };
+  }
   if (/^dispatch$/i.test(d)) {
     return { masterName: "Dispatch", kraSheetId: "dispatch" };
   }

@@ -36,6 +36,7 @@ const DEPT_ALIASES: Record<string, string[]> = {
   Billing: ["billing", "invoice", "accounts"],
   "Plant Head": ["plant head", "plant overall"],
   Process: ["process", "efficiency"],
+  "MD Office": ["md office", "mdo", "md. office"],
 };
 
 function parseProgress(progress: string): number {
