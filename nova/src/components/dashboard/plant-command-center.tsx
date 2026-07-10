@@ -141,7 +141,21 @@ function DepartmentCard({
             <p className="truncate font-semibold">{name}</p>
             <p className="text-xs text-muted-foreground">{employeeCount} employees</p>
           </div>
-          <p className={cn("text-2xl font-black", scoreTone(score))}>{score ?? "—"}%</p>
+          <div
+            className={cn(
+              "flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-sm font-black tabular-nums ring-2",
+              score == null
+                ? "bg-slate-200 text-slate-500 ring-slate-300/80"
+                : score >= 90
+                  ? "bg-emerald-500 text-white ring-emerald-600/30"
+                  : score >= 70
+                    ? "bg-amber-500 text-white ring-amber-600/30"
+                    : "bg-rose-500 text-white ring-rose-600/30"
+            )}
+            style={{ transform: "translateZ(28px)" }}
+          >
+            {score != null ? `${score}%` : "—"}
+          </div>
         </div>
         <div
           className="mt-4 h-2.5 overflow-hidden rounded-full bg-muted shadow-inner"
@@ -195,9 +209,10 @@ function ScoreBreakdownDialog({
   const plant = report?.plantKpis.overallScore ?? null;
   const departments = report?.departments.overallScore ?? null;
   const employees = report?.employees.overallScore ?? null;
+  const plantSource = report?.plantKpis.scoreSource ?? "none";
 
   const available = [
-    plant != null ? `Plant ${plant}%` : null,
+    plant != null && plantSource === "plant" ? `Plant ${plant}%` : null,
     departments != null ? `Departments ${departments}%` : null,
     employees != null ? `Employees ${employees}%` : null,
   ].filter(Boolean) as string[];
@@ -207,7 +222,7 @@ function ScoreBreakdownDialog({
       ? "No scored layers yet. Upload plant, department, or employee KRA data to calculate plant health."
       : available.length === 1
         ? `Only one layer has data, so overall health equals that score: ${available[0]}.`
-        : `Simple average of available layers (null / “—” values are skipped):\n(${available.join(" + ")}) ÷ ${available.length} = ${healthScore}%`;
+        : `Simple average of available layers (plant fallback scores are not double-counted):\n(${available.join(" + ")}) ÷ ${available.length} = ${healthScore}%`;
 
   const title =
     focus === "department"
@@ -253,7 +268,7 @@ function ScoreBreakdownDialog({
                   score={plant}
                   body={
                     report?.plantKpis.overallCalculation?.trim() ||
-                    "Weighted average of plant-level KPIs (weight × points). No plant KPIs are loaded for this period, so this shows —%."
+                    "Weighted average of plant-level KPIs (weight × points). When plant KPIs are missing, this uses the department average (then employee overall)."
                   }
                   highlight={focus === "plant"}
                 />
@@ -375,8 +390,9 @@ export function PlantCommandCenter({
 
   const healthScore = useMemo(() => {
     if (!report) return null;
+    // Native plant KPIs only — department/employee fallbacks must not be double-counted
     const parts = [
-      report.plantKpis.overallScore,
+      report.plantKpis.scoreSource === "plant" ? report.plantKpis.overallScore : null,
       report.departments.overallScore,
       report.employees.overallScore,
     ].filter((s): s is number => s != null);
@@ -564,15 +580,32 @@ function ScorePill({
   value: number | null | undefined;
   onClick?: () => void;
 }) {
+  const score = value ?? null;
+  const fill =
+    score == null
+      ? "bg-white/10 text-white/50 ring-white/15"
+      : score >= 90
+        ? "bg-emerald-500 text-white ring-emerald-300/40"
+        : score >= 70
+          ? "bg-amber-500 text-white ring-amber-300/40"
+          : "bg-rose-500 text-white ring-rose-300/40";
+
   return (
     <button
       type="button"
       onClick={onClick}
-      className="rounded-xl bg-white/5 px-3 py-2.5 text-left ring-1 ring-white/10 backdrop-blur-sm transition hover:bg-white/10 hover:ring-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60"
+      className="flex items-center gap-3 rounded-xl bg-white/5 px-3 py-2.5 text-left ring-1 ring-white/10 backdrop-blur-sm transition hover:bg-white/10 hover:ring-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60"
       title={`Click to see how ${label} score is calculated`}
     >
+      <span
+        className={cn(
+          "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-bold tabular-nums ring-2",
+          fill
+        )}
+      >
+        {score != null ? `${score}%` : "—"}
+      </span>
       <p className="text-[10px] uppercase tracking-wide text-white/40">{label}</p>
-      <p className={cn("text-xl font-bold", scoreTone(value ?? null))}>{value ?? "—"}%</p>
     </button>
   );
 }

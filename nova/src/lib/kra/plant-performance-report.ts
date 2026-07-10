@@ -30,6 +30,7 @@ export const PLANT_KPI_METHODOLOGY = [
   "Target vs achieved for the selected quarter (Q1 Apr–Jun, Q2 Jul–Sep, Q3 Oct–Dec, Q4 Jan–Mar).",
   "Status rules: numeric targets use ≤ / ≥ when marked in target text; otherwise ±5% tolerance vs target.",
   "Plant score = Σ (weightage × points) ÷ Σ (weightage) for all plant-level KPIs.",
+  "When no plant-level KPIs are scored, Plant falls back to the department average, then the employee overall score.",
 ] as const;
 
 /** @deprecated use level-specific constants */
@@ -104,6 +105,8 @@ export type PlantPerformanceReport = {
     overallScore: number | null;
     overallCalculation: string;
     rows: PlantBusinessKpiRow[];
+    /** How overallScore was derived — fallback avoids blank “—” when only dept/employee KRAs exist */
+    scoreSource: "plant" | "departments" | "employees" | "none";
   };
 };
 
@@ -469,6 +472,22 @@ export function buildPlantPerformanceReport(
   const plantRows = buildPlantKpiRows(kpis, quarter);
   const plantOverall = scoreFromKpiRows("Plant KPI score", plantRows);
 
+  let plantScore = plantOverall.score;
+  let plantCalculation = plantOverall.calculation;
+  let scoreSource: PlantPerformanceReport["plantKpis"]["scoreSource"] = "none";
+
+  if (plantOverall.score != null) {
+    scoreSource = "plant";
+  } else if (deptOverallScore != null) {
+    plantScore = deptOverallScore;
+    scoreSource = "departments";
+    plantCalculation = `No plant-level KPIs scored for this period — using department average as plant score.\n${deptOverallCalculation}`;
+  } else if (employeeOverall.score != null) {
+    plantScore = employeeOverall.score;
+    scoreSource = "employees";
+    plantCalculation = `No plant or department scores yet — using overall employee score as plant score.\n${employeeOverall.calculation}`;
+  }
+
   return {
     quarter,
     plantName,
@@ -484,9 +503,10 @@ export function buildPlantPerformanceReport(
       cards: departmentCards,
     },
     plantKpis: {
-      overallScore: plantOverall.score,
-      overallCalculation: plantOverall.calculation,
+      overallScore: plantScore,
+      overallCalculation: plantCalculation,
       rows: plantRows,
+      scoreSource,
     },
   };
 }

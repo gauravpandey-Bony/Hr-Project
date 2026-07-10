@@ -40,15 +40,24 @@ const QUARTERS: { id: FiscalQuarter; label: string; months: string }[] = [
 function ScoreBadge({ score }: { score: number | null }) {
   if (score == null) {
     return (
-      <span className="rounded-full bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-500">
+      <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-slate-200 text-sm font-semibold text-slate-500 ring-2 ring-slate-300/80">
         —
       </span>
     );
   }
   const tone =
-    score >= 90 ? "bg-emerald-100 text-emerald-800" : score >= 70 ? "bg-amber-100 text-amber-900" : "bg-rose-100 text-rose-800";
+    score >= 90
+      ? "bg-emerald-500 text-white ring-emerald-600/30"
+      : score >= 70
+        ? "bg-amber-500 text-white ring-amber-600/30"
+        : "bg-rose-500 text-white ring-rose-600/30";
   return (
-    <span className={cn("rounded-full px-3 py-1 text-sm font-bold", tone)}>
+    <span
+      className={cn(
+        "inline-flex h-10 min-w-10 items-center justify-center rounded-full px-2 text-sm font-bold tabular-nums ring-2",
+        tone
+      )}
+    >
       {score}%
     </span>
   );
@@ -467,15 +476,21 @@ export function PlantPerformanceReportClient({
                 <div className="mt-3 grid grid-cols-3 gap-1.5 text-[10px]">
                   <div className="rounded-lg bg-emerald-50 p-2 text-center">
                     <p className="text-muted-foreground">Employee</p>
-                    <p className="text-base font-bold text-emerald-800">{p.employeeScore ?? "—"}%</p>
+                    <p className="text-base font-bold text-emerald-800">
+                      {p.employeeScore != null ? `${p.employeeScore}%` : "—"}
+                    </p>
                   </div>
                   <div className="rounded-lg bg-sky-50 p-2 text-center">
                     <p className="text-muted-foreground">Dept</p>
-                    <p className="text-base font-bold text-sky-800">{p.departmentScore ?? "—"}%</p>
+                    <p className="text-base font-bold text-sky-800">
+                      {p.departmentScore != null ? `${p.departmentScore}%` : "—"}
+                    </p>
                   </div>
                   <div className="rounded-lg bg-indigo-50 p-2 text-center">
                     <p className="text-muted-foreground">Plant</p>
-                    <p className="text-base font-bold text-indigo-800">{p.plantScore ?? "—"}%</p>
+                    <p className="text-base font-bold text-indigo-800">
+                      {p.plantScore != null ? `${p.plantScore}%` : "—"}
+                    </p>
                   </div>
                 </div>
                 <p className="mt-2 text-[10px] text-muted-foreground">
@@ -505,7 +520,15 @@ export function PlantPerformanceReportClient({
             <SummaryCard
               label="Plant score"
               score={report.plantKpis.overallScore}
-              sub={`${report.plantKpis.rows.length} plant KPIs`}
+              sub={
+                report.plantKpis.scoreSource === "plant"
+                  ? `${report.plantKpis.rows.length} plant KPIs`
+                  : report.plantKpis.scoreSource === "departments"
+                    ? "From department average"
+                    : report.plantKpis.scoreSource === "employees"
+                      ? "From employee overall"
+                      : "No plant KPIs yet"
+              }
               tone="indigo"
             />
           </div>
@@ -602,15 +625,32 @@ function SummaryCard({
 }) {
   const cls =
     tone === "emerald"
-      ? "border-emerald-200 bg-gradient-to-br from-emerald-50 to-white"
+      ? "border-emerald-200 bg-gradient-to-br from-emerald-50 to-slate-50"
       : tone === "sky"
-        ? "border-sky-200 bg-gradient-to-br from-sky-50 to-white"
-        : "border-indigo-200 bg-gradient-to-br from-indigo-50 to-white";
+        ? "border-sky-200 bg-gradient-to-br from-sky-50 to-slate-50"
+        : "border-indigo-200 bg-gradient-to-br from-indigo-50 to-slate-50";
+  const fill =
+    score == null
+      ? "bg-slate-200 text-slate-500 ring-slate-300/80"
+      : score >= 90
+        ? "bg-emerald-500 text-white ring-emerald-600/30"
+        : score >= 70
+          ? "bg-amber-500 text-white ring-amber-600/30"
+          : "bg-rose-500 text-white ring-rose-600/30";
   return (
     <div className={cn("rounded-2xl border p-4 shadow-sm", cls)}>
       <p className="text-xs font-medium text-muted-foreground">{label}</p>
-      <p className="mt-1 text-3xl font-bold">{score ?? "—"}%</p>
-      <p className="mt-1 text-xs text-muted-foreground">{sub}</p>
+      <div className="mt-2 flex items-center gap-3">
+        <span
+          className={cn(
+            "inline-flex h-14 w-14 items-center justify-center rounded-full text-base font-bold tabular-nums ring-2",
+            fill
+          )}
+        >
+          {score != null ? `${score}%` : "—"}
+        </span>
+        <p className="text-xs text-muted-foreground">{sub}</p>
+      </div>
     </div>
   );
 }
