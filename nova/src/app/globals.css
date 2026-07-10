@@ -195,11 +195,103 @@
   }
 
   .login-mesh {
-    background-color: hsl(0 0% 100%);
+    background-color: #eef1f6;
     background-image:
-      radial-gradient(ellipse 80% 60% at 10% 20%, hsl(221 83% 48% / 0.09) 0, transparent 55%),
-      radial-gradient(ellipse 60% 50% at 90% 80%, hsl(217 80% 55% / 0.06) 0, transparent 50%),
-      radial-gradient(circle at 50% 0%, hsl(214 40% 98%) 0, transparent 70%);
+      radial-gradient(ellipse 80% 60% at 10% 20%, rgba(59, 130, 246, 0.1) 0, transparent 55%),
+      radial-gradient(ellipse 60% 50% at 90% 80%, rgba(99, 102, 241, 0.07) 0, transparent 50%),
+      radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.9) 0, transparent 70%);
+  }
+
+  /* Apple-style frosted glass on hero */
+  .login-hero-glass {
+    border-radius: 1.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    background:
+      linear-gradient(165deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.08) 45%, rgba(0, 0, 0, 0.18) 100%);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.35) inset,
+      0 -1px 0 rgba(0, 0, 0, 0.15) inset,
+      0 20px 50px -18px rgba(0, 0, 0, 0.55),
+      0 8px 20px -8px rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(22px) saturate(1.35);
+    -webkit-backdrop-filter: blur(22px) saturate(1.35);
+  }
+
+  .login-stat-tile {
+    border-radius: 0.9rem;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    background: linear-gradient(160deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.06));
+    padding: 0.75rem;
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.3) inset,
+      0 8px 18px -10px rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+
+  /* Elevated 3D sign-in panel */
+  .login-panel-3d {
+    border-radius: 1.75rem;
+    border: 1px solid rgba(255, 255, 255, 0.85);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.97) 0%, rgba(248, 250, 252, 0.94) 100%);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 1) inset,
+      0 -1px 0 rgba(15, 23, 42, 0.04) inset,
+      0 2px 4px rgba(15, 23, 42, 0.04),
+      0 12px 28px -8px rgba(15, 23, 42, 0.14),
+      0 32px 64px -24px rgba(15, 23, 42, 0.18);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+
+  .login-card-3d {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1.25rem;
+    border: 1px solid rgba(15, 23, 42, 0.06);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.95) inset,
+      0 -1px 0 rgba(15, 23, 42, 0.04) inset,
+      0 4px 10px -4px rgba(15, 23, 42, 0.08),
+      0 14px 28px -12px rgba(15, 23, 42, 0.12);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+  }
+
+  .login-card-3d:hover {
+    transform: translateY(-2px);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 1) inset,
+      0 -1px 0 rgba(15, 23, 42, 0.04) inset,
+      0 8px 16px -6px rgba(15, 23, 42, 0.1),
+      0 22px 40px -16px rgba(15, 23, 42, 0.16);
+  }
+
+  .login-btn-3d {
+    position: relative;
+    border: 0;
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.35) inset,
+      0 -1px 0 rgba(0, 0, 0, 0.18) inset,
+      0 6px 14px -4px rgba(15, 23, 42, 0.35);
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.25);
+    transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+  }
+
+  .login-btn-3d:hover:not(:disabled) {
+    transform: translateY(-1px);
+    filter: brightness(1.04);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.4) inset,
+      0 -1px 0 rgba(0, 0, 0, 0.2) inset,
+      0 10px 20px -6px rgba(15, 23, 42, 0.4);
+  }
+
+  .login-btn-3d:active:not(:disabled) {
+    transform: translateY(1px);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.2) inset,
+      0 2px 6px -2px rgba(15, 23, 42, 0.3);
   }
 
   .nav-pill-active {

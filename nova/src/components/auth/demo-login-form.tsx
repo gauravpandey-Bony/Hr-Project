@@ -66,29 +66,29 @@ function QuickLoginCard({
   return (
     <div
       className={cn(
-        "group relative overflow-hidden rounded-xl border p-4 transition-all duration-200 sm:p-5",
+        "login-card-3d group p-4 sm:p-5",
         isAdmin
-          ? "border-amber-200/70 bg-gradient-to-br from-amber-50/90 via-white to-orange-50/30 hover:border-amber-300/80"
-          : "border-violet-200/70 bg-gradient-to-br from-violet-50/90 via-white to-indigo-50/30 hover:border-violet-300/80"
+          ? "bg-gradient-to-br from-amber-50 via-white to-orange-50/60"
+          : "bg-gradient-to-br from-violet-50 via-white to-indigo-50/60"
       )}
     >
       <div
         className={cn(
-          "pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full blur-2xl transition-opacity group-hover:opacity-100",
-          isAdmin ? "bg-amber-300/20 opacity-70" : "bg-violet-300/20 opacity-70"
+          "pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full blur-3xl transition-opacity",
+          isAdmin ? "bg-amber-400/25 opacity-80" : "bg-violet-400/25 opacity-80"
         )}
       />
 
       <div className="relative flex items-start gap-4">
         <div
           className={cn(
-            "flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl shadow-sm",
+            "flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-white",
             isAdmin
-              ? "bg-gradient-to-br from-amber-500 to-orange-500 text-white"
-              : "bg-gradient-to-br from-violet-500 to-indigo-500 text-white"
+              ? "bg-gradient-to-br from-amber-400 to-orange-600 shadow-[0_8px_18px_-6px_rgba(234,88,12,0.55),inset_0_1px_0_rgba(255,255,255,0.35)]"
+              : "bg-gradient-to-br from-violet-400 to-indigo-600 shadow-[0_8px_18px_-6px_rgba(79,70,229,0.55),inset_0_1px_0_rgba(255,255,255,0.35)]"
           )}
         >
-          <Icon className="h-5 w-5" />
+          <Icon className="h-5 w-5 drop-shadow-sm" />
         </div>
 
         <div className="min-w-0 flex-1">
@@ -110,7 +110,7 @@ function QuickLoginCard({
             ) : null}
           </p>
           {!isAdmin && account.teamSize ? (
-            <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-white/80 px-2.5 py-1 text-xs font-medium text-violet-700 ring-1 ring-violet-100">
+            <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-white/90 px-2.5 py-1 text-xs font-medium text-violet-700 shadow-sm ring-1 ring-violet-100">
               <BadgeCheck className="h-3.5 w-3.5" />
               {account.teamSize} direct reports with live KRA data
             </p>
@@ -130,10 +130,10 @@ function QuickLoginCard({
       <Button
         type="button"
         className={cn(
-          "relative mt-5 w-full gap-2 shadow-sm",
+          "login-btn-3d relative mt-5 w-full gap-2 text-white",
           isAdmin
-            ? "bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700"
-            : "bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700"
+            ? "bg-gradient-to-b from-amber-500 to-orange-600 hover:from-amber-500 hover:to-orange-600"
+            : "bg-gradient-to-b from-violet-500 to-indigo-600 hover:from-violet-500 hover:to-indigo-600"
         )}
         size="lg"
         disabled={loading}
@@ -233,11 +233,11 @@ export function DemoLoginForm() {
             e.preventDefault();
             void handleLogin(employeeId.trim(), employeePassword, "employee");
           }}
-          className="rounded-xl border border-border/60 bg-muted/20 p-4 sm:p-5"
+          className="login-card-3d bg-gradient-to-br from-sky-50/80 via-white to-blue-50/50 p-4 sm:p-5"
         >
           <div className="mb-4 flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-              <UserRound className="h-5 w-5" />
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-400 to-blue-600 text-white shadow-[0_8px_18px_-6px_rgba(37,99,235,0.5),inset_0_1px_0_rgba(255,255,255,0.35)]">
+              <UserRound className="h-5 w-5 drop-shadow-sm" />
             </div>
             <div>
               <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
@@ -254,7 +254,7 @@ export function DemoLoginForm() {
                 id="employeeId"
                 value={employeeId}
                 onChange={(e) => setEmployeeId(e.target.value)}
-                className="font-mono"
+                className="font-mono shadow-inner"
                 placeholder="e.g. 101911"
                 autoComplete="username"
                 required
@@ -267,7 +267,7 @@ export function DemoLoginForm() {
                 type="password"
                 value={employeePassword}
                 onChange={(e) => setEmployeePassword(e.target.value)}
-                className="font-mono"
+                className="font-mono shadow-inner"
                 placeholder="First login: same as ECN"
                 autoComplete="current-password"
                 required
@@ -282,7 +282,7 @@ export function DemoLoginForm() {
 
           <Button
             type="submit"
-            className="mt-4 w-full gap-2"
+            className="login-btn-3d mt-4 w-full gap-2 bg-gradient-to-b from-blue-500 to-blue-700 text-white hover:from-blue-500 hover:to-blue-700"
             size="lg"
             disabled={loading === "employee"}
           >
