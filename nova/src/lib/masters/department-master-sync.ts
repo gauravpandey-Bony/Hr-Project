@@ -512,12 +512,18 @@ export async function dedupeDepartmentMasters(
   return { merged, deactivated };
 }
 
-/** Deactivate department master rows in plant scope that have no active employees. */
+/** Deactivate department master rows in plant scope that have no active employees.
+ *  Skipped unless ALLOW_DATA_PURGE=1 — empty depts must not vanish on deploy/import. */
 export async function deactivateEmptyDepartments(
   db: PrismaClient,
   organizationId: string,
   plantUnitKey?: string | null
-): Promise<{ deactivated: number }> {
+): Promise<{ deactivated: number; skipped?: boolean }> {
+  const { isDataPurgeAllowed } = await import("./data-safety");
+  if (!isDataPurgeAllowed()) {
+    return { deactivated: 0, skipped: true };
+  }
+
   const where = plantUnitKey?.trim()
     ? departmentMasterWhereForPlant(organizationId, plantDataScope(plantUnitKey))
     : { organizationId };

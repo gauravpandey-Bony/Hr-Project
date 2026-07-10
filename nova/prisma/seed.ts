@@ -616,7 +616,11 @@ async function main() {
     where: { organizationId: org.id, isActive: true },
   });
   const kpiCount = await db.kpi.count({ where: { organizationId: org.id, isActive: true } });
-  const junkPurged = await purgeLogisticsJunkData(db, org.id);
+  // Never auto-purge on seed/deploy — only when ALLOW_DATA_PURGE=1
+  const junkPurged =
+    process.env.ALLOW_DATA_PURGE === "1" || process.env.SEED_RESET_DATA === "1"
+      ? await purgeLogisticsJunkData(db, org.id)
+      : { employeesDeactivated: 0, kpisDeactivated: 0, skipped: true };
 
   console.log("Seed complete:", {
     org: ORG_NAME,

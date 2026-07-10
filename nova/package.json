@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "prisma generate && next dev",
     "dev:lan": "prisma generate && next dev -H 0.0.0.0 -p 3000",
-    "build": "prisma generate && prisma db push --accept-data-loss && next build",
+    "build": "prisma generate && prisma db push && next build",
     "start": "next start",
     "lint": "next lint",
     "db:migrate": "prisma migrate dev",
@@ -18,7 +18,7 @@
     "provision:users": "npx tsx scripts/provision-employee-users.ts",
     "db:reconcile-departments": "npx tsx scripts/reconcile-plant-departments.ts",
     "db:push": "prisma db push",
-    "db:reset": "prisma migrate reset --force",
+    "db:reset": "echo 'Blocked: will not wipe DB. Use an explicit operator command if you truly need a reset.' && exit 1",
     "postinstall": "prisma generate"
   },
   "prisma": {

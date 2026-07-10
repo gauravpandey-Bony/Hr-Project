@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 # Server par run hota hai — git pull, build, PM2 restart
+#
+# DATA SAFETY (critical):
+# - Never wipe / deactivate plant employees or KPIs on deploy.
+# - Never run db:purge-junk here.
+# - Never use prisma --accept-data-loss here.
+# - SEED_RESET_DATA and ALLOW_DATA_PURGE must stay unset unless an operator
+#   explicitly runs a one-off command on the server.
 set -euo pipefail
 
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -27,37 +34,40 @@ if [[ ! -f .env ]]; then
   exit 1
 fi
 
+# Hard-block accidental wipe flags on deploy
+unset SEED_RESET_DATA || true
+unset ALLOW_DATA_PURGE || true
+export SEED_RESET_DATA=""
+export ALLOW_DATA_PURGE=""
+
 echo "==> Installing dependencies"
 npm ci
 
-echo "==> Sync database schema"
-npx prisma db push --accept-data-loss
+echo "==> Sync database schema (safe — no --accept-data-loss)"
+npx prisma db push
 
-echo "==> Seed database (users/org only — does NOT wipe plant KPIs/employees)"
-# SEED_RESET_DATA must stay unset on production deploys. Wiping all plant data
-# caused Corporate / other units to lose KRA & employees on every push.
-SEED_RESET_DATA= npm run db:seed || true
-
-echo "==> Purge logistics KPI junk from database"
-npm run db:purge-junk || true
+echo "==> Seed users/org only (does NOT wipe plant KPIs/employees)"
+SEED_RESET_DATA= ALLOW_DATA_PURGE= npm run db:seed || true
 
 STAFF_FILE="${STAFF_DETAILS_FILE:-$NOVA_DIR/data/staff-details.xlsx}"
 if [[ -f "$STAFF_FILE" ]]; then
-  echo "==> Import staff details (plant-wise employee assignment)"
-  npx tsx scripts/import-staff-details.ts "$STAFF_FILE" || true
+  echo "==> Import staff details (upsert plant assignment — no wipe)"
+  ALLOW_DATA_PURGE= npx tsx scripts/import-staff-details.ts "$STAFF_FILE" || true
 else
   echo "WARN: Staff details file not found at $STAFF_FILE — skip employee plant assignment"
 fi
 
-echo "==> Reconcile plant-scoped department master rows"
-npm run db:reconcile-departments || true
+echo "==> Reconcile plant-scoped department master rows (no deactivate)"
+ALLOW_DATA_PURGE= npm run db:reconcile-departments || true
 
-echo "==> Import KRA workbooks (37P + Fluid 58)"
-npm run import:kra-data || true
+echo "==> Import KRA workbooks (upsert only — purge gated off)"
+ALLOW_DATA_PURGE= npm run import:kra-data || true
 
 echo "==> Building application"
 rm -rf .next
-npm run build
+# Use generate + next build; avoid package.json build's accept-data-loss path
+npx prisma generate
+npx next build
 
 echo "==> Restarting PM2 process"
 cd "$APP_DIR"
@@ -69,5 +79,5 @@ fi
 
 pm2 save
 
-echo "==> Deploy complete"
+echo "==> Deploy complete (plant data was NOT wiped)"
 pm2 status nova-hr

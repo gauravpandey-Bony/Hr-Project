@@ -268,15 +268,19 @@ export async function reconcilePlantHeadEmployeesAsProduction(
   const legacyDepts = await db.departmentMaster.findMany({
     where: { organizationId, name: { in: ["Plant Head", "Operations"] } },
   });
-  for (const dept of legacyDepts) {
-    await db.departmentMaster.update({
-      where: { id: dept.id },
-      data: {
-        isActive: false,
-        name: `${dept.name} (archived ${dept.id.slice(-6)})`,
-        location: `${dept.location ?? "unknown"}#${dept.id.slice(-6)}`,
-      },
-    });
+  // Archiving departments is destructive — only with explicit ALLOW_DATA_PURGE=1
+  const { isDataPurgeAllowed } = await import("./data-safety");
+  if (isDataPurgeAllowed()) {
+    for (const dept of legacyDepts) {
+      await db.departmentMaster.update({
+        where: { id: dept.id },
+        data: {
+          isActive: false,
+          name: `${dept.name} (archived ${dept.id.slice(-6)})`,
+          location: `${dept.location ?? "unknown"}#${dept.id.slice(-6)}`,
+        },
+      });
+    }
   }
 
   await dedupeDepartmentMasters(db, organizationId, "Bony 37P");

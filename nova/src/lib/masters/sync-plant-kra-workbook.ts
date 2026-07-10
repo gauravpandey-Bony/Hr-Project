@@ -168,6 +168,7 @@ export async function syncPlantKraWorkbook(
 
   const employeeEnsured = await ensureRajKumarEmployee(db, organizationId);
   await reconcilePlantHeadEmployeesAsProduction(db, organizationId);
+  // No auto-purge — only when ALLOW_DATA_PURGE=1
   await purgeLogisticsJunkData(db, organizationId);
 
   const rajUser =

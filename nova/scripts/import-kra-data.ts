@@ -156,6 +156,7 @@ async function main() {
   }
 
   const junkPurged = await purgeLogisticsJunkData(db, org.id);
+  // purgeLogisticsJunkData is a no-op unless ALLOW_DATA_PURGE=1
   const employeeCount = await db.employeeMaster.count({
     where: { organizationId: org.id, isActive: true },
   });

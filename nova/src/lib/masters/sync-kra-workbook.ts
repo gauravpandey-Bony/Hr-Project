@@ -18,6 +18,7 @@ import {
 } from "@/lib/unit-workspace";
 import { ROSTER_DEPARTMENTS, reconcilePlantHeadEmployeesAsProduction } from "./37p-roster";
 import { purgeLogisticsJunkData } from "./logistics-kra-junk";
+import { isDataPurgeAllowed } from "./data-safety";
 import {
   dedupeDepartmentMasters,
   deactivateEmptyDepartments,
@@ -287,12 +288,15 @@ function normalizeEmployeeName(name: string): string {
     .trim();
 }
 
-/** Keep one row per person when re-import fills ECN/DOJ */
+/** Keep one row per person when re-import fills ECN/DOJ.
+ *  Only deactivates duplicates when ALLOW_DATA_PURGE=1. */
 async function dedupeKraEmployees(
   db: PrismaClient,
   organizationId: string,
   employees: KraWorkbookEmployee[]
 ): Promise<number> {
+  if (!isDataPurgeAllowed()) return 0;
+
   const withEcn = employees.filter((e) => e.ecn);
   if (!withEcn.length) return 0;
 
@@ -541,8 +545,11 @@ export async function syncKraWorkbook(
   await dedupeKraEmployees(db, organizationId, employees);
 
   await reconcilePlantHeadEmployeesAsProduction(db, organizationId);
-  await purgeLogisticsJunkData(db, organizationId);
-  await deactivateEmptyDepartments(db, organizationId, plantUnitKey);
+  // Bulk deactivate only when operator sets ALLOW_DATA_PURGE=1
+  if (isDataPurgeAllowed()) {
+    await purgeLogisticsJunkData(db, organizationId);
+    await deactivateEmptyDepartments(db, organizationId, plantUnitKey);
+  }
 
   const {
     created: kpisCreated,

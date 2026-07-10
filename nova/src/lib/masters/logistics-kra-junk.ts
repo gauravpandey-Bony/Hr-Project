@@ -1,4 +1,5 @@
 import type { PrismaClient } from "@prisma/client";
+import { isDataPurgeAllowed } from "./data-safety";
 
 /** Logistics workbook KPI tab names mistaken as employees — never show or import. */
 const LOGISTICS_JUNK_PATTERN =
@@ -50,10 +51,21 @@ export function filterRealKraEmployees<T extends { name: string }>(rows: T[]): T
   return rows.filter((row) => !isLogisticsJunkName(row.name));
 }
 
+/**
+ * Deactivates logistics junk rows. NEVER runs unless ALLOW_DATA_PURGE=1
+ * (or SEED_RESET_DATA=1). Deploy/import must not call this blindly.
+ */
 export async function purgeLogisticsJunkData(
   db: PrismaClient,
   organizationId: string
-): Promise<{ employeesDeactivated: number; kpisDeactivated: number }> {
+): Promise<{ employeesDeactivated: number; kpisDeactivated: number; skipped?: boolean }> {
+  if (!isDataPurgeAllowed()) {
+    console.log(
+      "purgeLogisticsJunkData: skipped (set ALLOW_DATA_PURGE=1 to run explicitly)"
+    );
+    return { employeesDeactivated: 0, kpisDeactivated: 0, skipped: true };
+  }
+
   const employees = await db.employeeMaster.findMany({
     where: { organizationId, isActive: true },
     select: { id: true, name: true },
