@@ -9,7 +9,6 @@ import {
   KeyRound,
   LogIn,
   Shield,
-  Sparkles,
   UserRound,
   Users,
 } from "lucide-react";
@@ -67,10 +66,10 @@ function QuickLoginCard({
   return (
     <div
       className={cn(
-        "group relative overflow-hidden rounded-2xl border p-5 transition-all duration-300",
+        "group relative overflow-hidden rounded-xl border p-4 transition-all duration-200 sm:p-5",
         isAdmin
-          ? "border-amber-200/80 bg-gradient-to-br from-amber-50 via-white to-orange-50/40 shadow-sm hover:shadow-md"
-          : "border-violet-200/80 bg-gradient-to-br from-violet-50 via-white to-indigo-50/40 shadow-sm hover:shadow-md"
+          ? "border-amber-200/70 bg-gradient-to-br from-amber-50/90 via-white to-orange-50/30 hover:border-amber-300/80"
+          : "border-violet-200/70 bg-gradient-to-br from-violet-50/90 via-white to-indigo-50/30 hover:border-violet-300/80"
       )}
     >
       <div
@@ -147,7 +146,7 @@ function QuickLoginCard({
   );
 }
 
-export function DemoLoginForm({ compact = false }: { compact?: boolean }) {
+export function DemoLoginForm() {
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") ?? "/dashboard";
 
@@ -212,20 +211,7 @@ export function DemoLoginForm({ compact = false }: { compact?: boolean }) {
   const showEmployeeLogin = hasEmployeeLogin;
 
   return (
-    <div className={cn("space-y-5", compact ? "max-w-md" : "max-w-lg")}>
-      {!compact && (
-        <div className="space-y-2 text-center sm:text-left">
-          <div className="inline-flex items-center gap-2 rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-xs font-semibold text-primary">
-            <Sparkles className="h-3.5 w-3.5" />
-            Secure workspace access
-          </div>
-          <h2 className="text-2xl font-bold tracking-tight text-foreground">Sign in</h2>
-          <p className="text-sm leading-relaxed text-muted-foreground">
-            Admin and manager quick access below. Employees sign in with ECN and password.
-          </p>
-        </div>
-      )}
-
+    <div className="space-y-4">
       {showcase.admin ? (
         <QuickLoginCard
           account={showcase.admin}
@@ -247,7 +233,7 @@ export function DemoLoginForm({ compact = false }: { compact?: boolean }) {
             e.preventDefault();
             void handleLogin(employeeId.trim(), employeePassword, "employee");
           }}
-          className="rounded-2xl border border-border/70 bg-card p-5 shadow-sm"
+          className="rounded-xl border border-border/60 bg-muted/20 p-4 sm:p-5"
         >
           <div className="mb-4 flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
