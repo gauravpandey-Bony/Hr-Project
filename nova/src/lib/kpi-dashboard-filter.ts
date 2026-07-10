@@ -16,6 +16,7 @@ import {
   parseQuarterTargets,
   type FiscalQuarter,
 } from "@/lib/kpi-quarters";
+import { isUnfilledTemplateAchieved } from "@/lib/kra/quarter-status";
 import { normalizeQuarterTargets } from "@/lib/kra/target-format";
 import type { QuarterFilter } from "@/lib/ai/employee-quarter-filter";
 import type { Kpi, KpiEntry } from "@prisma/client";
@@ -71,6 +72,24 @@ export function evaluateKpiForFilter(
   };
   const quarters = normalizeQuarterTargets(raw, kpi.unit);
   const cell = quarters[filter];
+
+  if (isUnfilledTemplateAchieved(cell.target, cell.achieved)) {
+    return {
+      id: kpi.id,
+      name: kpi.name,
+      category: kpi.category,
+      unit: kpi.unit,
+      current: 0,
+      target: kpi.targetValue,
+      progress: 0,
+      status: "red",
+      kraName: kpi.kraName,
+      department: kpi.department,
+      currentLabel: "—",
+      targetLabel: cell.target?.trim() || "—",
+    };
+  }
+
   let achieved = parseQuarterNumber(
     isPlaceholderAchieved(cell.achieved) ? undefined : cell.achieved
   );

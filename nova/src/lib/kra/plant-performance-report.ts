@@ -6,6 +6,7 @@ import {
 import {
   quarterAchievementStatus,
   quarterStatusLabel,
+  isUnfilledTemplateAchieved,
   type QuarterAchievementStatus,
 } from "@/lib/kra/quarter-status";
 import { formatWeightage, weightageFraction } from "@/lib/kra/weightage";
@@ -13,24 +14,25 @@ import { buildQuarterlyReportRows, quarterlyReportSummary } from "@/lib/kra/quar
 
 export const EMPLOYEE_SCORE_METHODOLOGY = [
   "Employee section uses Individual KRA/KPI rows (kpiLevel = INDIVIDUAL) for the selected plant and quarter.",
-  "Each KPI: Achieved = 100 pts, Not achieved = 0 pts, Entered (review) = 50 pts. Pending KPIs are excluded.",
+  "Each KPI: Achieved = 100 pts, Not achieved = 0 pts, Entered (review) = 50 pts.",
   "If Achieved still equals the Target text (common Excel template paste), it counts as Pending — not 100%.",
-  "Employee score = Σ (weightage × points) ÷ Σ (weightage) for that employee's scored KPIs.",
-  "Overall employee score = weighted average across all individual KPIs at the plant.",
+  "Pending KPIs count as 0 pts but keep their weight in the denominator (so 1 met of 10 equal KPIs ≈ 10%, not 100%).",
+  "Employee score = Σ (weightage × points) ÷ Σ (all KPI weightage for that employee).",
+  "Overall employee score = average of each employee's score (equal weight per person).",
 ] as const;
 
 export const DEPARTMENT_SCORE_METHODOLOGY = [
   "Department section uses Department-level KPIs (kpiLevel = DEPARTMENT) — dept targets from KRA master sheets.",
-  "When department KPIs exist, dept score = Σ (weightage × points) ÷ Σ (weightage) for that department's KPIs.",
+  "When department KPIs exist, dept score = Σ (weightage × points) ÷ Σ (all dept KPI weightage); pending KPIs count as 0.",
   "When no department KPIs exist, dept score = average of employee scores in that department.",
-  "Overall department score = average of all department scores (or weighted dept KPI rollup if present).",
+  "Overall department score = average of all department scores.",
 ] as const;
 
 export const PLANT_KPI_METHODOLOGY = [
   "Plant section uses Plant-level KPIs (kpiLevel = PLANT) — sales, OTD, rejection, production, etc.",
   "Target vs achieved for the selected quarter (Q1 Apr–Jun, Q2 Jul–Sep, Q3 Oct–Dec, Q4 Jan–Mar).",
   "Status rules: numeric targets use ≤ / ≥ when marked in target text; otherwise ±5% tolerance vs target.",
-  "Plant score = Σ (weightage × points) ÷ Σ (weightage) for all plant-level KPIs.",
+  "Plant score = Σ (weightage × points) ÷ Σ (all plant KPI weightage); pending / template-copy cells count as 0.",
   "When no plant-level KPIs are scored, Plant falls back to the department average, then the employee overall score.",
 ] as const;
 
@@ -247,37 +249,62 @@ function buildLevelKpiRows(
 
 function weightedAverageFormula(
   label: string,
-  items: { weight: number; points: number; label: string }[]
+  items: { weight: number; points: number; label: string }[],
+  /** When set, pending/unscored weight stays in the denominator (points treated as 0). */
+  totalWeightIncludingPending?: number
 ): { score: number | null; calculation: string } {
+  if (items.length === 0 && !(totalWeightIncludingPending && totalWeightIncludingPending > 0)) {
+    return {
+      score: null,
+      calculation: `${label}: no scored KPIs (all pending).`,
+    };
+  }
+  const scoredWeight = items.reduce((s, i) => s + i.weight, 0);
+  const weightSum =
+    totalWeightIncludingPending != null && totalWeightIncludingPending > 0
+      ? totalWeightIncludingPending
+      : scoredWeight;
+  if (weightSum <= 0) {
+    return {
+      score: null,
+      calculation: `${label}: no weightage on KPIs.`,
+    };
+  }
+  // No real achieved data yet — show incomplete, not 0%
   if (items.length === 0) {
     return {
       score: null,
       calculation: `${label}: no scored KPIs (all pending).`,
     };
   }
-  const weightSum = items.reduce((s, i) => s + i.weight, 0);
   const weightedSum = items.reduce((s, i) => s + i.weight * i.points, 0);
-  const score = weightSum > 0 ? Math.round((weightedSum / weightSum) * 10) / 10 : null;
+  const score = Math.round((weightedSum / weightSum) * 10) / 10;
   const terms = items
     .slice(0, 4)
     .map((i) => `${i.label} (${(i.weight * 100).toFixed(1)}%×${i.points})`)
     .join(" + ");
   const more = items.length > 4 ? ` + … (${items.length - 4} more)` : "";
+  const pendingNote =
+    totalWeightIncludingPending != null && totalWeightIncludingPending > scoredWeight
+      ? ` · pending weight ${(Math.max(0, totalWeightIncludingPending - scoredWeight) * 100).toFixed(1)}% counted as 0`
+      : "";
   return {
     score,
-    calculation: `${label} = (${terms}${more}) ÷ ${(weightSum * 100).toFixed(1)}% = ${score ?? "—"}%`,
+    calculation: `${label} = (${terms}${more}) ÷ ${(weightSum * 100).toFixed(1)}%${pendingNote} = ${score}%`,
   };
 }
 
 function scoreFromKpiRows(label: string, rows: LevelKpiRow[]) {
-  const items = rows
-    .filter((r) => r.points != null && r.weightFraction != null)
+  const withWeight = rows.filter((r) => r.weightFraction != null);
+  const totalWeight = withWeight.reduce((s, r) => s + (r.weightFraction ?? 0), 0);
+  const items = withWeight
+    .filter((r) => r.points != null)
     .map((r) => ({
       weight: r.weightFraction!,
       points: r.points!,
       label: r.kpiName.slice(0, 16),
     }));
-  return weightedAverageFormula(label, items);
+  return weightedAverageFormula(label, items, totalWeight);
 }
 
 export function buildEmployeeRows(
@@ -302,6 +329,8 @@ export function buildEmployeeRows(
       ? kpis.find((k) => k.ownerName?.trim() === employeeName)?.department ?? "—"
       : "—";
     const scored = breakdown.filter((b) => b.points != null);
+    const withWeight = breakdown.filter((b) => b.weightFraction != null);
+    const totalWeight = withWeight.reduce((s, b) => s + (b.weightFraction ?? 0), 0);
     const items = scored
       .filter((b) => b.weightFraction != null)
       .map((b) => ({
@@ -309,7 +338,11 @@ export function buildEmployeeRows(
         points: b.points!,
         label: b.kpiName.slice(0, 20),
       }));
-    const { score, calculation } = weightedAverageFormula(employeeName, items);
+    const { score, calculation } = weightedAverageFormula(
+      employeeName,
+      items,
+      totalWeight
+    );
 
     employees.push({
       employeeName,
@@ -449,17 +482,27 @@ export function buildPlantPerformanceReport(
   const employeeRows = buildEmployeeRows(kpis, quarter);
   const departmentCards = buildDepartmentScorecards(kpis, employeeRows, quarter);
 
-  const allBreakdowns = employeeRows.flatMap((e) =>
-    e.breakdown.filter((b) => b.points != null && b.weightFraction != null)
-  );
-  const employeeOverall = weightedAverageFormula(
-    "Overall employee score",
-    allBreakdowns.map((b) => ({
-      weight: b.weightFraction!,
-      points: b.points!,
-      label: b.kpiName.slice(0, 16),
-    }))
-  );
+  // Equal weight per employee (not flat KPI pool — avoids people with more KPIs dominating)
+  const scoredEmployees = employeeRows.filter((e) => e.weightedScore != null);
+  const employeeOverallScore =
+    scoredEmployees.length > 0
+      ? Math.round(
+          (scoredEmployees.reduce((s, e) => s + (e.weightedScore ?? 0), 0) /
+            scoredEmployees.length) *
+            10
+        ) / 10
+      : null;
+  const employeeOverallCalculation =
+    scoredEmployees.length > 0
+      ? `Avg of ${scoredEmployees.length} employee score(s): (${scoredEmployees
+          .slice(0, 4)
+          .map((e) => `${e.employeeName.split(" ").slice(-1)[0]} ${e.weightedScore}%`)
+          .join(", ")}${scoredEmployees.length > 4 ? ", …" : ""}) ÷ ${scoredEmployees.length} = ${employeeOverallScore}%`
+      : "No employee scores yet (all KPIs pending or template copies).";
+  const employeeOverall = {
+    score: employeeOverallScore,
+    calculation: employeeOverallCalculation,
+  };
 
   const scoredDepts = departmentCards.filter((d) => d.weightedScore != null);
   const deptOverallScore =

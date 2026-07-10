@@ -10,6 +10,7 @@ import {
 } from "@/lib/kpi";
 import { weightagePercent } from "@/lib/kra/weightage";
 import { parseQuarterNumber } from "@/lib/kpi-quarters";
+import { isUnfilledTemplateAchieved } from "@/lib/kra/quarter-status";
 
 export type QuarterFilter = "all" | "annual" | "q1" | "q2" | "q3" | "q4";
 
@@ -73,17 +74,27 @@ export function kpiMetricsForFilter(
   }
 
   const cell = row.quarters[filter];
-  const achieved = parseQuarterNumber(cell.achieved);
+  const achievedRaw = cell.achieved;
+  const targetRaw = cell.target;
 
-  if (achieved === null) {
+  // Excel template often pastes target into achieved — treat as not entered
+  if (
+    isUnfilledTemplateAchieved(targetRaw, achievedRaw) ||
+    parseQuarterNumber(achievedRaw) === null
+  ) {
     return {
       progressNum: 0,
       status: "red",
-      currentFormatted: cell.achieved === "—" ? "—" : cell.achieved,
+      currentFormatted:
+        !achievedRaw || achievedRaw === "—" || isUnfilledTemplateAchieved(targetRaw, achievedRaw)
+          ? "—"
+          : achievedRaw,
       targetFormatted:
         cell.target !== "—" ? `${cell.target} ${row.unit}`.trim() : row.annualTarget,
     };
   }
+
+  const achieved = parseQuarterNumber(achievedRaw)!;
 
   // Quarter "Achieved" is weighted score (e.g. 9 of 9% weightage), not raw days/hours.
   const progressNum =

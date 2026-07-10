@@ -269,18 +269,29 @@ function ScoreBreakdownDialog({
   const employees = report?.employees.overallScore ?? null;
   const plantSource = report?.plantKpis.scoreSource ?? "none";
 
-  const available = [
-    plant != null && plantSource === "plant" ? `Plant ${plant}%` : null,
-    departments != null ? `Departments ${departments}%` : null,
-    employees != null ? `Employees ${employees}%` : null,
-  ].filter(Boolean) as string[];
+  const available =
+    plantSource === "plant"
+      ? ([
+          plant != null ? `Plant ${plant}%` : null,
+          departments != null ? `Departments ${departments}%` : null,
+          employees != null ? `Employees ${employees}%` : null,
+        ].filter(Boolean) as string[])
+      : ([
+          departments != null
+            ? `Departments ${departments}%`
+            : employees != null
+              ? `Employees ${employees}%`
+              : null,
+        ].filter(Boolean) as string[]);
 
   const healthBasis =
     healthScore == null
       ? "No scored layers yet. Upload plant, department, or employee KRA data to calculate plant health."
-      : available.length === 1
-        ? `Only one layer has data, so overall health equals that score: ${available[0]}.`
-        : `Simple average of available layers (plant fallback scores are not double-counted):\n(${available.join(" + ")}) ÷ ${available.length} = ${healthScore}%`;
+      : plantSource === "plant"
+        ? available.length === 1
+          ? `Only one layer has data, so overall health equals that score: ${available[0]}.`
+          : `Simple average of plant + department + employee layers:\n(${available.join(" + ")}) ÷ ${available.length} = ${healthScore}%`
+        : `No plant-level KPIs for this period — health uses a single rollup (departments preferred over employees to avoid double-counting):\n${available[0] ?? "—"} = ${healthScore}%`;
 
   const title =
     focus === "department"
@@ -448,14 +459,18 @@ export function PlantCommandCenter({
 
   const healthScore = useMemo(() => {
     if (!report) return null;
-    // Native plant KPIs only — department/employee fallbacks must not be double-counted
-    const parts = [
-      report.plantKpis.scoreSource === "plant" ? report.plantKpis.overallScore : null,
-      report.departments.overallScore,
-      report.employees.overallScore,
-    ].filter((s): s is number => s != null);
-    if (parts.length === 0) return null;
-    return Math.round((parts.reduce((a, b) => a + b, 0) / parts.length) * 10) / 10;
+    // Native plant KPIs: average plant + departments + employees
+    if (report.plantKpis.scoreSource === "plant") {
+      const parts = [
+        report.plantKpis.overallScore,
+        report.departments.overallScore,
+        report.employees.overallScore,
+      ].filter((s): s is number => s != null);
+      if (parts.length === 0) return null;
+      return Math.round((parts.reduce((a, b) => a + b, 0) / parts.length) * 10) / 10;
+    }
+    // No plant KPIs — use one rollup only (dept already includes employee rollups; don't double-count)
+    return report.departments.overallScore ?? report.employees.overallScore;
   }, [report]);
 
   const departments = report?.departments.cards ?? [];
