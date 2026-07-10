@@ -37,13 +37,13 @@ export function LoginShell({
             className="object-cover object-[center_42%] scale-[1.03]"
             sizes="58vw"
           />
-          {/* Stronger multi-layer scrim so white text always reads */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/45 to-black/25" />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/55 via-black/20 to-transparent" />
-          <div className="absolute inset-x-0 bottom-0 h-[55%] bg-gradient-to-t from-black/80 to-transparent" />
+          {/* Scrim stronger at bottom where glass text sits; keep top of building clearer */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-black/10" />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/45 via-black/10 to-transparent" />
+          <div className="absolute inset-x-0 bottom-0 h-[48%] bg-gradient-to-t from-black/80 to-transparent" />
         </div>
 
-        <div className="relative flex h-full min-h-[100dvh] flex-col justify-between p-8 xl:p-12">
+        <div className="relative flex h-full min-h-[100dvh] flex-col p-8 xl:p-12">
           <div className="flex items-center gap-3 pl-1 pt-1">
             <BonyLogoFlip size="lg" />
             <div>
@@ -62,44 +62,46 @@ export function LoginShell({
             </div>
           </div>
 
-          {/* Frosted glass content panel — Apple-style depth */}
-          <div className="login-hero-glass max-w-xl space-y-5 p-6 xl:p-7">
-            <p className="inline-flex rounded-full border border-white/30 bg-white/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] backdrop-blur-md">
-              Performance management
-            </p>
-            <h1
-              className="text-balance text-3xl font-bold leading-[1.12] tracking-tight text-white xl:text-[2.65rem]"
-              style={{ textShadow: "0 2px 18px rgba(0,0,0,0.55)" }}
-            >
-              KPI tracking built for every plant.
-            </h1>
-            <p
-              className="max-w-lg text-sm leading-relaxed text-white/95 xl:text-base"
-              style={{ textShadow: "0 1px 10px rgba(0,0,0,0.5)" }}
-            >
-              Department master, employee KRA sheets, and quarterly reports — one
-              workspace for {companyName}.
-            </p>
+          {/* Keep glass panel low so the building photo stays visible above */}
+          <div className="mt-auto max-w-xl space-y-4 pb-1">
+            <div className="login-hero-glass space-y-5 p-6 xl:p-7">
+              <p className="inline-flex rounded-full border border-white/30 bg-white/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] backdrop-blur-md">
+                Performance management
+              </p>
+              <h1
+                className="text-balance text-3xl font-bold leading-[1.12] tracking-tight text-white xl:text-[2.65rem]"
+                style={{ textShadow: "0 2px 18px rgba(0,0,0,0.55)" }}
+              >
+                KPI tracking built for every plant.
+              </h1>
+              <p
+                className="max-w-lg text-sm leading-relaxed text-white/95 xl:text-base"
+                style={{ textShadow: "0 1px 10px rgba(0,0,0,0.5)" }}
+              >
+                Department master, employee KRA sheets, and quarterly reports — one
+                workspace for {companyName}.
+              </p>
 
-            <div className="grid max-w-lg grid-cols-3 gap-2.5 pt-1">
-              {HIGHLIGHTS.map(({ icon: Icon, label, value }) => (
-                <div key={label} className="login-stat-tile">
-                  <Icon className="mb-1.5 h-4 w-4 text-white drop-shadow" />
-                  <p className="text-[9px] font-bold uppercase tracking-wider text-white/70">
-                    {label}
-                  </p>
-                  <p className="mt-0.5 text-xs font-bold text-white xl:text-sm">{value}</p>
-                </div>
-              ))}
+              <div className="grid max-w-lg grid-cols-3 gap-2.5 pt-1">
+                {HIGHLIGHTS.map(({ icon: Icon, label, value }) => (
+                  <div key={label} className="login-stat-tile">
+                    <Icon className="mb-1.5 h-4 w-4 text-white drop-shadow" />
+                    <p className="text-[9px] font-bold uppercase tracking-wider text-white/70">
+                      {label}
+                    </p>
+                    <p className="mt-0.5 text-xs font-bold text-white xl:text-sm">{value}</p>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
 
-          <p
-            className="pl-1 text-[11px] text-white/70"
-            style={{ textShadow: "0 1px 6px rgba(0,0,0,0.5)" }}
-          >
-            © {new Date().getFullYear()} {companyName}
-          </p>
+            <p
+              className="pl-1 text-[11px] text-white/70"
+              style={{ textShadow: "0 1px 6px rgba(0,0,0,0.5)" }}
+            >
+              © {new Date().getFullYear()} {companyName}
+            </p>
+          </div>
         </div>
       </aside>
 
