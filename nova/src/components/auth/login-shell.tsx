@@ -105,8 +105,9 @@ export function LoginShell({
 
       {/* Sign-in column */}
       <div className="login-mesh relative flex min-h-screen flex-1 flex-col lg:min-h-[100dvh]">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_50%_at_100%_0%,rgba(59,130,246,0.12),transparent_55%)]" />
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_50%_40%_at_0%_100%,rgba(15,23,42,0.06),transparent_50%)]" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_50%_at_100%_0%,rgba(59,130,246,0.14),transparent_55%)]" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_55%_45%_at_0%_100%,rgba(245,158,11,0.08),transparent_50%)]" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(255,255,255,0.55),transparent_65%)]" />
 
         {/* Mobile hero */}
         <div className="relative h-44 w-full shrink-0 overflow-hidden lg:hidden">

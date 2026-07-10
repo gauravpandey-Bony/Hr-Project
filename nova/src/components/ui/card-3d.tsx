@@ -82,9 +82,9 @@ export function Card3D({
         }}
       >
         {shine && <span className="card-raised-shine" aria-hidden="true" />}
-        <span className="relative z-[1] block w-full" style={{ transform: "translateZ(20px)" }}>
+        <div className="relative z-[1] block w-full" style={{ transform: "translateZ(20px)" }}>
           {children}
-        </span>
+        </div>
       </Component>
     </div>
   );

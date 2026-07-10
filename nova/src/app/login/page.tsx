@@ -25,10 +25,13 @@ export default async function LoginPage() {
   return (
     <LoginShell productName={company.productName} companyName={company.name}>
       <div className="mb-6 text-center lg:mb-7 lg:text-left">
-        <h2 className="text-2xl font-bold tracking-tight text-foreground xl:text-3xl">
+        <p className="mb-2 inline-flex items-center rounded-full border border-slate-200/80 bg-white/80 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500 shadow-[0_1px_0_rgba(255,255,255,1)_inset,0_4px_10px_-6px_rgba(15,23,42,0.12)]">
+          Secure access
+        </p>
+        <h2 className="text-balance text-2xl font-bold tracking-tight text-foreground xl:text-[1.85rem]">
           Welcome back
         </h2>
-        <p className="mt-1.5 text-sm text-muted-foreground">
+        <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
           Sign in to your {company.productName} workspace
         </p>
       </div>
