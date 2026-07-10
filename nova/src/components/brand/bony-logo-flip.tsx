@@ -35,10 +35,22 @@ export function BonyLogoFlip({
         )}
         style={{ transformStyle: "preserve-3d", transformOrigin: "center center" }}
         initial={{ rotateY: 95, opacity: 0.35, scale: 0.86 }}
-        animate={{ rotateY: 0, opacity: 1, scale: 1 }}
+        animate={{
+          rotateY: 0,
+          opacity: 1,
+          scale: 1,
+          y: [0, -3, 0],
+        }}
         transition={{
-          duration: 2.6,
-          ease: [0.22, 0.8, 0.2, 1],
+          rotateY: { duration: 2.4, ease: [0.22, 0.8, 0.2, 1] },
+          opacity: { duration: 1.2, ease: "easeOut" },
+          scale: { duration: 2.4, ease: [0.22, 0.8, 0.2, 1] },
+          y: {
+            duration: 2.8,
+            delay: 2.4,
+            repeat: Infinity,
+            ease: "easeInOut",
+          },
         }}
       >
         <Image

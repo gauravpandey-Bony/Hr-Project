@@ -132,17 +132,7 @@ export function LoginShell({
 
           <div className="flex flex-1 flex-col items-center justify-center px-5 pb-10 pt-2 sm:px-8 lg:px-10 lg:py-12 xl:px-14">
             <div className="w-full max-w-[440px] animate-fade-up lg:max-w-[460px] xl:max-w-[500px]">
-              <div className="mb-6 flex items-center justify-center gap-3 lg:hidden">
-                <BonyLogoFlip size="lg" />
-                <div>
-                  <p className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
-                    {productName}
-                  </p>
-                  <p className="text-sm text-muted-foreground">{companyName}</p>
-                </div>
-              </div>
-
-              {/* Apple-style elevated glass panel */}
+              {/* Scrut-style elevated panel — brand logo lives inside children */}
               <div className="login-panel-3d p-6 sm:p-7 lg:p-8">{children}</div>
             </div>
           </div>
