@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { Filter, Loader2, Users, X } from "lucide-react";
+import { ChevronDown, Filter, Loader2, Users, X } from "lucide-react";
 import { Card3D } from "@/components/ui/card-3d";
 import { cn } from "@/lib/utils";
 import {
@@ -65,7 +65,7 @@ function DeptTile({
       className={cn(
         "w-full overflow-hidden rounded-2xl border bg-card p-0 text-left shadow-soft transition",
         active
-          ? "border-emerald-500 ring-2 ring-emerald-600/25 ring-offset-2"
+          ? "border-emerald-500 bg-emerald-50/40 ring-2 ring-emerald-600/30 ring-offset-2"
           : "border-border/80 hover:border-emerald-300 hover:shadow-md"
       )}
     >
@@ -88,6 +88,14 @@ function DeptTile({
             {dept.headName}
           </p>
         )}
+        {active ? (
+          <p className="mt-2 flex items-center gap-1 text-[10px] font-semibold text-emerald-700">
+            <ChevronDown className="h-3 w-3" />
+            Employees shown below
+          </p>
+        ) : dept.employeeCount > 0 ? (
+          <p className="mt-2 text-[10px] text-muted-foreground">Tap to view employees</p>
+        ) : null}
       </div>
     </Card3D>
   );
@@ -104,6 +112,7 @@ export function DepartmentBrowser() {
   const [deptPage, setDeptPage] = useState(0);
   const [empPage, setEmpPage] = useState(0);
   const [deptSearch, setDeptSearch] = useState("");
+  const employeePanelRef = useRef<HTMLDivElement>(null);
 
   const companyOptions = useMemo(() => {
     const opts: { value: string; label: string }[] = [
@@ -214,6 +223,24 @@ export function DepartmentBrowser() {
     }
   }, [selectedDept, loadEmployees]);
 
+  useEffect(() => {
+    if (!selectedDept) return;
+    const scrollToPanel = () => {
+      employeePanelRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    };
+    const openTimer = window.setTimeout(scrollToPanel, 80);
+    const loadedTimer = loadingEmployees
+      ? undefined
+      : window.setTimeout(scrollToPanel, 200);
+    return () => {
+      window.clearTimeout(openTimer);
+      if (loadedTimer !== undefined) window.clearTimeout(loadedTimer);
+    };
+  }, [selectedDept, loadingEmployees]);
+
   function handleCompanyChange(value: string) {
     setCompanyFilter(value);
     setSelectedDept(null);
@@ -285,6 +312,12 @@ export function DepartmentBrowser() {
         </p>
       ) : (
         <>
+          {!selectedDept && (
+            <p className="rounded-xl border border-dashed border-emerald-200/80 bg-emerald-50/40 px-4 py-2.5 text-center text-xs text-emerald-900/80">
+              Tap any department card to open its employee list below.
+            </p>
+          )}
+
           <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
             {pageDepartments.map((dept) => (
               <DeptTile
@@ -295,6 +328,125 @@ export function DepartmentBrowser() {
               />
             ))}
           </div>
+
+          {selectedDept ? (
+            <div
+              ref={employeePanelRef}
+              className="scroll-mt-24 animate-fade-up overflow-hidden rounded-2xl border-2 border-emerald-500/70 bg-card shadow-elevated ring-4 ring-emerald-500/10"
+            >
+              <div className="flex flex-wrap items-start justify-between gap-3 border-b border-emerald-200 bg-gradient-to-r from-emerald-50 to-emerald-50/40 px-4 py-3.5 sm:px-5 dark:border-emerald-900/40 dark:from-emerald-950/50 dark:to-emerald-950/20">
+                <div>
+                  <p className="flex flex-wrap items-center gap-2 text-base font-semibold text-foreground">
+                    <Users className="h-4 w-4 text-emerald-700" />
+                    <span className="dept-name">
+                      {formatDepartmentDisplayName(selectedDept.name)}
+                    </span>
+                    <span className="rounded-full bg-emerald-600 px-2.5 py-0.5 text-xs font-bold text-white">
+                      {loadingEmployees ? "…" : deptEmployees.length} employees
+                    </span>
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {selectedDept.headName
+                      ? `Head: ${selectedDept.headName}`
+                      : "No department head"}
+                    {companyFilter !== "all" ? ` · ${companyLabel}` : " · All plants"}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedDept(null)}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-border/70 bg-card px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                >
+                  <X className="h-3.5 w-3.5" />
+                  Close
+                </button>
+              </div>
+
+              {loadingEmployees ? (
+                <div className="flex items-center justify-center gap-2 py-12 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading employees…
+                </div>
+              ) : deptEmployees.length === 0 ? (
+                <p className="px-4 py-10 text-center text-sm text-muted-foreground sm:px-5">
+                  No active employees in this department
+                  {companyFilter !== "all" ? ` for ${companyLabel}` : ""}.
+                </p>
+              ) : (
+                <>
+                  {employeesByPlant.length > 1 && (
+                    <div className="flex flex-wrap gap-2 border-b border-border/50 px-4 py-2.5 sm:px-5">
+                      {employeesByPlant.map(([plant, count]) => (
+                        <span
+                          key={plant}
+                          className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-medium text-foreground dark:border-emerald-800 dark:bg-emerald-950/40"
+                        >
+                          {plant}{" "}
+                          <span className="text-muted-foreground">({count})</span>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="max-h-[min(420px,50vh)] overflow-auto scrollbar-thin">
+                    <table className="w-full text-sm">
+                      <thead className="sticky top-0 z-10 bg-card/95 backdrop-blur-sm">
+                        <tr className="border-b border-border/60 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                          <th className="px-4 py-2.5 sm:px-5">Employee</th>
+                          <th className="hidden px-3 py-2.5 sm:table-cell">ECN</th>
+                          <th className="px-3 py-2.5">Plant</th>
+                          <th className="hidden px-3 py-2.5 md:table-cell">Designation</th>
+                          <th className="hidden px-3 py-2.5 lg:table-cell">Reporting</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pageEmployees.map((emp) => (
+                          <tr
+                            key={emp.id}
+                            className="border-b border-border/40 transition hover:bg-muted/40"
+                          >
+                            <td className="px-4 py-2.5 sm:px-5">
+                              <Link
+                                href={`/dashboard/masters/employees/${emp.id}`}
+                                className="font-medium text-foreground hover:text-primary hover:underline"
+                              >
+                                {emp.name}
+                              </Link>
+                            </td>
+                            <td className="hidden px-3 py-2.5 font-mono text-xs text-muted-foreground sm:table-cell">
+                              {emp.ecn ?? "—"}
+                            </td>
+                            <td className="px-3 py-2.5">
+                              <span className="inline-flex max-w-[140px] truncate rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-foreground">
+                                {emp.plantLabel || emp.location || "—"}
+                              </span>
+                            </td>
+                            <td className="hidden max-w-[160px] truncate px-3 py-2.5 text-muted-foreground md:table-cell">
+                              {emp.designation ?? "—"}
+                            </td>
+                            <td className="hidden max-w-[140px] truncate px-3 py-2.5 text-muted-foreground lg:table-cell">
+                              {emp.managerName ?? "—"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="border-t border-border/60 px-4 py-2 sm:px-5">
+                    <ListPagination
+                      page={empPage}
+                      pageSize={EMP_PAGE_SIZE}
+                      total={deptEmployees.length}
+                      onPageChange={setEmpPage}
+                      label="employees"
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+          ) : null}
+
           <ListPagination
             page={deptPage}
             pageSize={DEPT_CARD_PAGE_SIZE}
@@ -303,114 +455,6 @@ export function DepartmentBrowser() {
             label="departments"
           />
         </>
-      )}
-
-      {selectedDept && (
-        <div className="animate-fade-up overflow-hidden rounded-2xl border border-border/80 bg-card shadow-soft">
-          <div className="flex flex-wrap items-start justify-between gap-3 border-b border-emerald-100 bg-emerald-50/50 px-4 py-3 sm:px-5 dark:border-emerald-900/40 dark:bg-emerald-950/30">
-            <div>
-              <p className="flex items-center gap-2 text-base font-semibold text-foreground">
-                <Users className="h-4 w-4 text-emerald-700" />
-                {selectedDept.name}
-              </p>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                {selectedDept.headName ? `Head: ${selectedDept.headName}` : "No department head"}
-                {companyFilter !== "all" ? ` · ${companyLabel}` : " · All plants"}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setSelectedDept(null)}
-              className="rounded-lg p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground"
-              aria-label="Close employee list"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-
-          {loadingEmployees ? (
-            <div className="flex items-center justify-center gap-2 py-10 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Loading employees…
-            </div>
-          ) : deptEmployees.length === 0 ? (
-            <p className="px-4 py-8 text-center text-sm text-muted-foreground sm:px-5">
-              No active employees in this department
-              {companyFilter !== "all" ? ` for ${companyLabel}` : ""}.
-            </p>
-          ) : (
-            <>
-              {employeesByPlant.length > 1 && (
-                <div className="flex flex-wrap gap-2 border-b border-border/50 px-4 py-2.5 sm:px-5">
-                  {employeesByPlant.map(([plant, count]) => (
-                    <span
-                      key={plant}
-                      className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-medium text-foreground dark:border-emerald-800 dark:bg-emerald-950/40"
-                    >
-                      {plant}{" "}
-                      <span className="text-muted-foreground">({count})</span>
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              <div className="max-h-[min(420px,50vh)] overflow-auto scrollbar-thin">
-                <table className="w-full text-sm">
-                  <thead className="sticky top-0 z-10 bg-card/95 backdrop-blur-sm">
-                    <tr className="border-b border-border/60 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      <th className="px-4 py-2.5 sm:px-5">Employee</th>
-                      <th className="hidden px-3 py-2.5 sm:table-cell">ECN</th>
-                      <th className="px-3 py-2.5">Plant</th>
-                      <th className="hidden px-3 py-2.5 md:table-cell">Designation</th>
-                      <th className="hidden px-3 py-2.5 lg:table-cell">Reporting</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {pageEmployees.map((emp) => (
-                      <tr
-                        key={emp.id}
-                        className="border-b border-border/40 transition hover:bg-muted/40"
-                      >
-                        <td className="px-4 py-2.5 sm:px-5">
-                          <Link
-                            href={`/dashboard/masters/employees/${emp.id}`}
-                            className="font-medium text-foreground hover:text-primary hover:underline"
-                          >
-                            {emp.name}
-                          </Link>
-                        </td>
-                        <td className="hidden px-3 py-2.5 font-mono text-xs text-muted-foreground sm:table-cell">
-                          {emp.ecn ?? "—"}
-                        </td>
-                        <td className="px-3 py-2.5">
-                          <span className="inline-flex max-w-[140px] truncate rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-foreground">
-                            {emp.plantLabel || emp.location || "—"}
-                          </span>
-                        </td>
-                        <td className="hidden max-w-[160px] truncate px-3 py-2.5 text-muted-foreground md:table-cell">
-                          {emp.designation ?? "—"}
-                        </td>
-                        <td className="hidden max-w-[140px] truncate px-3 py-2.5 text-muted-foreground lg:table-cell">
-                          {emp.managerName ?? "—"}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="border-t border-border/60 px-4 py-2 sm:px-5">
-                <ListPagination
-                  page={empPage}
-                  pageSize={EMP_PAGE_SIZE}
-                  total={deptEmployees.length}
-                  onPageChange={setEmpPage}
-                  label="employees"
-                />
-              </div>
-            </>
-          )}
-        </div>
       )}
     </div>
   );
