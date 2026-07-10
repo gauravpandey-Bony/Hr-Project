@@ -28,19 +28,19 @@ export function LoginShell({
     <div className="flex min-h-screen flex-col bg-[#eef1f6] lg:min-h-[100dvh] lg:flex-row">
       {/* Desktop hero */}
       <aside className="relative hidden min-h-[100dvh] w-[54%] shrink-0 overflow-hidden lg:block xl:w-[58%]">
-        <div className="absolute inset-3 overflow-hidden rounded-[1.85rem] shadow-[0_30px_80px_-20px_rgba(0,0,0,0.55)] ring-1 ring-white/25 xl:inset-4">
+        <div className="absolute inset-3 overflow-hidden rounded-[1.85rem] bg-[#0b1220] shadow-[0_30px_80px_-20px_rgba(0,0,0,0.55)] ring-1 ring-white/25 xl:inset-4">
           <Image
             src={BUILDING_IMAGE}
             alt={`${companyName} corporate office`}
             fill
             priority
-            className="object-cover object-[center_42%] scale-[1.03]"
+            className="object-contain object-center"
             sizes="58vw"
           />
           {/* Scrim stronger at bottom where glass text sits; keep top of building clearer */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-black/10" />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/45 via-black/10 to-transparent" />
-          <div className="absolute inset-x-0 bottom-0 h-[48%] bg-gradient-to-t from-black/80 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/5" />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/35 via-transparent to-transparent" />
+          <div className="absolute inset-x-0 bottom-0 h-[42%] bg-gradient-to-t from-black/75 to-transparent" />
         </div>
 
         <div className="relative flex h-full min-h-[100dvh] flex-col p-8 xl:p-12">
@@ -112,16 +112,16 @@ export function LoginShell({
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(255,255,255,0.55),transparent_65%)]" />
 
         {/* Mobile hero */}
-        <div className="relative h-44 w-full shrink-0 overflow-hidden lg:hidden">
+        <div className="relative h-44 w-full shrink-0 overflow-hidden bg-[#0b1220] lg:hidden">
           <Image
             src={BUILDING_IMAGE}
             alt={`${companyName} corporate office`}
             fill
             priority
-            className="object-cover object-[center_40%]"
+            className="object-contain object-center"
             sizes="100vw"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/45 to-black/30" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/20" />
           <div className="relative z-10 flex h-full items-end gap-3 p-5">
             <BonyLogoFlip size="md" />
             <div>
