@@ -48,15 +48,102 @@ const QUARTER_MAP: Record<string, FiscalQuarter> = {
 
 type ScoreFocus = "health" | "plant" | "departments" | "employees";
 
+function scoreColor(score: number | null): string {
+  if (score == null) return "#64748b";
+  if (score >= 90) return "#34d399";
+  if (score >= 70) return "#fbbf24";
+  return "#fb7185";
+}
+
 function scoreTone(score: number | null) {
   if (score == null) return "text-slate-400";
-  if (score >= 90) return "text-emerald-500";
-  if (score >= 70) return "text-amber-500";
-  return "text-rose-500";
+  if (score >= 90) return "text-emerald-400";
+  if (score >= 70) return "text-amber-400";
+  return "text-rose-400";
 }
 
 function formatScore(score: number | null | undefined) {
   return score == null ? "—" : `${score}%`;
+}
+
+/** Shared SVG progress ring — same look for hero + mini pills. */
+function ScoreRing({
+  score,
+  sizePx,
+  stroke = 8,
+  className,
+}: {
+  score: number | null;
+  sizePx: number;
+  stroke?: number;
+  className?: string;
+}) {
+  const pct = Math.max(0, Math.min(100, score ?? 0));
+  const vb = 100;
+  const radius = (vb - stroke * 2) / 2;
+  const c = vb / 2;
+  const circumference = 2 * Math.PI * radius;
+  const dash = score == null ? 0 : (pct / 100) * circumference;
+  const color = scoreColor(score);
+  const isHero = sizePx >= 120;
+
+  return (
+    <div
+      className={cn("relative shrink-0", className)}
+      style={{ width: sizePx, height: sizePx }}
+    >
+      <svg
+        className="absolute inset-0 h-full w-full -rotate-90"
+        viewBox={`0 0 ${vb} ${vb}`}
+        width={sizePx}
+        height={sizePx}
+        aria-hidden
+      >
+        <circle
+          cx={c}
+          cy={c}
+          r={radius}
+          fill="none"
+          stroke="rgba(255,255,255,0.14)"
+          strokeWidth={stroke}
+        />
+        <circle
+          cx={c}
+          cy={c}
+          r={radius}
+          fill="none"
+          stroke={color}
+          strokeWidth={stroke}
+          strokeLinecap="round"
+          strokeDasharray={`${dash} ${circumference}`}
+          style={{ transition: "stroke-dasharray 1s ease-out" }}
+        />
+      </svg>
+      <div className="absolute inset-0 flex items-center justify-center">
+        <div className="flex items-baseline justify-center gap-0.5 leading-none">
+          <span
+            className={cn(
+              "font-black tabular-nums tracking-tight",
+              isHero ? "text-[2.15rem]" : "text-[11px]",
+              scoreTone(score)
+            )}
+          >
+            {score ?? "—"}
+          </span>
+          {score != null ? (
+            <span
+              className={cn(
+                "font-bold",
+                isHero ? "text-sm text-white/70" : "text-[8px] text-white/75"
+              )}
+            >
+              %
+            </span>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function HealthRing({
@@ -66,68 +153,18 @@ function HealthRing({
   score: number | null;
   onClick?: () => void;
 }) {
-  const pct = Math.max(0, Math.min(100, score ?? 0));
-  // Geometry stays fully inside the square viewBox (no clip / oval look).
-  const size = 100;
-  const stroke = 8;
-  const radius = 40; // outer edge = 44, well inside 50
-  const circumference = 2 * Math.PI * radius;
-  const offset = circumference - (pct / 100) * circumference;
-  const color =
-    score == null ? "#94a3b8" : pct >= 90 ? "#10b981" : pct >= 70 ? "#f59e0b" : "#f43f5e";
-
   return (
     <button
       type="button"
       onClick={onClick}
-      className="group relative mx-auto flex h-40 w-40 shrink-0 items-center justify-center overflow-visible rounded-full outline-none transition hover:scale-[1.02] focus-visible:ring-2 focus-visible:ring-indigo-400/60"
+      className="group relative mx-auto flex h-44 w-44 shrink-0 items-center justify-center rounded-full outline-none transition hover:scale-[1.02] focus-visible:ring-2 focus-visible:ring-indigo-400/60"
       title="Click to see how this score is calculated"
       aria-label="Overall plant health score — click for calculation basis"
     >
-      <svg
-        className="pointer-events-none absolute inset-0 h-full w-full -rotate-90 overflow-visible"
-        viewBox={`0 0 ${size} ${size}`}
-        aria-hidden
-      >
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke="rgb(255 255 255 / 0.12)"
-          strokeWidth={stroke}
-        />
-        <motion.circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke={color}
-          strokeWidth={stroke}
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          initial={{ strokeDashoffset: circumference }}
-          animate={{ strokeDashoffset: score == null ? circumference : offset }}
-          transition={{ duration: 1.2, ease: "easeOut" }}
-          style={{ filter: `drop-shadow(0 0 8px ${color}66)` }}
-        />
-      </svg>
-      <div className="relative z-10 flex flex-col items-center justify-center leading-none">
-        <span
-          className={cn(
-            "text-[2.35rem] font-black tabular-nums tracking-tight",
-            scoreTone(score)
-          )}
-        >
-          {score ?? "—"}
-        </span>
-        {score != null && (
-          <span className="mt-1 text-[11px] font-semibold text-white/55">%</span>
-        )}
-        <span className="mt-1.5 inline-flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wider text-white/35 opacity-0 transition group-hover:opacity-100">
-          <Info className="h-2.5 w-2.5" /> How
-        </span>
-      </div>
+      <ScoreRing score={score} sizePx={176} stroke={9} />
+      <span className="pointer-events-none absolute bottom-3 inline-flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wider text-white/45 opacity-0 transition group-hover:opacity-100">
+        <Info className="h-2.5 w-2.5" /> How
+      </span>
     </button>
   );
 }
@@ -164,7 +201,7 @@ function DepartmentCard({
           </div>
           <div
             className={cn(
-              "flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-sm font-black tabular-nums ring-2",
+              "flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-[11px] font-black leading-none tabular-nums ring-2",
               score == null
                 ? "bg-slate-200 text-slate-500 ring-slate-300/80"
                 : score >= 90
@@ -480,7 +517,7 @@ export function PlantCommandCenter({
             </p>
             <h2 className="mt-1 text-3xl font-bold tracking-tight sm:text-4xl">{unitName}</h2>
             <p className="mt-2 max-w-lg text-sm text-slate-400">{profile.tagline}</p>
-            <p className="mt-1 text-[11px] text-white/35">
+            <p className="mt-1 text-[11px] text-white/55">
               Tap the ring or any score below to see the calculation basis.
             </p>
             {!hasKpiData && employeeCount > 0 && (
@@ -489,10 +526,17 @@ export function PlantCommandCenter({
                 spotlight metrics.
               </p>
             )}
-            <div className="mt-5 grid grid-cols-3 gap-3 sm:max-w-md">
+            <div className="mt-5 grid grid-cols-3 gap-3 sm:max-w-lg">
               <ScorePill
                 label="Plant"
                 value={report?.plantKpis.overallScore}
+                hint={
+                  report?.plantKpis.scoreSource === "departments"
+                    ? "From depts"
+                    : report?.plantKpis.scoreSource === "employees"
+                      ? "From employees"
+                      : undefined
+                }
                 onClick={() => openScore("plant")}
               />
               <ScorePill
@@ -595,38 +639,30 @@ export function PlantCommandCenter({
 function ScorePill({
   label,
   value,
+  hint,
   onClick,
 }: {
   label: string;
   value: number | null | undefined;
+  hint?: string;
   onClick?: () => void;
 }) {
   const score = value ?? null;
-  const fill =
-    score == null
-      ? "bg-white/10 text-white/50 ring-white/15"
-      : score >= 90
-        ? "bg-emerald-500 text-white ring-emerald-300/40"
-        : score >= 70
-          ? "bg-amber-500 text-white ring-amber-300/40"
-          : "bg-rose-500 text-white ring-rose-300/40";
 
   return (
     <button
       type="button"
       onClick={onClick}
-      className="flex items-center gap-3 rounded-xl bg-white/5 px-3 py-2.5 text-left ring-1 ring-white/10 backdrop-blur-sm transition hover:bg-white/10 hover:ring-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60"
+      className="flex min-h-[3.25rem] items-center gap-2.5 rounded-xl bg-white/5 px-2.5 py-2 text-left ring-1 ring-white/10 backdrop-blur-sm transition hover:bg-white/10 hover:ring-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60"
       title={`Click to see how ${label} score is calculated`}
     >
-      <span
-        className={cn(
-          "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-bold tabular-nums ring-2",
-          fill
-        )}
-      >
-        {score != null ? `${score}%` : "—"}
-      </span>
-      <p className="text-[10px] uppercase tracking-wide text-white/40">{label}</p>
+      <ScoreRing score={score} sizePx={44} stroke={5} />
+      <div className="min-w-0">
+        <p className="text-[10px] font-bold uppercase tracking-wide text-white/70">{label}</p>
+        {hint ? (
+          <p className="truncate text-[9px] font-medium text-amber-200/80">{hint}</p>
+        ) : null}
+      </div>
     </button>
   );
 }
