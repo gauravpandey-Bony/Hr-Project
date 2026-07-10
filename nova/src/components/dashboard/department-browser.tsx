@@ -172,14 +172,16 @@ export function DepartmentBrowser() {
           _count?: { employees?: number };
         }>;
         setDepartments(
-          raw.map((d) => ({
-            id: d.id,
-            name: d.name,
-            headName: d.headName,
-            location: d.location,
-            employeeCount: d._count?.employees ?? 0,
-            departmentIds: [d.id],
-          }))
+          raw
+            .filter((d) => !/\(archived\b/i.test(d.name))
+            .map((d) => ({
+              id: d.id,
+              name: d.name,
+              headName: d.headName,
+              location: d.location,
+              employeeCount: d._count?.employees ?? 0,
+              departmentIds: [d.id],
+            }))
         );
       }
     } finally {

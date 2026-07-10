@@ -43,7 +43,11 @@ export async function GET(request: Request) {
   const locationWhere = await employeeCountWhere(unitSlug, user.organizationId);
 
   const departments = await db.departmentMaster.findMany({
-    where: { organizationId: user.organizationId, isActive: true },
+    where: {
+      organizationId: user.organizationId,
+      isActive: true,
+      NOT: { name: { contains: "(archived" } },
+    },
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     include: {
       _count: {

@@ -62,6 +62,11 @@ function isMdOfficeAlias(raw: string): boolean {
   return compact === "mdo" || compact === "md office" || /^md\s+office$/.test(compact);
 }
 
+/** Soft-deleted / merged department rows keep a renamed marker — never show in UI. */
+export function isArchivedDepartmentName(name: string | null | undefined): boolean {
+  return /\(archived\b/i.test(name?.trim() ?? "");
+}
+
 /** UI label for department tabs and headers */
 export function formatDepartmentDisplayName(name: string): string {
   const normalized = normalizeDepartmentMasterName(name);
@@ -676,6 +681,7 @@ export function groupDepartmentMasterRowsForBrowser(
 
   for (const row of rows) {
     if (!row.name?.trim()) continue;
+    if (isArchivedDepartmentName(row.name)) continue;
     const key = departmentNameKey(row.name);
     const existing = groups.get(key);
     if (existing) {

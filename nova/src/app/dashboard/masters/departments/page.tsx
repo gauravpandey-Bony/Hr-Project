@@ -11,6 +11,7 @@ import { DepartmentMasterClient } from "@/components/masters/department-master-c
 import {
   departmentsAreEquivalent,
   formatDepartmentDisplayName,
+  isArchivedDepartmentName,
   staffedDepartmentNamesFromEmployees,
 } from "@/lib/masters/department-master-sync";
 import { filterRealKraEmployees } from "@/lib/masters/logistics-kra-junk";
@@ -33,8 +34,11 @@ export default async function DepartmentMasterPage({
 
   const departments = await db.departmentMaster.findMany({
     where: workspace.dataScope
-      ? departmentMasterWhereForPlant(user.organizationId, workspace.dataScope)
-      : { organizationId: user.organizationId },
+      ? {
+          ...departmentMasterWhereForPlant(user.organizationId, workspace.dataScope),
+          isActive: true,
+        }
+      : { organizationId: user.organizationId, isActive: true },
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
   });
 
@@ -83,8 +87,9 @@ export default async function DepartmentMasterPage({
 
   const departmentsWithEmployees = departments.filter(
     (d) =>
-      staffedDeptIds.has(d.id) ||
-      [...staffedDeptNames].some((name) => departmentsAreEquivalent(name, d.name))
+      !isArchivedDepartmentName(d.name) &&
+      (staffedDeptIds.has(d.id) ||
+        [...staffedDeptNames].some((name) => departmentsAreEquivalent(name, d.name)))
   );
 
   return (
