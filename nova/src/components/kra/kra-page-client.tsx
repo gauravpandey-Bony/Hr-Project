@@ -120,14 +120,16 @@ export function KraPageClient({
   const isEmployeeRole = userRole === "EMPLOYEE";
   const isManagerRole = userRole === "MANAGER";
 
-  // Admins/managers see every department sheet for the unit (even with 0 staff).
-  // Employees only see departments they belong to.
+  // Managers only see departments where they have team members (or their own dept).
   const visibleSheets = useMemo(() => {
-    if (!isEmployeeRole) return sheets;
-    return sheets.filter(
-      (s) => employeesForDepartment(employeesByDepartment, s.department).length > 0
-    );
-  }, [sheets, employeesByDepartment, isEmployeeRole]);
+    if (isAdmin) return sheets;
+    if (isManagerRole || isEmployeeRole) {
+      return sheets.filter(
+        (s) => employeesForDepartment(employeesByDepartment, s.department).length > 0
+      );
+    }
+    return sheets;
+  }, [sheets, employeesByDepartment, isAdmin, isManagerRole, isEmployeeRole]);
 
   const sheet =
     visibleSheets.find((s) => s.id === activeSheet) ??
@@ -140,14 +142,9 @@ export function KraPageClient({
     ? employeesForDepartment(employeesByDepartment, sheet.department)
     : EMPTY_EMPLOYEES;
 
-  const deptEmployees = useMemo(() => {
-    if (isAdmin || !isManagerRole || !viewerName?.trim()) return deptEmployeesRaw;
-    return deptEmployeesRaw.filter(
-      (e) =>
-        personNamesMatch(e.managerName ?? "", viewerName) ||
-        personNamesMatch(e.name, viewerName)
-    );
-  }, [deptEmployeesRaw, isAdmin, isManagerRole, viewerName]);
+  // Server already scopes managers to direct reports + self (org-wide).
+  // Do not re-filter here — plant/name variants would drop valid reports.
+  const deptEmployees = deptEmployeesRaw;
 
   useEffect(() => {
     if (!initialEmployeeId) return;
@@ -163,11 +160,11 @@ export function KraPageClient({
   }, [initialEmployeeId, employeesByDepartment, sheets]);
 
   useEffect(() => {
-    if (isEmployeeRole && visibleSheets.length > 0 && !initialEmployeeId) {
+    if ((isEmployeeRole || isManagerRole) && visibleSheets.length > 0 && !initialEmployeeId) {
       const deptWithEmployee = visibleSheets[0];
       if (deptWithEmployee) setActiveSheet(deptWithEmployee.id);
     }
-  }, [isEmployeeRole, visibleSheets, initialEmployeeId]);
+  }, [isEmployeeRole, isManagerRole, visibleSheets, initialEmployeeId]);
 
   useEffect(() => {
     if (visibleSheets.length === 0) return;
@@ -285,10 +282,8 @@ export function KraPageClient({
 
   const managerCanFillEmployee =
     isManagerRole &&
-    activeEmployee &&
-    viewerName &&
-    (personNamesMatch(activeEmployee.managerName ?? "", viewerName) ||
-      personNamesMatch(activeEmployee.name, viewerName));
+    Boolean(activeEmployee) &&
+    deptEmployees.some((e) => e.id === activeEmployee!.id);
 
   const showFillSection =
     activeEmployee &&
@@ -310,7 +305,7 @@ export function KraPageClient({
             {unitName ? `${unitName} — ` : ""}
             {isEmployeeRole
               ? "View your KRA sheet — enter achieved values for each quarter"
-              : "Select department → team dashboard → employee for Q1–Q4 report & fill-up"}
+              : "Select department → employee → fill Q1–Q4 achieved (same as employee fill). Admins can also edit targets."}
           </p>
           {isAdmin && (
             <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -424,10 +419,19 @@ export function KraPageClient({
 
           {showFillSection && (
             <div className="space-y-2">
-              <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                <Users className="h-3.5 w-3.5" />
-                KRA fill-up — {isAdmin || managerCanFillEmployee ? "Admin / Reporting Manager" : "Your entries"}
-              </p>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  <Users className="h-3.5 w-3.5" />
+                  {isAdmin || managerCanFillEmployee
+                    ? `Fill KPI on behalf of ${activeEmployee.name}`
+                    : "Fill your KPI — enter Q1–Q4 achieved"}
+                </p>
+                {(isAdmin || managerCanFillEmployee) && (
+                  <p className="rounded-full border border-amber-300/60 bg-amber-50 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800">
+                    Admin / Manager fill
+                  </p>
+                )}
+              </div>
               <LogisticKraSheetEditable
                 employee={activeEmployee}
                 kpis={kpis}

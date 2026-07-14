@@ -1,6 +1,16 @@
 import type { EmployeeMaster, Kpi, Prisma, User } from "@prisma/client";
 import { db } from "@/lib/db";
-import { normalizePersonName, personNameVariants, personNamesMatch } from "@/lib/person-name";
+import {
+  managerNamesMatch,
+  normalizePersonName,
+  personNameVariants,
+  personNamesMatch,
+} from "@/lib/person-name";
+
+type TeamScopeUser = Pick<
+  User,
+  "id" | "name" | "role" | "organizationId" | "department"
+>;
 
 export function canEmployeeEditKpiAchieved(
   user: User,
@@ -16,18 +26,22 @@ export function canEditKpiTargets(user: User): boolean {
   return user.role === "ADMIN" || user.role === "MANAGER";
 }
 
+/** Who may update a KPI, and which fields they can change. */
 export async function canUpdateKpi(
   user: User,
   kpi: Pick<Kpi, "ownerId" | "ownerName" | "department" | "kpiLevel">
-): Promise<"targets" | "achieved" | null> {
-  if (user.role === "ADMIN") return "targets";
+): Promise<"targets" | "achieved" | "both" | null> {
+  // Admin can fill targets and achieved (on behalf of any employee)
+  if (user.role === "ADMIN") return "both";
+  // Employee fills own achieved values only
   if (canEmployeeEditKpiAchieved(user, kpi)) return "achieved";
-  if (user.role === "MANAGER" && (await canManageKpi(user, kpi))) return "targets";
+  // Manager fills targets + achieved for self / direct reports
+  if (user.role === "MANAGER" && (await canManageKpi(user, kpi))) return "both";
   return null;
 }
 
 export async function canViewEmployeeMaster(
-  user: User,
+  user: TeamScopeUser,
   employeeId: string
 ): Promise<boolean> {
   if (user.role === "ADMIN") return true;
@@ -39,8 +53,8 @@ export async function canViewEmployeeMaster(
     return Boolean(self && personNamesMatch(self.name, user.name));
   }
   if (user.role === "MANAGER") {
-    const team = await getManagedEmployees(user);
-    return team.some((e) => e.id === employeeId);
+    const viewable = await getViewableEmployees(user);
+    return viewable.some((e) => e.id === employeeId);
   }
   return false;
 }
@@ -53,7 +67,7 @@ export const IT_TEAM_META = {
 } as const;
 
 /** Employees this manager can manage — direct reports via reporting manager name */
-export async function getManagedEmployees(user: User) {
+export async function getManagedEmployees(user: TeamScopeUser) {
   if (user.role === "ADMIN") {
     return db.employeeMaster.findMany({
       where: { organizationId: user.organizationId, isActive: true },
@@ -68,16 +82,32 @@ export async function getManagedEmployees(user: User) {
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
   });
 
-  const managerKey = normalizePersonName(user.name);
-
   return all.filter((e) => {
     if (personNamesMatch(e.name, user.name)) return false;
-    if (e.managerName && personNamesMatch(e.managerName, user.name)) return true;
-    if (e.managerName && normalizePersonName(e.managerName).includes(managerKey)) {
-      return true;
-    }
-    return false;
+    if (!e.managerName?.trim()) return false;
+    return managerNamesMatch(e.managerName, user.name);
   });
+}
+
+/**
+ * Employees a manager may view in reports / Maya: direct reports + self.
+ * Admins get all active employees.
+ */
+export async function getViewableEmployees(
+  user: TeamScopeUser
+): Promise<EmployeeMaster[]> {
+  if (user.role === "ADMIN") {
+    return getManagedEmployees(user);
+  }
+  if (user.role !== "MANAGER") return [];
+
+  const team = await getManagedEmployees(user);
+  const all = await db.employeeMaster.findMany({
+    where: { organizationId: user.organizationId, isActive: true },
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+  });
+  const self = all.filter((e) => personNamesMatch(e.name, user.name));
+  return dedupeTeamMembers([...team, ...self]);
 }
 
 export async function kpiWhereForManager(user: User): Promise<Prisma.KpiWhereInput> {
@@ -111,9 +141,13 @@ export async function canManageKpi(user: User, kpi: Pick<Kpi, "ownerId" | "owner
   return team.some((e) => personNamesMatch(kpi.ownerName!, e.name));
 }
 
-export async function canViewEmployeeReport(user: User, employeeName: string) {
+export async function canViewEmployeeReport(
+  user: TeamScopeUser,
+  employeeName: string
+) {
   if (user.role === "ADMIN") return true;
   if (user.role !== "MANAGER") return false;
+  if (personNamesMatch(employeeName, user.name)) return true;
   const team = await getManagedEmployees(user);
   return team.some((e) => personNamesMatch(e.name, employeeName));
 }
@@ -129,7 +163,7 @@ export function dedupeTeamMembers(team: EmployeeMaster[]): EmployeeMaster[] {
     }
     if (!prev.ecn?.trim() && e.ecn?.trim()) byKey.set(key, e);
   }
-  return [...byKey.values()];
+  return Array.from(byKey.values());
 }
 
 export function displayTeamForUser(user: User, team: EmployeeMaster[]): EmployeeMaster[] {

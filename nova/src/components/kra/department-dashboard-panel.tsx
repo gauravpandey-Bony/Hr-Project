@@ -180,6 +180,7 @@ export function DepartmentDashboardPanel({
               <th className="px-4 py-3">Q3</th>
               <th className="px-4 py-3">Q4</th>
               <th className="px-4 py-3">{quarter.toUpperCase()}</th>
+              <th className="px-4 py-3">Action</th>
             </tr>
           </thead>
           <tbody>
@@ -210,7 +211,12 @@ export function DepartmentDashboardPanel({
                   >
                     {member.activeQuarterScore != null
                       ? `${member.activeQuarterScore}%`
-                      : "Pending"}
+                      : "—"}
+                  </span>
+                </td>
+                <td className="px-4 py-3">
+                  <span className="inline-flex rounded-lg border border-primary/30 bg-primary/5 px-2.5 py-1 text-xs font-semibold text-primary">
+                    Fill KPI
                   </span>
                 </td>
               </tr>

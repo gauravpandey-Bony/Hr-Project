@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import {
+  mergeKpiWhere,
   mergeKpiWhereForWorkspace,
   employeeMasterWhereForUser,
 } from "@/lib/access-control";
@@ -26,8 +27,7 @@ import {
   formatDepartmentDisplayName,
 } from "@/lib/masters/department-master-sync";
 import type { UserRole } from "@prisma/client";
-import { getManagedEmployees } from "@/lib/team-scope";
-import { personNamesMatch } from "@/lib/person-name";
+import { getViewableEmployees } from "@/lib/team-scope";
 
 export const dynamic = "force-dynamic";
 
@@ -110,7 +110,16 @@ export default async function KraPage({
         managerName: true,
       },
     });
-    if (row) focusEmployee = toKraEmployeeRow(row);
+    if (row) {
+      if (user.role === "MANAGER") {
+        const { canViewEmployeeMaster } = await import("@/lib/team-scope");
+        if (await canViewEmployeeMaster(user, row.id)) {
+          focusEmployee = toKraEmployeeRow(row);
+        }
+      } else {
+        focusEmployee = toKraEmployeeRow(row);
+      }
+    }
   }
 
   let workspace = await resolveWorkspace(user, unitId);
@@ -132,21 +141,34 @@ export default async function KraPage({
     requireAdminWorkspace(user, workspace);
   }
 
-  const employeeScope = workspace.dataScope
-    ? employeeMasterWhereForPlant(user.organizationId, workspace.dataScope)
-    : { organizationId: user.organizationId };
+  const isManager = user.role === "MANAGER";
+
+  // Managers see their full direct-report team across plants — plant scope
+  // would hide reports sitting at Corporate / other units (e.g. Bhupesh IT).
+  const employeeScope = isManager
+    ? { organizationId: user.organizationId }
+    : workspace.dataScope
+      ? employeeMasterWhereForPlant(user.organizationId, workspace.dataScope)
+      : { organizationId: user.organizationId };
+
+  const kpiWhere = isManager
+    ? await mergeKpiWhere(user, {})
+    : await mergeKpiWhereForWorkspace(user, workspace.dataScope, {});
 
   const [kpis, sheetsRaw, employeesByDepartmentRaw, company] = await Promise.all([
     db.kpi.findMany({
-      where: await mergeKpiWhereForWorkspace(user, workspace.dataScope, {}),
+      where: kpiWhere,
       include: { entries: { orderBy: { recordedAt: "desc" }, take: 12 } },
       orderBy: [{ kpiLevel: "asc" }, { weightage: "desc" }],
     }),
-    fetchKraSheets(user.organizationId, workspace.dataScope),
+    fetchKraSheets(
+      user.organizationId,
+      isManager ? null : workspace.dataScope
+    ),
     fetchKraEmployeesByDepartment(
       user.organizationId,
       employeeScope,
-      workspace.dataScope
+      isManager ? null : workspace.dataScope
     ),
     getCompanyContext(user.organizationId),
   ]);
@@ -165,18 +187,39 @@ export default async function KraPage({
         emps.filter((e) => allowedIds.has(e.id)),
       ])
     );
-  } else if (user.role === "MANAGER") {
-    const team = await getManagedEmployees(user);
-    const allowedIds = new Set(team.map((e) => e.id));
-    employeesByDepartment = Object.fromEntries(
-      Object.entries(employeesByDepartmentRaw).map(([dept, emps]) => [
-        dept,
-        emps.filter(
-          (e) =>
-            allowedIds.has(e.id) || personNamesMatch(e.name, user.name)
-        ),
-      ])
-    );
+  } else if (isManager) {
+    const viewable = await getViewableEmployees(user);
+    // Rebuild from viewable team + self — never rely on plant-scoped raw list.
+    employeesByDepartment = {};
+    for (const emp of viewable) {
+      employeesByDepartment = injectEmployee(
+        employeesByDepartment,
+        toKraEmployeeRow(emp)
+      );
+    }
+
+    // Ensure a sheet exists for every department on the manager's team.
+    for (const dept of Object.keys(employeesByDepartment)) {
+      const hasSheet = sheets.some((s) =>
+        departmentsAreEquivalent(s.department, dept)
+      );
+      if (!hasSheet) {
+        sheets = [
+          ...sheets,
+          {
+            id: slugDept(dept),
+            label: dept,
+            department: dept,
+            meta: {
+              kpiLevel: "INDIVIDUAL",
+              department: dept,
+              category: dept,
+              showPerspective: true,
+            },
+          },
+        ];
+      }
+    }
   }
 
   if (focusEmployee) {
@@ -207,7 +250,6 @@ export default async function KraPage({
 
   const isAdmin = user.role === "ADMIN";
   const isEmployee = user.role === "EMPLOYEE";
-  const isManager = user.role === "MANAGER";
 
   return (
     <KraPageClient
@@ -219,7 +261,7 @@ export default async function KraPage({
       userRole={user.role as UserRole}
       viewerName={user.name}
       canEditTargets={isAdmin || isManager}
-      canEditAchieved={isEmployee}
+      canEditAchieved={isEmployee || isAdmin || isManager}
       canFillKra={isAdmin || isManager}
       plantUnit={workspace.plantUnitKey ?? "Bony Polymers"}
       unitName={workspace.unit?.name}

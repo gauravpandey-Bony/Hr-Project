@@ -44,6 +44,29 @@ export function mergeTargetsQuarterJson(
   });
 }
 
+/** Admin / manager: update targets and achieved together. */
+export function mergeFullQuarterJson(
+  existingRaw: string | null,
+  incomingRaw: string
+): string {
+  const existing = parseFull(existingRaw);
+  const incoming = parseFull(incomingRaw);
+  const keys = ["q1", "q2", "q3", "q4"] as const;
+
+  for (const q of keys) {
+    existing[q] = {
+      target: incoming[q]?.target ?? existing[q].target ?? "",
+      achieved: incoming[q]?.achieved ?? existing[q].achieved ?? "",
+    };
+  }
+
+  return JSON.stringify({
+    ...existing,
+    annualTarget: incoming.annualTarget ?? existing.annualTarget ?? "",
+    lastYearAchieved: incoming.lastYearAchieved ?? existing.lastYearAchieved ?? "",
+  });
+}
+
 /** Employee: update achieved only; preserve targets. */
 export function mergeAchievedQuarterJson(
   existingRaw: string | null,

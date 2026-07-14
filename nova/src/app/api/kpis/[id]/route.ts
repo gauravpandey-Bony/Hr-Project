@@ -7,6 +7,7 @@ import { canManageKpi, canUpdateKpi } from "@/lib/team-scope";
 import { syncKpiEntryFromQuarters } from "@/lib/kpi-quarters";
 import {
   mergeAchievedQuarterJson,
+  mergeFullQuarterJson,
   mergeTargetsQuarterJson,
 } from "@/lib/kra/quarter-merge";
 
@@ -71,12 +72,13 @@ export async function PATCH(
     return NextResponse.json(kpi);
   }
 
+  // Admin / manager: can update targets and achieved (and other KPI fields)
   const data: z.infer<typeof updateSchema> = { ...body };
   if (body.quarterTargets !== undefined) {
-    data.quarterTargets = mergeTargetsQuarterJson(
-      existing.quarterTargets,
-      body.quarterTargets
-    );
+    data.quarterTargets =
+      updateScope === "both"
+        ? mergeFullQuarterJson(existing.quarterTargets, body.quarterTargets)
+        : mergeTargetsQuarterJson(existing.quarterTargets, body.quarterTargets);
   }
 
   const kpi = await db.kpi.update({
