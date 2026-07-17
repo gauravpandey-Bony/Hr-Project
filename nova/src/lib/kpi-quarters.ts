@@ -9,11 +9,18 @@ import {
 import { emptyQuarterTargets } from "@/lib/kra-sheets";
 import type { KpiDirection } from "@prisma/client";
 
+export type QuarterCell = {
+  target: string;
+  achieved?: string;
+  /** Reporting manager entry — not used for employee scoring */
+  managerAchieved?: string;
+};
+
 export type QuarterData = {
-  q1: { target: string; achieved?: string };
-  q2: { target: string; achieved?: string };
-  q3: { target: string; achieved?: string };
-  q4: { target: string; achieved?: string };
+  q1: QuarterCell;
+  q2: QuarterCell;
+  q3: QuarterCell;
+  q4: QuarterCell;
 };
 
 export const KRA_QUARTER_SYNC_NOTE = "kra-quarter-sync";
@@ -33,10 +40,26 @@ export function parseQuarterTargets(raw: string | null | undefined): QuarterData
   try {
     const parsed = JSON.parse(raw) as QuarterData & { annualTarget?: string };
     return {
-      q1: parsed.q1 ?? { target: "", achieved: "" },
-      q2: parsed.q2 ?? { target: "", achieved: "" },
-      q3: parsed.q3 ?? { target: "", achieved: "" },
-      q4: parsed.q4 ?? { target: "", achieved: "" },
+      q1: {
+        target: parsed.q1?.target ?? "",
+        achieved: parsed.q1?.achieved ?? "",
+        managerAchieved: parsed.q1?.managerAchieved ?? "",
+      },
+      q2: {
+        target: parsed.q2?.target ?? "",
+        achieved: parsed.q2?.achieved ?? "",
+        managerAchieved: parsed.q2?.managerAchieved ?? "",
+      },
+      q3: {
+        target: parsed.q3?.target ?? "",
+        achieved: parsed.q3?.achieved ?? "",
+        managerAchieved: parsed.q3?.managerAchieved ?? "",
+      },
+      q4: {
+        target: parsed.q4?.target ?? "",
+        achieved: parsed.q4?.achieved ?? "",
+        managerAchieved: parsed.q4?.managerAchieved ?? "",
+      },
     };
   } catch {
     return null;

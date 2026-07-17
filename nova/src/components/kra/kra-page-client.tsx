@@ -440,6 +440,7 @@ export function KraPageClient({
                 editAchieved={
                   canEditAchieved || isAdmin || Boolean(managerCanFillEmployee)
                 }
+                editManagerAchieved={isAdmin || Boolean(managerCanFillEmployee)}
               />
             </div>
           )}

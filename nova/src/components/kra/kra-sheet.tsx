@@ -61,16 +61,16 @@ export function KraSheetTable({
               <th className="px-3 py-2.5 font-semibold">KPI — Measure</th>
               <th className="px-3 py-2.5 font-semibold text-right">Wt %</th>
               <th className="border-l px-2 py-2.5 text-center font-semibold">Annual</th>
-              <th className="border-l px-2 py-2.5 text-center font-semibold" colSpan={2}>
+              <th className="border-l px-2 py-2.5 text-center font-semibold" colSpan={3}>
                 Q1
               </th>
-              <th className="border-l px-2 py-2.5 text-center font-semibold" colSpan={2}>
+              <th className="border-l px-2 py-2.5 text-center font-semibold" colSpan={3}>
                 Q2
               </th>
-              <th className="border-l px-2 py-2.5 text-center font-semibold" colSpan={2}>
+              <th className="border-l px-2 py-2.5 text-center font-semibold" colSpan={3}>
                 Q3
               </th>
-              <th className="border-l px-2 py-2.5 text-center font-semibold" colSpan={2}>
+              <th className="border-l px-2 py-2.5 text-center font-semibold" colSpan={3}>
                 Q4
               </th>
               <th className="border-l px-3 py-2.5 font-semibold">Status</th>
@@ -80,12 +80,16 @@ export function KraSheetTable({
               <th className="border-l px-2 py-1 text-center">Target</th>
               <th className="border-l px-2 py-1">Target</th>
               <th className="px-2 py-1">Achieved</th>
+              <th className="px-2 py-1">Mgr</th>
               <th className="border-l px-2 py-1">Target</th>
               <th className="px-2 py-1">Achieved</th>
+              <th className="px-2 py-1">Mgr</th>
               <th className="border-l px-2 py-1">Target</th>
               <th className="px-2 py-1">Achieved</th>
+              <th className="px-2 py-1">Mgr</th>
               <th className="border-l px-2 py-1">Target</th>
               <th className="px-2 py-1">Achieved</th>
+              <th className="px-2 py-1">Mgr</th>
               <th className="border-l" />
             </tr>
           </thead>
@@ -127,6 +131,9 @@ export function KraSheetTable({
                       </td>
                       <td className="px-2 py-2.5 text-center text-slate-500">
                         {quarters?.[q]?.achieved || (q === "q1" ? String(current || "—") : "—")}
+                      </td>
+                      <td className="px-2 py-2.5 text-center text-amber-800/80">
+                        {quarters?.[q]?.managerAchieved || "—"}
                       </td>
                     </Fragment>
                   ))}

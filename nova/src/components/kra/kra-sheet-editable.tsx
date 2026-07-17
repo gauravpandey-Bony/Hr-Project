@@ -16,10 +16,10 @@ import { COMPANY } from "@/lib/company";
 type KpiWithEntries = Kpi & { entries: KpiEntry[] };
 
 type QuarterData = {
-  q1: { target: string; achieved?: string };
-  q2: { target: string; achieved?: string };
-  q3: { target: string; achieved?: string };
-  q4: { target: string; achieved?: string };
+  q1: { target: string; achieved?: string; managerAchieved?: string };
+  q2: { target: string; achieved?: string; managerAchieved?: string };
+  q3: { target: string; achieved?: string; managerAchieved?: string };
+  q4: { target: string; achieved?: string; managerAchieved?: string };
 };
 
 const QUARTERS = ["q1", "q2", "q3", "q4"] as const;
@@ -135,7 +135,7 @@ export function KraSheetEditable({
   function updateQuarter(
     id: string,
     q: keyof QuarterData,
-    field: "target" | "achieved",
+    field: "target" | "achieved" | "managerAchieved",
     value: string
   ) {
     setDrafts((prev) => ({
@@ -424,6 +424,23 @@ export function KraSheetEditable({
                             value={d.quarters[q].achieved ?? ""}
                             onChange={(e) =>
                               updateQuarter(kpi.id, q, "achieved", e.target.value)
+                            }
+                          />
+                        </div>
+                        <div>
+                          <FieldLabel>Manager Achieved</FieldLabel>
+                          <textarea
+                            rows={2}
+                            className={cn(inputBase, "border-amber-300/80")}
+                            value={d.quarters[q].managerAchieved ?? ""}
+                            onChange={(e) =>
+                              updateQuarter(kpi.id, q, "managerAchieved", e.target.value)
+                            }
+                            disabled={!editable}
+                            title={
+                              editable
+                                ? "Reporting manager / admin entry"
+                                : "Only reporting manager can fill"
                             }
                           />
                         </div>

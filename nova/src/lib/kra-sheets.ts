@@ -33,10 +33,10 @@ export function kpisForSheet(
 
 export const emptyQuarterTargets = () =>
   JSON.stringify({
-    q1: { target: "", achieved: "" },
-    q2: { target: "", achieved: "" },
-    q3: { target: "", achieved: "" },
-    q4: { target: "", achieved: "" },
+    q1: { target: "", achieved: "", managerAchieved: "" },
+    q2: { target: "", achieved: "", managerAchieved: "" },
+    q3: { target: "", achieved: "", managerAchieved: "" },
+    q4: { target: "", achieved: "", managerAchieved: "" },
   });
 
 export function sheetMetaForDepartment(

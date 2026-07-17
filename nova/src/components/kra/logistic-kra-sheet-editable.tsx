@@ -10,21 +10,23 @@ import { toast } from "sonner";
 
 type KpiWithEntries = Kpi & { entries: KpiEntry[] };
 
+type QuarterSide = "target" | "achieved" | "managerAchieved";
+
 type QuarterData = {
   annualTarget?: string;
   lastYearAchieved?: string;
-  q1: { target: string; achieved?: string };
-  q2: { target: string; achieved?: string };
-  q3: { target: string; achieved?: string };
-  q4: { target: string; achieved?: string };
+  q1: { target: string; achieved?: string; managerAchieved?: string };
+  q2: { target: string; achieved?: string; managerAchieved?: string };
+  q3: { target: string; achieved?: string; managerAchieved?: string };
+  q4: { target: string; achieved?: string; managerAchieved?: string };
 };
 
 function parseQuarters(raw: string | null): QuarterData {
   const empty = {
-    q1: { target: "", achieved: "" },
-    q2: { target: "", achieved: "" },
-    q3: { target: "", achieved: "" },
-    q4: { target: "", achieved: "" },
+    q1: { target: "", achieved: "", managerAchieved: "" },
+    q2: { target: "", achieved: "", managerAchieved: "" },
+    q3: { target: "", achieved: "", managerAchieved: "" },
+    q4: { target: "", achieved: "", managerAchieved: "" },
   };
   if (!raw) return empty;
   try {
@@ -59,6 +61,7 @@ function groupRows(kpis: KpiWithEntries[]) {
 const th =
   "border border-slate-300 bg-slate-100 px-2 py-1.5 text-[11px] font-semibold text-slate-700";
 const td = "border border-slate-300 px-2 py-1.5 text-[11px] text-slate-800 align-middle";
+const COL_COUNT = 19;
 
 function CellInput({
   value,
@@ -93,12 +96,15 @@ export function LogisticKraSheetEditable({
   departmentLabel = "Logistics",
   editTargets = false,
   editAchieved = false,
+  editManagerAchieved = false,
 }: {
   employee: KraEmployeeRow;
   kpis: KpiWithEntries[];
   departmentLabel?: string;
   editTargets?: boolean;
   editAchieved?: boolean;
+  /** Only reporting manager / admin */
+  editManagerAchieved?: boolean;
 }) {
   const [rows, setRows] = useState<Record<string, QuarterData>>({});
   const [saving, setSaving] = useState(false);
@@ -115,7 +121,7 @@ export function LogisticKraSheetEditable({
 
   const groups = useMemo(() => groupRows(initialKpis), [initialKpis]);
   const fiscalLabel = "2026-2027";
-  const canSave = dirty && (editTargets || editAchieved);
+  const canSave = dirty && (editTargets || editAchieved || editManagerAchieved);
 
   const updateCell = useCallback(
     (
@@ -123,7 +129,7 @@ export function LogisticKraSheetEditable({
       field:
         | "lastYearAchieved"
         | "annualTarget"
-        | { quarter: "q1" | "q2" | "q3" | "q4"; side: "target" | "achieved" },
+        | { quarter: "q1" | "q2" | "q3" | "q4"; side: QuarterSide },
       value: string
     ) => {
       setRows((prev) => {
@@ -169,15 +175,20 @@ export function LogisticKraSheetEditable({
     }
   };
 
+  const helpText = (() => {
+    const bits: string[] = [];
+    if (editTargets) bits.push("Target");
+    if (editAchieved) bits.push("Achieved");
+    if (editManagerAchieved) bits.push("Manager Achieved (RM only)");
+    if (bits.length === 0) return null;
+    return `Edit: ${bits.join(" · ")}`;
+  })();
+
   return (
     <div className="overflow-hidden rounded-lg border border-slate-300 bg-white shadow-sm">
-      {(editTargets || editAchieved) && (
+      {(editTargets || editAchieved || editManagerAchieved) && (
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-4 py-2">
-          <p className="text-xs text-slate-600">
-            {editTargets && !editAchieved && "Admin: edit Target columns only"}
-            {editAchieved && !editTargets && "Employee: edit Achieved columns only"}
-            {editTargets && editAchieved && "Edit targets and achieved"}
-          </p>
+          <p className="text-xs text-slate-600">{helpText}</p>
           {canSave && (
             <button
               type="button"
@@ -193,10 +204,13 @@ export function LogisticKraSheetEditable({
       )}
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[1100px] border-collapse text-left">
+        <table className="w-full min-w-[1280px] border-collapse text-left">
           <thead>
             <tr>
-              <th colSpan={15} className="border border-slate-300 bg-white px-3 py-2 text-center text-sm font-bold text-slate-900">
+              <th
+                colSpan={COL_COUNT}
+                className="border border-slate-300 bg-white px-3 py-2 text-center text-sm font-bold text-slate-900"
+              >
                 KRA/ KPI-{fiscalLabel} -{departmentLabel}
               </th>
             </tr>
@@ -214,7 +228,7 @@ export function LogisticKraSheetEditable({
               <th className="border border-slate-300 px-2 py-1 font-semibold text-slate-600">Department</th>
               <th className="border border-slate-300 px-2 py-1 text-slate-800">{employee.department ?? "—"}</th>
               <th className="border border-slate-300 px-2 py-1 font-semibold text-slate-600">DESIGNATION</th>
-              <th colSpan={5} className="border border-slate-300 px-2 py-1 text-slate-800">
+              <th colSpan={7} className="border border-slate-300 px-2 py-1 text-slate-800">
                 {employee.designation ?? "—"}
               </th>
             </tr>
@@ -225,30 +239,29 @@ export function LogisticKraSheetEditable({
               <th className={th}>Weightage (%)</th>
               <th className={cn(th, "min-w-[100px]")}>Last Year Achieved 2025-2026</th>
               <th className={cn(th, "min-w-[100px]")}>Current Year Target {fiscalLabel}</th>
-              <th className={cn(th, "text-center")} colSpan={2}>
+              <th className={cn(th, "text-center")} colSpan={3}>
                 Q1
               </th>
-              <th className={cn(th, "text-center")} colSpan={2}>
+              <th className={cn(th, "text-center")} colSpan={3}>
                 Q2
               </th>
-              <th className={cn(th, "text-center")} colSpan={2}>
+              <th className={cn(th, "text-center")} colSpan={3}>
                 Q3
               </th>
-              <th className={cn(th, "text-center")} colSpan={2}>
+              <th className={cn(th, "text-center")} colSpan={3}>
                 Q4
               </th>
               <th className={th}>SCORE</th>
             </tr>
             <tr>
               <th className={th} colSpan={6} />
-              <th className={cn(th, "text-center")}>Target</th>
-              <th className={cn(th, "text-center")}>Achieved</th>
-              <th className={cn(th, "text-center")}>Target</th>
-              <th className={cn(th, "text-center")}>Achieved</th>
-              <th className={cn(th, "text-center")}>Target</th>
-              <th className={cn(th, "text-center")}>Achieved</th>
-              <th className={cn(th, "text-center")}>Target</th>
-              <th className={cn(th, "text-center")}>Achieved</th>
+              {(["Q1", "Q2", "Q3", "Q4"] as const).map((q) => (
+                <Fragment key={q}>
+                  <th className={cn(th, "text-center")}>Target</th>
+                  <th className={cn(th, "text-center")}>Achieved</th>
+                  <th className={cn(th, "text-center text-amber-800")}>Manager Achieved</th>
+                </Fragment>
+              ))}
               <th className={th} />
             </tr>
           </thead>
@@ -299,8 +312,30 @@ export function LogisticKraSheetEditable({
                           <CellInput
                             value={q[key]?.achieved ?? ""}
                             editable={editAchieved}
-                            onChange={(v) => updateCell(kpi.id, { quarter: key, side: "achieved" }, v)}
+                            onChange={(v) =>
+                              updateCell(kpi.id, { quarter: key, side: "achieved" }, v)
+                            }
                             className={editAchieved ? "border-emerald-400 bg-white" : undefined}
+                          />
+                        </td>
+                        <td
+                          className={cn(
+                            td,
+                            "text-center",
+                            editManagerAchieved && "bg-amber-50/70"
+                          )}
+                        >
+                          <CellInput
+                            value={q[key]?.managerAchieved ?? ""}
+                            editable={editManagerAchieved}
+                            onChange={(v) =>
+                              updateCell(kpi.id, { quarter: key, side: "managerAchieved" }, v)
+                            }
+                            className={
+                              editManagerAchieved
+                                ? "border-amber-400 bg-white"
+                                : undefined
+                            }
                           />
                         </td>
                       </Fragment>
@@ -312,7 +347,7 @@ export function LogisticKraSheetEditable({
             )}
             {initialKpis.length === 0 && (
               <tr>
-                <td colSpan={15} className="px-4 py-10 text-center text-sm text-slate-500">
+                <td colSpan={COL_COUNT} className="px-4 py-10 text-center text-sm text-slate-500">
                   No KPI rows — upload Excel or add data.
                 </td>
               </tr>

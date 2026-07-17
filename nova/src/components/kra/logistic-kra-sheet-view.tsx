@@ -11,10 +11,10 @@ type KpiWithEntries = Kpi & { entries: KpiEntry[] };
 type QuarterData = {
   annualTarget?: string;
   lastYearAchieved?: string;
-  q1: { target: string; achieved?: string };
-  q2: { target: string; achieved?: string };
-  q3: { target: string; achieved?: string };
-  q4: { target: string; achieved?: string };
+  q1: { target: string; achieved?: string; managerAchieved?: string };
+  q2: { target: string; achieved?: string; managerAchieved?: string };
+  q3: { target: string; achieved?: string; managerAchieved?: string };
+  q4: { target: string; achieved?: string; managerAchieved?: string };
 };
 
 function parseQuarters(raw: string | null): QuarterData {
@@ -69,10 +69,10 @@ export function LogisticKraSheetView({
   return (
     <div className="overflow-hidden rounded-lg border border-slate-300 bg-white shadow-sm">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[1100px] border-collapse text-left">
+        <table className="w-full min-w-[1280px] border-collapse text-left">
           <thead>
             <tr>
-              <th colSpan={15} className="border border-slate-300 bg-white px-3 py-2 text-center text-sm font-bold text-slate-900">
+              <th colSpan={19} className="border border-slate-300 bg-white px-3 py-2 text-center text-sm font-bold text-slate-900">
                 KRA/ KPI-{fiscalLabel} -{departmentLabel}
               </th>
             </tr>
@@ -90,7 +90,7 @@ export function LogisticKraSheetView({
               <th className="border border-slate-300 px-2 py-1 font-semibold text-slate-600">Department</th>
               <th className="border border-slate-300 px-2 py-1 text-slate-800">{employee.department ?? "—"}</th>
               <th className="border border-slate-300 px-2 py-1 font-semibold text-slate-600">DESIGNATION</th>
-              <th colSpan={5} className="border border-slate-300 px-2 py-1 text-slate-800">
+              <th colSpan={7} className="border border-slate-300 px-2 py-1 text-slate-800">
                 {employee.designation ?? "—"}
               </th>
             </tr>
@@ -101,30 +101,29 @@ export function LogisticKraSheetView({
               <th className={th}>Weightage (%)</th>
               <th className={cn(th, "min-w-[100px]")}>Last Year Achieved 2025-2026</th>
               <th className={cn(th, "min-w-[100px]")}>Current Year Target {fiscalLabel}</th>
-              <th className={cn(th, "text-center")} colSpan={2}>
+              <th className={cn(th, "text-center")} colSpan={3}>
                 Q1
               </th>
-              <th className={cn(th, "text-center")} colSpan={2}>
+              <th className={cn(th, "text-center")} colSpan={3}>
                 Q2
               </th>
-              <th className={cn(th, "text-center")} colSpan={2}>
+              <th className={cn(th, "text-center")} colSpan={3}>
                 Q3
               </th>
-              <th className={cn(th, "text-center")} colSpan={2}>
+              <th className={cn(th, "text-center")} colSpan={3}>
                 Q4
               </th>
               <th className={th}>SCORE</th>
             </tr>
             <tr>
               <th className={th} colSpan={6} />
-              <th className={cn(th, "text-center")}>Target</th>
-              <th className={cn(th, "text-center")}>Achieved</th>
-              <th className={cn(th, "text-center")}>Target</th>
-              <th className={cn(th, "text-center")}>Achieved</th>
-              <th className={cn(th, "text-center")}>Target</th>
-              <th className={cn(th, "text-center")}>Achieved</th>
-              <th className={cn(th, "text-center")}>Target</th>
-              <th className={cn(th, "text-center")}>Achieved</th>
+              {(["Q1", "Q2", "Q3", "Q4"] as const).map((q) => (
+                <Fragment key={q}>
+                  <th className={cn(th, "text-center")}>Target</th>
+                  <th className={cn(th, "text-center")}>Achieved</th>
+                  <th className={cn(th, "text-center text-amber-800")}>Manager Achieved</th>
+                </Fragment>
+              ))}
               <th className={th} />
             </tr>
           </thead>
@@ -157,6 +156,7 @@ export function LogisticKraSheetView({
                       <Fragment key={`${kpi.id}-${key}`}>
                         <td className={cn(td, "text-center")}>{q[key]?.target || "—"}</td>
                         <td className={cn(td, "text-center")}>{q[key]?.achieved || "—"}</td>
+                        <td className={cn(td, "text-center")}>{q[key]?.managerAchieved || "—"}</td>
                       </Fragment>
                     ))}
                     <td className={cn(td, "text-center text-slate-500")}>—</td>
@@ -166,7 +166,7 @@ export function LogisticKraSheetView({
             )}
             {kpis.length === 0 && (
               <tr>
-                <td colSpan={15} className="px-4 py-10 text-center text-sm text-slate-500">
+                <td colSpan={19} className="px-4 py-10 text-center text-sm text-slate-500">
                   No KPI rows — upload Excel or add data.
                 </td>
               </tr>

@@ -40,10 +40,10 @@ export function normalizeKraCellValue(raw: string, unit: string): string {
 }
 
 export type QuarterCellData = {
-  q1: { target: string; achieved?: string };
-  q2: { target: string; achieved?: string };
-  q3: { target: string; achieved?: string };
-  q4: { target: string; achieved?: string };
+  q1: { target: string; achieved?: string; managerAchieved?: string };
+  q2: { target: string; achieved?: string; managerAchieved?: string };
+  q3: { target: string; achieved?: string; managerAchieved?: string };
+  q4: { target: string; achieved?: string; managerAchieved?: string };
 };
 
 export function normalizeQuarterTargets(
@@ -54,9 +54,25 @@ export function normalizeQuarterTargets(
     val != null && val !== "" ? normalizeKraCellValue(val, unit) : val ?? "";
 
   return {
-    q1: { target: quarters.q1.target ?? "", achieved: norm(quarters.q1.achieved) },
-    q2: { target: quarters.q2.target ?? "", achieved: norm(quarters.q2.achieved) },
-    q3: { target: quarters.q3.target ?? "", achieved: norm(quarters.q3.achieved) },
-    q4: { target: quarters.q4.target ?? "", achieved: norm(quarters.q4.achieved) },
+    q1: {
+      target: quarters.q1.target ?? "",
+      achieved: norm(quarters.q1.achieved),
+      managerAchieved: quarters.q1.managerAchieved ?? "",
+    },
+    q2: {
+      target: quarters.q2.target ?? "",
+      achieved: norm(quarters.q2.achieved),
+      managerAchieved: quarters.q2.managerAchieved ?? "",
+    },
+    q3: {
+      target: quarters.q3.target ?? "",
+      achieved: norm(quarters.q3.achieved),
+      managerAchieved: quarters.q3.managerAchieved ?? "",
+    },
+    q4: {
+      target: quarters.q4.target ?? "",
+      achieved: norm(quarters.q4.achieved),
+      managerAchieved: quarters.q4.managerAchieved ?? "",
+    },
   };
 }
